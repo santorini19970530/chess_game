@@ -24,6 +24,12 @@ A1 - set up HTML base
 
 A2 - Design
 
+```
+A chessboard has 64 squares, laid out in a grid of 8 x 8.
+The squares alternate between light and dark.
+Ths bottom right-hand corner should be a light square for both players, whether you are playing with an actual boardor online.
+```
+
 A2A - UX/UI design
 
 A2B - Design game flow
