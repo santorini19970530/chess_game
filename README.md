@@ -1,63 +1,92 @@
-# Chess Game Web App version
+# UoLCS CM3070 Final Project
 
-## About
+Chess game players with Orchestrating AI models
 
-In this project I am going to write a chess game.
-This game will have two players, one or two as real human, and remaining are AI.
-All the play records will be recorded by database and these data will be used as storage for future machine learning.
-The whole project will be planned to have three portions:
+## Project Goal
 
-1. Front-End web app
+Build a web app for board game AI play.
+Start with Chess.
+Add more variants after Chess is stable.
+Use short, clear move input.
+Support Human vs AI.
+Support AI vs AI evaluation.
 
-2. Back-End data storage and API support
+## System Parts
 
-3. AI agent and ML study base
+The system has three parts.
 
-The same structure will be applied for Shogi, Go and Elephant Chess, that means there will be twelve mid-term projects to be prepared to finish my final year project.
-The reason of having these projects are to study the differences of how AI learn and react differently on handling different games.
+1. Frontend web app.
+2. Go backend API and game flow.
+3. Python analyst service for text feedback.
 
-## Project Kanban
+## Core Replan Direction
 
-### Project A : Front-End Chess Game
+Keep one full vertical slice first.
+That slice is Chess end to end.
+Then expand to more variants.
+Do not expand scope too early.
 
-A1 - set up HTML base
+## Main Phases
 
-A2 - Design
+### Phase 1: Literature and evaluation design
 
-```
-A chessboard has 64 squares, laid out in a grid of 8 x 8.
-The squares alternate between light and dark.
-Ths bottom right-hand corner should be a light square for both players, whether you are playing with an actual boardor online.
-```
+Write literature with critical comparison.
+Define metrics early.
+Use win rate, game length, and latency.
 
-A2A - UX/UI design
+### Phase 2: Architecture and API freeze
 
-A2B - Design game flow
+Freeze API contracts.
+Freeze data flow between services.
+Keep frontend thin.
 
-A2C - Set up use cases and their attributes and methods
+### Phase 3: Chess vertical slice
 
-A2D - Determine interactions of the objects
+Create game.
+Accept human move.
+Return AI move.
+Show game status.
+Add analysis button.
 
-A3 - Implement UX/UI design
+### Phase 4: Variant expansion
 
-A4 - Implement objects and their code
+Add next variant with same backend pattern.
+Keep feature parity minimal first.
+Stabilize before adding more.
 
-A5 - Set up flow of communication with backend API
+### Phase 5: Quality and polish
 
-A6 - Tests and reflections
+Tune easy, medium, and hard profiles.
+Improve UI clarity.
+Improve analyst response quality.
 
-### Project B : Back-End data storage and API support
+### Phase 6: Testing and instrumentation
 
-B1 - Design stage
+Add API tests.
+Add move-flow tests.
+Log per-game metadata for evaluation.
 
-B1A - Database
+### Phase 7: Evaluation
 
-B1B - Design API
+Run AI vs AI tournaments.
+Produce tables and charts.
+Write short result analysis.
 
-B1C - Design Algorithm for generating AI and ML output
+### Phase 8: Final documentation
 
-B2 - Implement the design
+Finalize report.
+Finalize README and run steps.
+Prepare demo assets.
 
-B3 - Tests and reflections
+## Weekly Rule
 
-### Project C ; AI agent and ML study base
+End each week with three outputs.
+A runnable build.
+One evaluation artifact.
+One documentation update.
+
+## Scope Rules
+
+Finish Chess first.
+Prefer fewer complete variants.
+Keep analyst output simple if needed.
