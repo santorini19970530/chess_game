@@ -1,6 +1,10 @@
 package components
 
-import "fmt"
+import (
+	"fmt"
+	"html/template"
+	"strings"
+)
 
 type ChessBoard struct {
 	squares []ChessBoardSquare
@@ -18,11 +22,24 @@ func NewChessBoard() *ChessBoard {
 	return board
 }
 
-func (c *ChessBoard) Draw() {
-	for i, square := range c.squares {
-		fmt.Printf("%s ", square.Draw())
-		if (i+1)%8 == 0 {
-			fmt.Println()
+func (c *ChessBoard) Draw() template.HTML {
+	var htmlBuilder strings.Builder
+	htmlBuilder.WriteString(`<div class="chess_board">`)
+
+	for _, square := range c.squares {
+		squareClass := "chess_board_square_dark"
+		if square.IsLight {
+			squareClass = "chess_board_square_light"
 		}
+
+		fmt.Fprintf(
+			&htmlBuilder,
+			`<div class="chess_board_square %s" data-sequence="%d"></div>`,
+			squareClass,
+			square.Sequence,
+		)
 	}
+
+	htmlBuilder.WriteString(`</div>`)
+	return template.HTML(htmlBuilder.String())
 }

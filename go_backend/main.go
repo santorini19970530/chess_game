@@ -1,6 +1,7 @@
 package main
 
 import (
+	"go_backend/components"
 	"html/template"
 	"log"
 	"net/http"
@@ -152,9 +153,11 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := struct {
-		PageTitle string
+		PageTitle   string
+		MainContent template.HTML
 	}{
-		PageTitle: "Chess Game",
+		PageTitle:   "Chess Game",
+		MainContent: generateChessBoard(),
 	}
 
 	if err := t.ExecuteTemplate(w, "index", data); err != nil {
@@ -162,6 +165,17 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("index template execute error: %v", err)
 		return
 	}
+}
+
+func generateChessBoard() template.HTML {
+	var htmlCode string
+	gameBoard := components.NewChessBoard()
+
+	htmlCode = "<div>"
+	htmlCode += string(gameBoard.Draw())
+	htmlCode += "</div>"
+
+	return template.HTML(htmlCode)
 }
 
 // configures routes and starts the http server
