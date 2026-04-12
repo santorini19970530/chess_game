@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	chesspieces "go_backend/chesspiece"
 	"go_backend/components"
 	"html/template"
 	"log"
@@ -204,6 +206,7 @@ func main() {
 	http.HandleFunc("/save/", withRequestLogging(saveHandler))
 
 	log.Println("server successfully loaded at http://localhost:8080")
+	fmt.Printf("%v", chesspieces.ChessPieces)
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatalf("server failed to start: %v", err)
 	}
