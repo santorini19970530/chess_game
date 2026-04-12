@@ -152,12 +152,34 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var mainHTMLCode strings.Builder
+	mainHTMLCode.WriteString(`<div class="game_panel">`)
+	mainHTMLCode.WriteString(`<div class="game_panel_left">`)
+	mainHTMLCode.WriteString(string(generateChessBoard()))
+	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`<div class="game_panel_right_top">`)
+	mainHTMLCode.WriteString(`<h2>Game Information</h2>`)
+	mainHTMLCode.WriteString(`<ul>`)
+	mainHTMLCode.WriteString(`<li>Status: waiting for first move</li>`)
+	mainHTMLCode.WriteString(`<li>Current turn: White</li>`)
+	mainHTMLCode.WriteString(`<li>Win probability: to be developed</li>`)
+	mainHTMLCode.WriteString(`</ul>`)
+	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`<div class="game_panel_right_bottom">`)
+	mainHTMLCode.WriteString(`<label for="chess-command">Chess command</label>`)
+	mainHTMLCode.WriteString(`<div class="command_row">`)
+	mainHTMLCode.WriteString(`<input id="chess-command" type="text" placeholder="e2e4" />`)
+	mainHTMLCode.WriteString(`<button type="button">Submit</button>`)
+	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`</div>`)
+
 	data := struct {
 		PageTitle   string
 		MainContent template.HTML
 	}{
 		PageTitle:   "Chess Game",
-		MainContent: generateChessBoard(),
+		MainContent: template.HTML(mainHTMLCode.String()),
 	}
 
 	if err := t.ExecuteTemplate(w, "index", data); err != nil {
@@ -168,14 +190,8 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func generateChessBoard() template.HTML {
-	var htmlCode string
 	gameBoard := components.NewChessBoard()
-
-	htmlCode = "<div>"
-	htmlCode += string(gameBoard.Draw())
-	htmlCode += "</div>"
-
-	return template.HTML(htmlCode)
+	return gameBoard.Draw()
 }
 
 // configures routes and starts the http server

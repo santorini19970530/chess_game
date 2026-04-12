@@ -22,7 +22,7 @@ func NewChessBoard() *ChessBoard {
 	return board
 }
 
-func (c *ChessBoard) Draw() template.HTML {
+func (c *ChessBoard) DrawChessBoard() template.HTML {
 	var htmlBuilder strings.Builder
 	htmlBuilder.WriteString(`<div class="chess_board">`)
 
@@ -42,4 +42,39 @@ func (c *ChessBoard) Draw() template.HTML {
 
 	htmlBuilder.WriteString(`</div>`)
 	return template.HTML(htmlBuilder.String())
+}
+
+func (c *ChessBoard) Draw() template.HTML {
+	var htmlBuilder strings.Builder
+	htmlBuilder.WriteString(`<div class="chess_board_wrapper">`)
+	htmlBuilder.WriteString(`<div class="board_ranks board_ranks_left">`)
+	htmlBuilder.WriteString(generateRankLabels())
+	htmlBuilder.WriteString(`</div>`)
+	htmlBuilder.WriteString(string(c.DrawChessBoard()))
+	htmlBuilder.WriteString(`<div class="board_spacer"></div>`)
+	htmlBuilder.WriteString(`<div class="board_files board_files_bottom">`)
+	htmlBuilder.WriteString(generateFileLabels())
+	htmlBuilder.WriteString(`</div>`)
+	htmlBuilder.WriteString(`</div>`)
+	return template.HTML(htmlBuilder.String())
+}
+
+func generateFileLabels() string {
+	var htmlBuilder strings.Builder
+	for _, file := range []string{"a", "b", "c", "d", "e", "f", "g", "h"} {
+		htmlBuilder.WriteString(`<span class="board_label">`)
+		htmlBuilder.WriteString(file)
+		htmlBuilder.WriteString(`</span>`)
+	}
+	return htmlBuilder.String()
+}
+
+func generateRankLabels() string {
+	var htmlBuilder strings.Builder
+	for _, rank := range []string{"8", "7", "6", "5", "4", "3", "2", "1"} {
+		htmlBuilder.WriteString(`<span class="board_label">`)
+		htmlBuilder.WriteString(rank)
+		htmlBuilder.WriteString(`</span>`)
+	}
+	return htmlBuilder.String()
 }
