@@ -4,27 +4,18 @@ Chess game players with Orchestrating AI models
 
 ## Project Goal
 
-Build a web app for board game AI play.
-Start with Chess.
-Add more variants after Chess is stable.
-Use short, clear move input.
-Support Human vs AI.
-Support AI vs AI evaluation.
+1. Build a web app for board game AI play.
+2. Start with Chess.
+3. Add more variants after Chess is stable.
+4. Use short, clear move input.
+5. Support Human vs AI.
+6. Support AI vs AI evaluation.
 
 ## System Parts
-
-The system has three parts.
 
 1. Frontend web app.
 2. Go backend API and game flow.
 3. Python analyst service for text feedback.
-
-## Core Replan Direction
-
-Keep one full vertical slice first.
-That slice is Chess end to end.
-Then expand to more variants.
-Do not expand scope too early.
 
 ## Main Phases
 
