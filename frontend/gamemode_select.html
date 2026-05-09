@@ -1,108 +1,112 @@
-<!-- index.html -->
+<!-- to be extended later -->
 
 <!DOCTYPE html>
 
 <html lang="en">
-
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chess Game</title>
     <link rel="stylesheet" href="./styles/style.css" />
     <link rel="icon" href="./favicon.ico" type="image/x-icon" />
-</head>
+  </head>
 
-<body>
+  <body>
     <header>
-        <div>
-            <h1>Three AI Models Game Demo</h1>
-            <p>Choose a game, a mode, and start playing or simulating.</p>
-        </div>
+      <div>
+        <h1>Three AI Models Game Demo</h1>
+        <p>Choose a game, a mode, and start playing or simulating.</p>
+      </div>
     </header>
 
     <main>
-        <div>
-            <section>
+      <div>
+        <section>
+          <div>
+            <div>
+              <h2 id="game-heading">Choose a game</h2>
+              <p>Start with Chess now; Go will be supported too.</p>
+            </div>
+          </div>
+          <div>
+            <button type="button" data-game="chess" class="game-option">
+              <div>
                 <div>
-                    <div>
-                        <h2 id="game-heading">Choose a game</h2>
-                        <p>Start with Chess now; Go will be supported too.</p>
-                    </div>
+                  <div>Chess</div>
+                  <div>
+                    8×8 board, classic rules, ideal for first experiments.
+                  </div>
                 </div>
+                <span>Ready</span>
+              </div>
+            </button>
+            <button type="button" data-game="go" class="game-option">
+              <div>
                 <div>
-                    <button type="button" data-game="chess" class="game-option">
-                        <div>
-                            <div>
-                                <div>Chess</div>
-                                <div>
-                                    8×8 board, classic rules, ideal for first experiments.
-                                </div>
-                            </div>
-                            <span>Ready</span>
-                        </div>
-                    </button>
-                    <button type="button" data-game="go" class="game-option">
-                        <div>
-                            <div>
-                                <div>Go</div>
-                                <div>
-                                    9×9 or 19×19 board, ideal for later multi-game experiments.
-                                </div>
-                            </div>
-                            <span>Coming soon</span>
-                        </div>
-                    </button>
+                  <div>Go</div>
+                  <div>
+                    9×9 or 19×19 board, ideal for later multi-game experiments.
+                  </div>
                 </div>
-            </section>
+                <span>Coming soon</span>
+              </div>
+            </button>
+          </div>
+        </section>
 
-            <section>
-                <div>
-                    <div>
-                        <h2 id="mode-heading">Choose a mode</h2>
-                        <p>Human vs AI uses a single-line move input on the game page.</p>
-                    </div>
-                </div>
-                <div>
-                    <button type="button" class="mode-option">
-                        <div>Human vs AI</div>
-                        <div>Play directly against the AI, one move at a time.</div>
-                    </button>
-                    <button type="button" class="mode-option">
-                        <div>AI vs AI (watch)</div>
-                        <div>Let two instances of your AI play while you observe.</div>
-                    </button>
-                    <button type="button" class="mode-option">
-                        <div>Run simulation (N games)</div>
-                        <div>Run many games automatically for evaluation.</div>
-                    </button>
-                </div>
-            </section>
+        <section>
+          <div>
+            <div>
+              <h2 id="mode-heading">Choose a mode</h2>
+              <p>Human vs AI uses a single-line move input on the game page.</p>
+            </div>
+          </div>
+          <div>
+            <button type="button" class="mode-option">
+              <div>Human vs AI</div>
+              <div>Play directly against the AI, one move at a time.</div>
+            </button>
+            <button type="button" class="mode-option">
+              <div>AI vs AI (watch)</div>
+              <div>Let two instances of your AI play while you observe.</div>
+            </button>
+            <button type="button" class="mode-option">
+              <div>Run simulation (N games)</div>
+              <div>Run many games automatically for evaluation.</div>
+            </button>
+          </div>
+        </section>
 
-            <section id="simulation-settings">
-                <div>
-                    <div>
-                        <h2 id="simulation-heading">Simulation settings</h2>
-                        <p>Choose how many full games to run when simulating.</p>
-                    </div>
-                </div>
-                <div>
-                    <div>
-                        <label for="simulation-games">Number of games</label>
-                        <input id="simulation-games" type="number" min="1" max="1000" value="10" />
-                        <p>Recommended range: 1–1000 games.</p>
-                    </div>
-                </div>
-            </section>
+        <section id="simulation-settings">
+          <div>
+            <div>
+              <h2 id="simulation-heading">Simulation settings</h2>
+              <p>Choose how many full games to run when simulating.</p>
+            </div>
+          </div>
+          <div>
+            <div>
+              <label for="simulation-games">Number of games</label>
+              <input
+                id="simulation-games"
+                type="number"
+                min="1"
+                max="1000"
+                value="10"
+              />
+              <p>Recommended range: 1–1000 games.</p>
+            </div>
+          </div>
+        </section>
 
-            <section>
-                <div>
-                    Game and mode choices will be passed to the game page through the
-                    URL.
-                </div>
-                <button id="start-button" type="button">Start</button>
-            </section>
-        </div>
+        <section>
+          <div>
+            Game and mode choices will be passed to the game page through the
+            URL.
+          </div>
+          <button id="start-button" type="button">Start</button>
+        </section>
+      </div>
     </main>
-</body>
-
+  </body>
 </html>

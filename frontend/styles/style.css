@@ -160,6 +160,9 @@
   }
 }
 @layer utilities {
+  .static {
+    position: static;
+  }
   .start {
     inset-inline-start: var(--spacing);
   }
@@ -222,7 +225,7 @@ main {
   width: 100%;
   height: 100%;
   display: grid;
-  grid-template-columns: 4fr 1fr;
+  grid-template-columns: minmax(0, 3fr) minmax(260px, 1fr);
   grid-template-rows: 1fr 1fr;
   grid-template-areas: "left rightTop" "left rightBottom";
   gap: 16px;
@@ -240,28 +243,30 @@ main {
   justify-content: center;
   min-height: 0;
   padding: 8px;
+  overflow: auto;
 }
 .chess_board_wrapper {
-  width: min(100%, 92vh);
-  min-width: 420px;
-  max-width: 1200px;
+  width: 100%;
+  max-width: min(100%, calc(100dvh - 220px));
+  max-height: min(100%, calc(100dvh - 220px));
+  min-width: 0;
   display: grid;
-  grid-template-columns: 28px 1fr;
-  grid-template-rows: auto 32px;
+  grid-template-columns: clamp(18px, 2vw, 24px) 1fr;
+  grid-template-rows: 1fr clamp(18px, 2vw, 24px);
   gap: 6px;
   box-sizing: border-box;
   margin: 0 auto;
 }
 .board_spacer {
-  width: 28px;
-  height: 28px;
+  width: clamp(18px, 2vw, 24px);
+  height: clamp(18px, 2vw, 24px);
 }
 .board_files {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   align-items: center;
   text-align: center;
-  font-size: 1.5rem;
+  font-size: clamp(0.75rem, 1vw, 0.95rem);
   font-weight: 700;
   color: #d9d9d9;
 }
@@ -270,7 +275,7 @@ main {
   grid-template-rows: repeat(8, 1fr);
   align-items: center;
   text-align: center;
-  font-size: 1.5rem;
+  font-size: clamp(0.75rem, 1vw, 0.95rem);
   font-weight: 700;
   color: #d9d9d9;
 }
@@ -318,7 +323,9 @@ main {
   cursor: pointer;
 }
 .chess_board {
-  width: 100%;
+  width: min(100%, calc(100dvh - 260px));
+  max-width: 100%;
+  min-width: 0;
   aspect-ratio: 1 / 1;
   display: grid;
   grid-template-columns: repeat(8, 1fr);
@@ -350,6 +357,7 @@ main {
   .chess_board_wrapper {
     width: min(100%, 680px);
     min-width: 0;
+    max-width: 100%;
   }
 }
 .chess_board_square {

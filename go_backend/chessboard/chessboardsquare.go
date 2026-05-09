@@ -1,16 +1,18 @@
-package components
+// CM3070 FP code
+// chessboardsquare.go defines chessboard square data
 
-import "fmt"
+package chessboard
 
+// ChessBoardSquare stores one square's metadata
 type ChessBoardSquare struct {
 	Sequence int
 	IsLight  bool
 	BoxWidth string
 }
 
+// NewChessBoardSquare creates a square with alternating color
 func NewChessBoardSquare(sequence int) ChessBoardSquare {
 	isLight := false
-
 	if (sequence/8)%2 == 0 {
 		isLight = sequence%2 == 0
 	} else {
@@ -22,13 +24,4 @@ func NewChessBoardSquare(sequence int) ChessBoardSquare {
 		IsLight:  isLight,
 		BoxWidth: "30px",
 	}
-}
-
-func (c ChessBoardSquare) Draw() string {
-	shade := "dark"
-	if c.IsLight {
-		shade = "light"
-	}
-
-	return fmt.Sprintf("[%d:%s]", c.Sequence, shade)
 }

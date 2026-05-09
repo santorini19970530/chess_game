@@ -1,33 +1,10 @@
-package chesspieces
+// CM3070 FP code
+// pieces.go - defines the initial set of chess pieces
+// each chess piece is having color, type, image file, and board position
 
-type PieceColor string
-
-const (
-	White PieceColor = "white"
-	Black PieceColor = "black"
-)
-
-type PieceKind string
-
-const (
-	Pawn   PieceKind = "pawn"
-	Rook   PieceKind = "rook"
-	Knight PieceKind = "knight"
-	Bishop PieceKind = "bishop"
-	Queen  PieceKind = "queen"
-	King   PieceKind = "king"
-)
-
-type ChessPiece struct {
-	Color   PieceColor
-	Kind    PieceKind
-	ImgFile string
-	File    int
-	Rank    int
-}
+package pieces
 
 var ChessPieces = []ChessPiece{
-	// white pieces
 	{Color: White, Kind: Rook, ImgFile: "pic/white_rook.png", File: 1, Rank: 1},
 	{Color: White, Kind: Knight, ImgFile: "pic/white_knight.png", File: 2, Rank: 1},
 	{Color: White, Kind: Bishop, ImgFile: "pic/white_bishop.png", File: 3, Rank: 1},
@@ -44,8 +21,6 @@ var ChessPieces = []ChessPiece{
 	{Color: White, Kind: Pawn, ImgFile: "pic/white_pawn.png", File: 6, Rank: 2},
 	{Color: White, Kind: Pawn, ImgFile: "pic/white_pawn.png", File: 7, Rank: 2},
 	{Color: White, Kind: Pawn, ImgFile: "pic/white_pawn.png", File: 8, Rank: 2},
-
-	// black pieces
 	{Color: Black, Kind: Pawn, ImgFile: "pic/black_pawn.png", File: 1, Rank: 7},
 	{Color: Black, Kind: Pawn, ImgFile: "pic/black_pawn.png", File: 2, Rank: 7},
 	{Color: Black, Kind: Pawn, ImgFile: "pic/black_pawn.png", File: 3, Rank: 7},
