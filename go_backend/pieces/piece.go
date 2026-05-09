@@ -12,3 +12,5 @@ type ChessPiece struct {
 	File    int
 	Rank    int
 }
+
+// moving chess pieces

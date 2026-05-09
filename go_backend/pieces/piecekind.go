@@ -1,5 +1,5 @@
 // CM3070 FP code
-// piece_kind.go - defines chess piece types
+// piece_kind.go - define the kinds of the chess and their motions
 
 package pieces
 
