@@ -9,8 +9,11 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 )
+
+var commandFormatPattern = regexp.MustCompile(`^(?:[a-h][1-8][a-h][1-8][qrbn]?|[prnbqk][a-h][1-8][a-h][1-8])$`)
 
 // generateChessBoard builds the chessboard html for the index page
 // game state integration (gameSession) will be added later.
@@ -62,12 +65,14 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`</div>`)
 
 	mainHTMLCode.WriteString(`<div class="game_panel_right_bottom">`)
-	mainHTMLCode.WriteString(`<label for="chess-command">Chess command</label>`)
+	mainHTMLCode.WriteString(`<label for="chess_command">Chess command</label>`)
 	mainHTMLCode.WriteString(`<div class="command_row">`)
-	mainHTMLCode.WriteString(`<input id="chess-command" type="text" placeholder="e2e4" />`)
-	mainHTMLCode.WriteString(`<button type="button">Submit</button>`)
+	mainHTMLCode.WriteString(`<input id="chess_command" type="text" placeholder="e2e4" />`)
+	mainHTMLCode.WriteString(`<button id="chess_command_submit" type="button">Submit</button>`)
 	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`<p id="chess_command_status" class="command_status" role="status" aria-live="polite"></p>`)
 	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`<script src="/scripts/chess_command.js"></script>`)
 
 	mainHTMLCode.WriteString(`</div>`)
 
@@ -86,4 +91,32 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 		log.Printf("index template execute error: %v", err)
 		return
 	}
+}
+
+// SubmitChessCommand receives input from command textbox and send to server for processing
+func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid command payload", http.StatusBadRequest)
+		return
+	}
+
+	command := strings.ToLower(strings.TrimSpace(r.FormValue("command")))
+	if command == "" {
+		http.Error(w, "Empty command", http.StatusBadRequest)
+		return
+	}
+	if !commandFormatPattern.MatchString(command) {
+		log.Printf("warning: invalid chess command format: %q", command)
+		http.Error(w, "Invalid command format", http.StatusBadRequest)
+		return
+	}
+
+	log.Println(command)
+	w.WriteHeader(http.StatusNoContent)
 }

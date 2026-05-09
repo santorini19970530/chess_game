@@ -95,6 +95,7 @@ func (c *ChessBoard) DrawChessBoardSquares() template.HTML {
 
 	return template.HTML(htmlBuilder.String())
 }
+
 // generateFileLabels builds file labels
 func generateFileLabels() string {
 	var htmlBuilder strings.Builder

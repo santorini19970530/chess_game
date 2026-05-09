@@ -27,6 +27,7 @@ func frontendPath(parts ...string) string {
 func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 	styleCSSPath := frontendPath("styles", "style.css")
 	inputCSSPath := frontendPath("styles", "input.css")
+	commandScriptPath := frontendPath("scripts", "chess_command.js")
 	iconPath := frontendPath("pic", "icon.png")
 	picDir := frontendPath("pic/")
 
@@ -37,6 +38,11 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 
 	mux.HandleFunc("/styles/input.css", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, inputCSSPath)
+	})
+
+	// command js script
+	mux.HandleFunc("/scripts/chess_command.js", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, commandScriptPath)
 	})
 
 	// favicon and icon routes
@@ -63,6 +69,7 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 
 	// page routes
 	mux.HandleFunc("/", h.Index) // index
+	mux.HandleFunc("/command", h.SubmitChessCommand)
 	// below routings come from GO wiki tutorial page, to be updated in future development
 	mux.HandleFunc("/view/", h.View)
 	mux.HandleFunc("/edit/", h.Edit)
