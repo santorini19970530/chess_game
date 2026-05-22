@@ -5,7 +5,7 @@ package chessboard
 
 import (
 	"fmt"
-	"go_backend/pieces"
+	pieces "go_backend/game/piece"
 	"html/template"
 	"strings"
 )

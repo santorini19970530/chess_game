@@ -5,15 +5,13 @@
 package handlers
 
 import (
-	"go_backend/chessboard"
+	chessboard "go_backend/game/board"
+	commandpkg "go_backend/game/command"
 	"html/template"
 	"log"
 	"net/http"
-	"regexp"
 	"strings"
 )
-
-var commandFormatPattern = regexp.MustCompile(`^(?:[a-h][1-8][a-h][1-8][qrbn]?|[prnbqk][a-h][1-8][a-h][1-8])$`)
 
 // generateChessBoard builds the chessboard html for the index page
 // game state integration (gameSession) will be added later.
@@ -106,17 +104,16 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	command := strings.ToLower(strings.TrimSpace(r.FormValue("command")))
-	if command == "" {
+	commandText := strings.ToLower(strings.TrimSpace(r.FormValue("command")))
+	if commandText == "" {
 		http.Error(w, "Empty command", http.StatusBadRequest)
 		return
 	}
-	if !commandFormatPattern.MatchString(command) {
-		log.Printf("warning: invalid chess command format: %q", command)
+
+	if err := commandpkg.ParseAndLogCommand(commandText); err != nil {
+		log.Printf("warning: invalid chess command format: %q", commandText)
 		http.Error(w, "Invalid command format", http.StatusBadRequest)
 		return
 	}
-
-	log.Println(command)
 	w.WriteHeader(http.StatusNoContent)
 }

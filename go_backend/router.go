@@ -70,8 +70,4 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 	// page routes
 	mux.HandleFunc("/", h.Index) // index
 	mux.HandleFunc("/command", h.SubmitChessCommand)
-	// below routings come from GO wiki tutorial page, to be updated in future development
-	mux.HandleFunc("/view/", h.View)
-	mux.HandleFunc("/edit/", h.Edit)
-	mux.HandleFunc("/save/", h.Save)
 }
