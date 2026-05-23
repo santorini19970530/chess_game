@@ -1,89 +1,109 @@
+// CM3070 FP code
+// chess_command.js
+// records the movement command from user
+// this is operating on frontend level
+
 (() => {
   const input = document.getElementById("chess_command");
   const button = document.getElementById("chess_command_submit");
   const status = document.getElementById("chess_command_status");
-  const moveHistoryList = document.getElementById("chess_move_history");
+  const moveHistoryWhiteList = document.getElementById("chess_move_history_white");
+  const moveHistoryBlackList = document.getElementById("chess_move_history_black");
   const moveSound = new Audio("/sounds/chess_movement.wav");
 
-  if (!input || !button || !status || !moveHistoryList) {
-    return;
-  }
+  if (!input || !button || !status || !moveHistoryWhiteList || !moveHistoryBlackList) return;
+
   input.focus();
 
+  // set current status
   const setStatus = (message, type) => {
     status.textContent = message;
     status.className = `command_status ${type}`;
   };
 
-  const appendMoveToHistory = (command) => {
-    const placeholder = moveHistoryList.querySelector(
-      ".chess_move_history_placeholder"
-    );
-    if (placeholder) {
-      placeholder.remove();
+  // update move history from backend source of truth
+  const renderMoveHistory = (history) => {
+    moveHistoryWhiteList.innerHTML = "";
+    moveHistoryBlackList.innerHTML = "";
+    if (!Array.isArray(history) || history.length === 0) {
+      const whitePlaceholder = document.createElement("li");
+      whitePlaceholder.className = "chess_move_history_placeholder";
+      whitePlaceholder.textContent = "No moves yet.";
+      moveHistoryWhiteList.appendChild(whitePlaceholder);
+
+      const blackPlaceholder = document.createElement("li");
+      blackPlaceholder.className = "chess_move_history_placeholder";
+      blackPlaceholder.textContent = "No moves yet.";
+      moveHistoryBlackList.appendChild(blackPlaceholder);
+      return;
     }
 
-    const item = document.createElement("li");
-    item.textContent = command;
-    moveHistoryList.appendChild(item);
-    moveHistoryList.scrollTop = moveHistoryList.scrollHeight;
+    for (const move of history) {
+      const item = document.createElement("li");
+      if (move.startsWith("White:")) {
+        item.textContent = move.replace(/^White:\s*/, "");
+        moveHistoryWhiteList.appendChild(item);
+      } else if (move.startsWith("Black:")) {
+        item.textContent = move.replace(/^Black:\s*/, "");
+        moveHistoryBlackList.appendChild(item);
+      } else {
+        item.textContent = move;
+        moveHistoryWhiteList.appendChild(item);
+      }
+    }
+
+    if (!moveHistoryWhiteList.children.length) {
+      const whitePlaceholder = document.createElement("li");
+      whitePlaceholder.className = "chess_move_history_placeholder";
+      whitePlaceholder.textContent = "No moves yet.";
+      moveHistoryWhiteList.appendChild(whitePlaceholder);
+    }
+    if (!moveHistoryBlackList.children.length) {
+      const blackPlaceholder = document.createElement("li");
+      blackPlaceholder.className = "chess_move_history_placeholder";
+      blackPlaceholder.textContent = "No moves yet.";
+      moveHistoryBlackList.appendChild(blackPlaceholder);
+    }
+
+    moveHistoryWhiteList.scrollTop = moveHistoryWhiteList.scrollHeight;
+    moveHistoryBlackList.scrollTop = moveHistoryBlackList.scrollHeight;
   };
 
+  // highlight the box being mentioned by user
   const squareSelectorByFileRank = (fileChar, rankChar) => {
     const fileIndex = fileChar.charCodeAt(0) - "a".charCodeAt(0) + 1;
     const rankNum = Number(rankChar);
-    if (fileIndex < 1 || fileIndex > 8 || rankNum < 1 || rankNum > 8) {
-      return "";
-    }
+    if (fileIndex < 1 || fileIndex > 8 || rankNum < 1 || rankNum > 8) return "";
+
     const sequence = (8 - rankNum) * 8 + (fileIndex - 1);
     return `.chess_board_square[data-sequence="${sequence}"]`;
   };
 
-  const applyMoveOnBoard = (rawCommand) => {
-    const command = rawCommand.trim().toLowerCase();
-    if (command.length < 4) {
-      return;
-    }
+  // move chess piece
+  const applyMoveOnBoard = (fromFile, fromRank, toFile, toRank) => {
+    const fromSquare = document.querySelector(
+      squareSelectorByFileRank(fromFile, fromRank)
+    );
+    const toSquare = document.querySelector(
+      squareSelectorByFileRank(toFile, toRank)
+    );
+    if (!fromSquare || !toSquare) return; // check if there is such box
 
-    let fromFile = "";
-    let fromRank = "";
-    let toFile = "";
-    let toRank = "";
-
-    if (/[1-8]/.test(command[1])) {
-      fromFile = command[0];
-      fromRank = command[1];
-      toFile = command[2];
-      toRank = command[3];
-    } else {
-      fromFile = command[1];
-      fromRank = command[2];
-      toFile = command[3];
-      toRank = command[4];
-    }
-
-    const fromSquare = document.querySelector(squareSelectorByFileRank(fromFile, fromRank));
-    const toSquare = document.querySelector(squareSelectorByFileRank(toFile, toRank));
-    if (!fromSquare || !toSquare) {
-      return;
-    }
-
+    // update the position of the picture of the piece
     const pieceEl = fromSquare.querySelector(".piece_img");
-    if (!pieceEl) {
-      return;
-    }
+    if (!pieceEl) return;
 
     const captured = toSquare.querySelector(".piece_img");
-    if (captured) {
-      captured.remove();
-    }
+    if (captured) captured.remove();
+
     toSquare.appendChild(pieceEl);
   };
 
+  // send the movement command to backend
   const submitCommand = async () => {
     const command = input.value.trim();
     if (!command) {
-      setStatus("Please enter a chess command.", "error");
+      setStatus("Please enter a chess movement command.", "error");
       return;
     }
 
@@ -97,16 +117,29 @@
 
       if (!response.ok) {
         const errorMessage = (await response.text()).trim();
+
         setStatus(errorMessage || "Invalid command format", "error");
-        input.value = "";
+        input.focus();
+
+        return;
+      }
+
+      const result = await response.json();
+      if (!result?.from || !result?.to) {
+        setStatus("Invalid move response from server", "error");
         input.focus();
         return;
       }
 
       input.value = "";
       setStatus("Command submitted", "success");
-      appendMoveToHistory(command);
-      applyMoveOnBoard(command);
+      renderMoveHistory(result.history);
+      applyMoveOnBoard(
+        result.from.file,
+        String(result.from.rank),
+        result.to.file,
+        String(result.to.rank)
+      );
       try {
         moveSound.currentTime = 0;
         await moveSound.play();
@@ -116,7 +149,6 @@
       input.focus();
     } catch (_error) {
       setStatus("Network error. Please try again.", "error");
-      input.value = "";
       input.focus();
     }
   };

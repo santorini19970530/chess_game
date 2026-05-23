@@ -1,4 +1,5 @@
-// apply_move.go
+// CM3070 FP code
+// apply_move.go - applies the movement command to the board
 
 package session
 
@@ -19,7 +20,24 @@ func ApplyMoveByCommand(commandText string) error {
 	fromFile := int(parsed.FromFile - 'a' + 1)
 	toFile := int(parsed.ToFile - 'a' + 1)
 
-	return ApplyMove(fromFile, parsed.FromRank, toFile, parsed.ToRank, parsed.PieceCode)
+	sourceIdx := -1
+	for i := range pieces.ChessPieces {
+		p := &pieces.ChessPieces[i]
+		if p.File == fromFile && p.Rank == parsed.FromRank {
+			sourceIdx = i
+			break
+		}
+	}
+	if sourceIdx == -1 {
+		return fmt.Errorf("There is no piece at source square")
+	}
+	moveColor := pieces.ChessPieces[sourceIdx].Color
+
+	if err := ApplyMove(fromFile, parsed.FromRank, toFile, parsed.ToRank, parsed.PieceCode); err != nil {
+		return err
+	}
+	AppendMoveHistory(commandText, moveColor)
+	return nil
 }
 
 func ApplyMove(fromFile, fromRank, toFile, toRank int, pieceCode string) error {
@@ -37,21 +55,21 @@ func ApplyMove(fromFile, fromRank, toFile, toRank int, pieceCode string) error {
 	}
 
 	if sourceIdx == -1 {
-		return fmt.Errorf("no piece at source square")
+		return fmt.Errorf("There is no piece at source square")
 	}
 
 	sourcePiece := &pieces.ChessPieces[sourceIdx]
 	if pieceCode != "" {
 		expectedKind, ok := command.CommandPieceMap[pieceCode]
 		if ok && sourcePiece.Kind != expectedKind {
-			return fmt.Errorf("piece code does not match source piece")
+			return fmt.Errorf("Piece code does not match source piece")
 		}
 	}
 
 	if targetIdx != -1 {
 		targetPiece := pieces.ChessPieces[targetIdx]
 		if targetPiece.Color == sourcePiece.Color {
-			return fmt.Errorf("cannot capture own piece")
+			return fmt.Errorf("Cannot capture own piece")
 		}
 
 		pieces.ChessPieces = append(pieces.ChessPieces[:targetIdx], pieces.ChessPieces[targetIdx+1:]...)
