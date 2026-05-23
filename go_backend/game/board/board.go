@@ -5,6 +5,7 @@ package chessboard
 
 import (
 	"fmt"
+	pieces "go_backend/game/piece"
 	"html/template"
 	"strings"
 )
@@ -56,18 +57,39 @@ func (c *ChessBoard) DrawChessBoardSquares() template.HTML {
 
 	htmlBuilder.WriteString(`<div class="chess_board">`)
 
+	pieceAt := make(map[string]string, len(pieces.ChessPieces))
+	for _, p := range pieces.ChessPieces {
+		key := fmt.Sprintf("%d_%d", p.File, p.Rank)
+		pieceAt[key] = "/" + p.ImgFile
+	}
+
 	for _, square := range c.squares {
 		squareClass := "chess_board_square_dark"
 		if square.IsLight {
 			squareClass = "chess_board_square_light"
 		}
 
+		file := (square.Sequence % 8) + 1
+		rank := 8 - (square.Sequence / 8)
+		key := fmt.Sprintf("%d_%d", file, rank)
+
 		fmt.Fprintf(
 			&htmlBuilder,
-			`<div class="chess_board_square %s" data-sequence="%d"></div>`,
+			`<div class="chess_board_square %s" data-sequence="%d">`,
 			squareClass,
 			square.Sequence,
 		)
+
+		// draw also the chess piece if there is
+		if src, ok := pieceAt[key]; ok {
+			fmt.Fprintf(
+				&htmlBuilder,
+				`<img class="piece_img" src="%s" alt="piece_%s" draggable="false">`,
+				src,
+				key,
+			)
+		}
+		htmlBuilder.WriteString(`</div>`)
 	}
 
 	htmlBuilder.WriteString(`</div>`)

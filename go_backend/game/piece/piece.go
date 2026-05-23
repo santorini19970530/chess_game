@@ -12,3 +12,9 @@ type ChessPiece struct {
 	File    int
 	Rank    int
 }
+
+// moving chess pieces
+func (p *ChessPiece) Move(file int, rank int) {
+	p.File = file
+	p.Rank = rank
+}
