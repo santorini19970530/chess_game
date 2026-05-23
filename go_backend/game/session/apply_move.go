@@ -8,39 +8,32 @@ import (
 	"log"
 
 	"go_backend/game/command"
+	"go_backend/game/engine"
 	pieces "go_backend/game/piece"
 )
 
-func ApplyMoveByCommand(commandText string) error {
+func ApplyMoveByCommand(commandText string) (string, error) {
 	parsed, err := command.ParseCommand(commandText)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	fromFile := int(parsed.FromFile - 'a' + 1)
 	toFile := int(parsed.ToFile - 'a' + 1)
 
-	sourceIdx := -1
-	for i := range pieces.ChessPieces {
-		p := &pieces.ChessPieces[i]
-		if p.File == fromFile && p.Rank == parsed.FromRank {
-			sourceIdx = i
-			break
-		}
+	moveColor, err := engine.ValidateMove(fromFile, parsed.FromRank, toFile, parsed.ToRank, parsed.PieceCode)
+	if err != nil {
+		return "", err
 	}
-	if sourceIdx == -1 {
-		return fmt.Errorf("There is no piece at source square")
-	}
-	moveColor := pieces.ChessPieces[sourceIdx].Color
 
-	if err := ApplyMove(fromFile, parsed.FromRank, toFile, parsed.ToRank, parsed.PieceCode); err != nil {
-		return err
+	if err := ApplyMove(fromFile, parsed.FromRank, toFile, parsed.ToRank); err != nil {
+		return "", err
 	}
-	AppendMoveHistory(commandText, moveColor)
-	return nil
+	AppendMoveHistory(parsed.Normalized, moveColor)
+	return parsed.Normalized, nil
 }
 
-func ApplyMove(fromFile, fromRank, toFile, toRank int, pieceCode string) error {
+func ApplyMove(fromFile, fromRank, toFile, toRank int) error {
 	sourceIdx := -1
 	targetIdx := -1
 
@@ -59,19 +52,7 @@ func ApplyMove(fromFile, fromRank, toFile, toRank int, pieceCode string) error {
 	}
 
 	sourcePiece := &pieces.ChessPieces[sourceIdx]
-	if pieceCode != "" {
-		expectedKind, ok := command.CommandPieceMap[pieceCode]
-		if ok && sourcePiece.Kind != expectedKind {
-			return fmt.Errorf("Piece code does not match source piece")
-		}
-	}
-
 	if targetIdx != -1 {
-		targetPiece := pieces.ChessPieces[targetIdx]
-		if targetPiece.Color == sourcePiece.Color {
-			return fmt.Errorf("Cannot capture own piece")
-		}
-
 		pieces.ChessPieces = append(pieces.ChessPieces[:targetIdx], pieces.ChessPieces[targetIdx+1:]...)
 		if targetIdx < sourceIdx {
 			sourceIdx--

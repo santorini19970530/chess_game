@@ -141,7 +141,8 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := sessionpkg.ApplyMoveByCommand(commandText); err != nil {
+	normalizedMove, err := sessionpkg.ApplyMoveByCommand(commandText)
+	if err != nil {
 		log.Printf("warning: failed to apply command %q: %v", commandText, err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -160,7 +161,7 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 		History []string               `json:"history"`
 		State   []sessionpkg.PieceState `json:"state"`
 	}{
-		Command: commandText,
+		Command: normalizedMove,
 		History: sessionpkg.GetMoveHistory(),
 		State:   sessionpkg.GetBoardState(),
 	}
