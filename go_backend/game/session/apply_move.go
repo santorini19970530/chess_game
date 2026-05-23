@@ -13,7 +13,7 @@ import (
 )
 
 func ApplyMoveByCommand(commandText string) (string, error) {
-	parsed, err := command.ParseCommand(commandText)
+	parsed, err := command.ParseCommandForColor(commandText, CurrentTurnColor())
 	if err != nil {
 		return "", err
 	}

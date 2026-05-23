@@ -130,13 +130,14 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	parsed, err := commandpkg.ParseCommand(commandText)
+	expectedColor := sessionpkg.CurrentTurnColor()
+	parsed, err := commandpkg.ParseCommandForColor(commandText, expectedColor)
 	if err != nil {
 		log.Printf("warning: invalid chess command format: %q", commandText)
 		http.Error(w, "Invalid command format (use e2e4 or ng1f3)", http.StatusBadRequest)
 		return
 	}
-	if err := commandpkg.ParseAndLogCommand(commandText); err != nil {
+	if err := commandpkg.ParseAndLogCommandForColor(commandText, expectedColor); err != nil {
 		http.Error(w, "Invalid command format (use e2e4 or ng1f3)", http.StatusBadRequest)
 		return
 	}

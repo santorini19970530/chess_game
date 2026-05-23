@@ -1,5 +1,6 @@
 // CM3070 FP code
-// strategy.go
+// strategy.go - set up the movement strategy interface and the square coordinate
+
 package movement
 
 import pieces "go_backend/game/piece"

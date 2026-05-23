@@ -29,6 +29,15 @@ func GetMoveHistory() []string {
 	return out
 }
 
+// CurrentTurnColor returns whose move should be next.
+// White starts at move 1, then alternates each successful move.
+func CurrentTurnColor() pieces.PieceColor {
+	if len(moveHistory)%2 == 0 {
+		return pieces.White
+	}
+	return pieces.Black
+}
+
 // temporary storage for the current state of the board
 type PieceState struct {
 	Color   string `json:"color"`

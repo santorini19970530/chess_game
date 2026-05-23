@@ -11,10 +11,21 @@ import (
 var commandFormatPattern = regexp.MustCompile(`^(?:[a-h][1-8][a-h][1-8][qrbn]?|[prnbqk][a-h][1-8][a-h][1-8])$`)
 var sanPattern = regexp.MustCompile(`^([kqrbn])?([a-h1-8]{0,2})(x)?([a-h][1-8])(?:=([qrbn]))?$`)
 
+type castleMove struct {
+	fromFile int
+	fromRank int
+	toFile   int
+	toRank   int
+}
+
 func ParseCommand(command string) (ParsedCommand, error) {
+	return ParseCommandForColor(command, "")
+}
+
+func ParseCommandForColor(command string, expectedColor pieces.PieceColor) (ParsedCommand, error) {
 	command = strings.ToLower(strings.TrimSpace(command))
 	if !commandFormatPattern.MatchString(command) {
-		parsedSAN, err := parseSANCommand(command)
+		parsedSAN, err := parseSANCommand(command, expectedColor)
 		if err != nil {
 			return ParsedCommand{}, fmt.Errorf("invalid command format")
 		}
@@ -55,14 +66,14 @@ func ParseCommand(command string) (ParsedCommand, error) {
 	return parsed, nil
 }
 
-func parseSANCommand(command string) (ParsedCommand, error) {
+func parseSANCommand(command string, expectedColor pieces.PieceColor) (ParsedCommand, error) {
 	san := strings.TrimRight(command, "+#!?")
 
 	if san == "o-o" || san == "0-0" {
-		return parseCastleSAN(command, false)
+		return parseCastleSAN(command, false, expectedColor)
 	}
 	if san == "o-o-o" || san == "0-0-0" {
-		return parseCastleSAN(command, true)
+		return parseCastleSAN(command, true, expectedColor)
 	}
 
 	matches := sanPattern.FindStringSubmatch(san)
@@ -101,24 +112,27 @@ func parseSANCommand(command string) (ParsedCommand, error) {
 		}
 	}
 
-	var fromFile, fromRank int
-	candidateCount := 0
-	for _, p := range pieces.ChessPieces {
-		if p.Kind != targetKind {
-			continue
-		}
-		if fileHint != 0 && p.File != fileHint {
-			continue
-		}
-		if rankHint != 0 && p.Rank != rankHint {
-			continue
-		}
-		if !canPieceReach(p, targetFile, targetRank, isCapture) {
-			continue
-		}
-		candidateCount++
-		fromFile = p.File
-		fromRank = p.Rank
+	fromFile, fromRank, candidateCount := findSANCandidate(
+		targetKind,
+		targetFile,
+		targetRank,
+		isCapture,
+		fileHint,
+		rankHint,
+		expectedColor,
+	)
+	if candidateCount == 0 && expectedColor != "" {
+		// Fallback for current non-turn-enforced flow: allow SAN resolution
+		// from either side when no expected-color candidate exists.
+		fromFile, fromRank, candidateCount = findSANCandidate(
+			targetKind,
+			targetFile,
+			targetRank,
+			isCapture,
+			fileHint,
+			rankHint,
+			"",
+		)
 	}
 
 	if candidateCount == 0 {
@@ -142,14 +156,7 @@ func parseSANCommand(command string) (ParsedCommand, error) {
 	return parsed, nil
 }
 
-func parseCastleSAN(raw string, queenSide bool) (ParsedCommand, error) {
-	type castleMove struct {
-		fromFile int
-		fromRank int
-		toFile   int
-		toRank   int
-	}
-
+func parseCastleSAN(raw string, queenSide bool, expectedColor pieces.PieceColor) (ParsedCommand, error) {
 	moves := []castleMove{
 		{fromFile: 5, fromRank: 1, toFile: 7, toRank: 1}, // white king side
 		{fromFile: 5, fromRank: 8, toFile: 7, toRank: 8}, // black king side
@@ -161,18 +168,9 @@ func parseCastleSAN(raw string, queenSide bool) (ParsedCommand, error) {
 		}
 	}
 
-	candidateCount := 0
-	var selected castleMove
-	for _, mv := range moves {
-		piece, found := getPieceAt(mv.fromFile, mv.fromRank)
-		if !found || piece.Kind != pieces.King {
-			continue
-		}
-		if _, occupied := getPieceAt(mv.toFile, mv.toRank); occupied {
-			continue
-		}
-		candidateCount++
-		selected = mv
+	selected, candidateCount := findCastleCandidate(moves, expectedColor)
+	if candidateCount == 0 && expectedColor != "" {
+		selected, candidateCount = findCastleCandidate(moves, "")
 	}
 
 	if candidateCount == 0 {
@@ -338,8 +336,68 @@ func abs(v int) int {
 	return v
 }
 
+func findSANCandidate(
+	targetKind pieces.PieceKind,
+	targetFile, targetRank int,
+	isCapture bool,
+	fileHint, rankHint int,
+	expectedColor pieces.PieceColor,
+) (int, int, int) {
+	var fromFile, fromRank int
+	candidateCount := 0
+
+	for _, p := range pieces.ChessPieces {
+		if expectedColor != "" && p.Color != expectedColor {
+			continue
+		}
+		if p.Kind != targetKind {
+			continue
+		}
+		if fileHint != 0 && p.File != fileHint {
+			continue
+		}
+		if rankHint != 0 && p.Rank != rankHint {
+			continue
+		}
+		if !canPieceReach(p, targetFile, targetRank, isCapture) {
+			continue
+		}
+		candidateCount++
+		fromFile = p.File
+		fromRank = p.Rank
+	}
+
+	return fromFile, fromRank, candidateCount
+}
+
+func findCastleCandidate(moves []castleMove, expectedColor pieces.PieceColor) (castleMove, int) {
+	candidateCount := 0
+	var selected castleMove
+
+	for _, mv := range moves {
+		piece, found := getPieceAt(mv.fromFile, mv.fromRank)
+		if !found || piece.Kind != pieces.King {
+			continue
+		}
+		if expectedColor != "" && piece.Color != expectedColor {
+			continue
+		}
+		if _, occupied := getPieceAt(mv.toFile, mv.toRank); occupied {
+			continue
+		}
+		candidateCount++
+		selected = mv
+	}
+
+	return selected, candidateCount
+}
+
 func ParseAndLogCommand(command string) error {
-	parsed, err := ParseCommand(command)
+	return ParseAndLogCommandForColor(command, "")
+}
+
+func ParseAndLogCommandForColor(command string, expectedColor pieces.PieceColor) error {
+	parsed, err := ParseCommandForColor(command, expectedColor)
 	if err != nil {
 		return err
 	}

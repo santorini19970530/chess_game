@@ -229,7 +229,7 @@ main {
 
 .chess_move_history_list {
   list-style: decimal;
-  padding-left: 1.5rem;
+  list-style-position: inside;
   margin: 0;
   min-height: 180px;
   max-height: none;
@@ -239,18 +239,18 @@ main {
   border: 1px solid #2d2d2d;
   border-radius: 8px;
   background: #0f0f0f;
-  padding: 10px 12px 10px 2rem;
+  padding: 10px 12px;
 }
 
 .chess_move_history_list li {
-  padding: 2px 0;
+  padding: 2px 0 2px 4px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 1rem;
 }
 
 .chess_move_history_placeholder {
   list-style: none;
-  margin-left: -1.5rem;
+  margin-left: 0;
   color: #888;
   font-family: inherit;
   font-size: 1rem;
