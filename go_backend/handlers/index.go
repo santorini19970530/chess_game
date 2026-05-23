@@ -7,6 +7,7 @@ package handlers
 import (
 	chessboard "go_backend/game/board"
 	commandpkg "go_backend/game/command"
+	sessionpkg "go_backend/game/session"
 	"html/template"
 	"log"
 	"net/http"
@@ -70,7 +71,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`</div>`)
 	mainHTMLCode.WriteString(`<p id="chess_command_status" class="command_status" role="status" aria-live="polite"></p>`)
 	mainHTMLCode.WriteString(`</div>`)
-	mainHTMLCode.WriteString(`<script src="/scripts/chess_command.js"></script>`)
+	mainHTMLCode.WriteString(`<script src="/scripts/chess_command.js?v=2"></script>`)
 
 	mainHTMLCode.WriteString(`</div>`)
 
@@ -113,6 +114,12 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 	if err := commandpkg.ParseAndLogCommand(commandText); err != nil {
 		log.Printf("warning: invalid chess command format: %q", commandText)
 		http.Error(w, "Invalid command format", http.StatusBadRequest)
+		return
+	}
+
+	if err := sessionpkg.ApplyMoveByCommand(commandText); err != nil {
+		log.Printf("warning: failed to apply command %q: %v", commandText, err)
+		http.Error(w, "Cannot apply move", http.StatusBadRequest)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

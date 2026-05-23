@@ -8,56 +8,59 @@ import (
 
 var commandFormatPattern = regexp.MustCompile(`^(?:[a-h][1-8][a-h][1-8][qrbn]?|[prnbqk][a-h][1-8][a-h][1-8])$`)
 
-func ParseAndLogCommand(command string) error {
+func ParseCommand(command string) (ParsedCommand, error) {
 	if !commandFormatPattern.MatchString(command) {
-		return fmt.Errorf("invalid command format")
+		return ParsedCommand{}, fmt.Errorf("invalid command format")
 	}
 
-	format := "uci"
-	pieceCode := ""
-	promotion := ""
-
-	var fromFile byte
-	var fromRank byte
-	var toFile byte
-	var toRank byte
+	parsed := ParsedCommand{
+		Raw:    command,
+		Format: "uci",
+	}
 
 	if command[1] >= '1' && command[1] <= '8' {
-		fromFile = command[0]
-		fromRank = command[1]
-		toFile = command[2]
-		toRank = command[3]
+		parsed.FromFile = command[0]
+		parsed.FromRank = int(command[1] - '0')
+		parsed.ToFile = command[2]
+		parsed.ToRank = int(command[3] - '0')
 		if len(command) == 5 {
-			promotion = string(command[4])
+			parsed.Promotion = string(command[4])
 		}
 	} else {
-		format = "piece-prefixed"
-		pieceCode = string(command[0])
-		fromFile = command[1]
-		fromRank = command[2]
-		toFile = command[3]
-		toRank = command[4]
+		parsed.Format = "piece-prefixed"
+		parsed.PieceCode = string(command[0])
+		parsed.FromFile = command[1]
+		parsed.FromRank = int(command[2] - '0')
+		parsed.ToFile = command[3]
+		parsed.ToRank = int(command[4] - '0')
 	}
 
-	fromFileInt := int(fromFile - 'a' + 1)
-	fromRankInt := int(fromRank - '0')
-	toFileInt := int(toFile - 'a' + 1)
-	toRankInt := int(toRank - '0')
+	return parsed, nil
+}
+
+func ParseAndLogCommand(command string) error {
+	parsed, err := ParseCommand(command)
+	if err != nil {
+		return err
+	}
+
+	fromFileInt := int(parsed.FromFile - 'a' + 1)
+	toFileInt := int(parsed.ToFile - 'a' + 1)
 
 	log.Printf(
 		"command parsed: raw=%q format=%s piece=%q from=%c%d(file=%d,rank=%d) to=%c%d(file=%d,rank=%d) promotion=%q",
-		command,
-		format,
-		pieceCode,
-		fromFile,
-		fromRankInt,
+		parsed.Raw,
+		parsed.Format,
+		parsed.PieceCode,
+		parsed.FromFile,
+		parsed.FromRank,
 		fromFileInt,
-		fromRankInt,
-		toFile,
-		toRankInt,
+		parsed.FromRank,
+		parsed.ToFile,
+		parsed.ToRank,
 		toFileInt,
-		toRankInt,
-		promotion,
+		parsed.ToRank,
+		parsed.Promotion,
 	)
 
 	return nil

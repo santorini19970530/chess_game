@@ -80,6 +80,7 @@ func (c *ChessBoard) DrawChessBoardSquares() template.HTML {
 			square.Sequence,
 		)
 
+		// draw also the chess piece if there is
 		if src, ok := pieceAt[key]; ok {
 			fmt.Fprintf(
 				&htmlBuilder,

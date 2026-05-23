@@ -30,6 +30,7 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 	commandScriptPath := frontendPath("scripts", "chess_command.js")
 	iconPath := frontendPath("pic", "icon.png")
 	picDir := frontendPath("pic/")
+	soundDir := frontendPath("sounds")
 
 	// css files
 	mux.HandleFunc("/styles/style.css", func(w http.ResponseWriter, r *http.Request) {
@@ -65,6 +66,12 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 	mux.Handle("/pic/", http.StripPrefix("/pic/", http.FileServer(http.Dir(picDir))))
 	if _, err := os.Stat(picDir); err != nil {
 		log.Printf("warning: piece image directory not found at %s: %v", picDir, err)
+	}
+
+	// sounds
+	mux.Handle("/sounds/", http.StripPrefix("/sounds/", http.FileServer(http.Dir(soundDir))))
+	if _, err := os.Stat(soundDir); err != nil {
+		log.Printf("warning: sound directory not found at %s: %v", soundDir, err)
 	}
 
 	// page routes
