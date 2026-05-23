@@ -106,3 +106,19 @@ func TestApplyMoveByCommand_QueenStrategy(t *testing.T) {
 		t.Fatalf("expected d3e5 to fail for queen movement")
 	}
 }
+
+func TestApplyMoveByCommand_KnightStrategy(t *testing.T) {
+	resetChessPieces()
+
+	if _, err := ApplyMoveByCommand("b1c3"); err != nil {
+		t.Fatalf("expected knight move b1c3 to succeed, got error: %v", err)
+	}
+	knight, ok := pieceAt(3, 3)
+	if !ok || knight.Kind != pieces.Knight || knight.Color != pieces.White {
+		t.Fatalf("expected white knight on c3 after move")
+	}
+
+	if _, err := ApplyMoveByCommand("c3c5"); err == nil {
+		t.Fatalf("expected c3c5 to fail for knight movement")
+	}
+}

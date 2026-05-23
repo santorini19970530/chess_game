@@ -15,6 +15,8 @@ func getStrategy(kind pieces.PieceKind) PieceMovementStrategy {
 		return RookStrategy{}
 	case pieces.Bishop:
 		return BishopStrategy{}
+	case pieces.Knight:
+		return KnightStrategy{}
 	case pieces.Queen:
 		return QueenStrategy{}
 	case pieces.King:
