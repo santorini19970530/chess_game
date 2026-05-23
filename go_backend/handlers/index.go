@@ -70,8 +70,14 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`<button id="chess_command_submit" type="button">Submit</button>`)
 	mainHTMLCode.WriteString(`</div>`)
 	mainHTMLCode.WriteString(`<p id="chess_command_status" class="command_status" role="status" aria-live="polite"></p>`)
+	mainHTMLCode.WriteString(`<div class="chess_move_history_section">`)
+	mainHTMLCode.WriteString(`<h3 class="chess_move_history_title">Move history</h3>`)
+	mainHTMLCode.WriteString(`<ol id="chess_move_history" class="chess_move_history_list">`)
+	mainHTMLCode.WriteString(`<li class="chess_move_history_placeholder">No moves yet.</li>`)
+	mainHTMLCode.WriteString(`</ol>`)
 	mainHTMLCode.WriteString(`</div>`)
-	mainHTMLCode.WriteString(`<script src="/scripts/chess_command.js?v=2"></script>`)
+	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`<script src="/scripts/chess_command.js"></script>`)
 
 	mainHTMLCode.WriteString(`</div>`)
 

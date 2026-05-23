@@ -4,6 +4,7 @@
 package main
 
 import (
+	"go_backend/cssbuild"
 	"go_backend/handlers"
 	"log"
 	"net/http"
@@ -27,24 +28,29 @@ func frontendPath(parts ...string) string {
 func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 	styleCSSPath := frontendPath("styles", "style.css")
 	inputCSSPath := frontendPath("styles", "input.css")
+	tailwindPath := frontendPath("styles", "tailwindcss")
 	commandScriptPath := frontendPath("scripts", "chess_command.js")
 	iconPath := frontendPath("pic", "icon.png")
 	picDir := frontendPath("pic/")
 	soundDir := frontendPath("sounds")
 
-	// css files
+	serveNoCache := func(path string) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Cache-Control", "no-store")
+			w.Header().Set("Pragma", "no-cache")
+			http.ServeFile(w, r, path)
+		}
+	}
+
 	mux.HandleFunc("/styles/style.css", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, styleCSSPath)
+		if err := cssbuild.EnsureStyleCSS(inputCSSPath, styleCSSPath, tailwindPath); err != nil {
+			http.Error(w, "Failed to build stylesheet", http.StatusInternalServerError)
+			return
+		}
+		serveNoCache(styleCSSPath)(w, r)
 	})
-
-	mux.HandleFunc("/styles/input.css", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, inputCSSPath)
-	})
-
-	// command js script
-	mux.HandleFunc("/scripts/chess_command.js", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, commandScriptPath)
-	})
+	mux.HandleFunc("/styles/input.css", serveNoCache(inputCSSPath))
+	mux.HandleFunc("/scripts/chess_command.js", serveNoCache(commandScriptPath))
 
 	// favicon and icon routes
 	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {

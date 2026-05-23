@@ -1,6 +1,10 @@
 set -e
 
-frontend/styles/tailwindcss -i frontend/styles/input.css -o frontend/styles/style.css
+TAILWIND=frontend/styles/tailwindcss
+INPUT_CSS=frontend/styles/input.css
+OUTPUT_CSS=frontend/styles/style.css
+
+"$TAILWIND" -i "$INPUT_CSS" -o "$OUTPUT_CSS"
 
 DIR="./go_backend/"
 
