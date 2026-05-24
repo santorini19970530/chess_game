@@ -172,6 +172,9 @@
   .table {
     display: table;
   }
+  .capitalize {
+    text-transform: capitalize;
+  }
 }
 * {
   margin: 0px;
@@ -343,6 +346,11 @@ main {
   color: #b8f5c3;
   font-weight: 700;
 }
+.game_info_col_in_check {
+  background: #4a1f1f;
+  color: #ffb3b3;
+  font-weight: 700;
+}
 .game_info_notes_box {
   width: 100%;
   margin-top: 10px;
@@ -481,7 +489,7 @@ main {
     min-height: 0;
     height: 100%;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) clamp(280px, 30vw, 400px);
+    grid-template-columns: minmax(0, 1fr) clamp(380px, 40vw, 560px);
     grid-template-rows: 1.35fr 0.65fr;
     grid-template-areas: "left rightTop" "left rightBottom";
     overflow: hidden;
@@ -506,6 +514,18 @@ main {
     --board-size: min(100cqw, 100cqh, 100%);
     max-height: 100%;
   }
+}
+.game_info_result_win {
+  color: #95f2a4;
+  font-weight: 800;
+}
+.game_info_result_loss {
+  color: #ff9f9f;
+  font-weight: 800;
+}
+.game_info_result_draw {
+  color: #cfd3ff;
+  font-weight: 800;
 }
 @media (max-width: 900px) {
   .chess_move_history_panels {

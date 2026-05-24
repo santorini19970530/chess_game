@@ -67,6 +67,18 @@ func ApplyMoveByCommand(commandText string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if castling && castlingViolatesCheckRules(moveColor, parsed.FromRank, toFile) {
+		return "", fmt.Errorf("illegal move: castling through check is not allowed")
+	}
+	if engine.WouldLeaveKingInCheck(
+		sourcePiece,
+		fromFile, parsed.FromRank,
+		toFile, parsed.ToRank,
+		enPassant, castling,
+		requiresPromotion, promotionKind,
+	) {
+		return "", fmt.Errorf("illegal move: king would remain in check")
+	}
 
 	if enPassant {
 		if err := ApplyEnPassantMove(fromFile, parsed.FromRank, toFile, parsed.ToRank); err != nil {
@@ -272,4 +284,25 @@ func promotedPieceImage(kind pieces.PieceKind, color pieces.PieceColor) string {
 		tone = "dark"
 	}
 	return fmt.Sprintf("pic/chess_pic/%s_%s.png", string(kind), tone)
+}
+
+func castlingViolatesCheckRules(color pieces.PieceColor, rank, toFile int) bool {
+	if engine.IsInCheck(color) {
+		return true
+	}
+	opponent := pieces.White
+	if color == pieces.White {
+		opponent = pieces.Black
+	}
+	throughFile := 6
+	if toFile == 3 {
+		throughFile = 4
+	}
+	if engine.IsSquareAttackedBy(throughFile, rank, opponent) {
+		return true
+	}
+	if engine.IsSquareAttackedBy(toFile, rank, opponent) {
+		return true
+	}
+	return false
 }

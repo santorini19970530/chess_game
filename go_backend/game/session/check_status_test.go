@@ -1,0 +1,128 @@
+package session
+
+import (
+	pieces "go_backend/game/piece"
+	"testing"
+)
+
+func TestEvaluateGameOutcome_Checkmate(t *testing.T) {
+	pieces.ChessPieces = []pieces.ChessPiece{
+		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 6, Rank: 6},   // Kf6
+		{Color: pieces.White, Kind: pieces.Queen, ImgFile: "pic/chess_pic/queen_light.png", File: 7, Rank: 7}, // Qg7
+		{Color: pieces.Black, Kind: pieces.King, ImgFile: "pic/chess_pic/king_dark.png", File: 8, Rank: 8},    // kh8
+	}
+	moveHistory = []string{"White: a2a3"} // black to move
+	lastAppliedMove = nil
+	resetCastlingState()
+	resetGameSessionForTest()
+
+	outcome := EvaluateGameOutcome()
+	if outcome.Status != "checkmate" {
+		t.Fatalf("expected checkmate, got %q", outcome.Status)
+	}
+	if outcome.Winner != "white" || outcome.Loser != "black" {
+		t.Fatalf("expected winner=white loser=black, got winner=%q loser=%q", outcome.Winner, outcome.Loser)
+	}
+	if outcome.CheckedSide != "black" {
+		t.Fatalf("expected checked side black, got %q", outcome.CheckedSide)
+	}
+	if outcome.LegalMoves != 0 {
+		t.Fatalf("expected 0 legal moves in checkmate, got %d", outcome.LegalMoves)
+	}
+}
+
+func TestEvaluateGameOutcome_Stalemate(t *testing.T) {
+	pieces.ChessPieces = []pieces.ChessPiece{
+		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 6, Rank: 7},   // Kf7
+		{Color: pieces.White, Kind: pieces.Queen, ImgFile: "pic/chess_pic/queen_light.png", File: 7, Rank: 6}, // Qg6
+		{Color: pieces.Black, Kind: pieces.King, ImgFile: "pic/chess_pic/king_dark.png", File: 8, Rank: 8},    // kh8
+	}
+	moveHistory = []string{"White: a2a3"} // black to move
+	lastAppliedMove = nil
+	resetCastlingState()
+	resetGameSessionForTest()
+
+	outcome := EvaluateGameOutcome()
+	if outcome.Status != "stalemate" {
+		t.Fatalf("expected stalemate, got %q", outcome.Status)
+	}
+	if outcome.LegalMoves != 0 {
+		t.Fatalf("expected 0 legal moves in stalemate, got %d", outcome.LegalMoves)
+	}
+}
+
+func TestRefreshGameSessionOutcome_UpdatesMetadataAndResult(t *testing.T) {
+	resetGameSessionForTest()
+	pieces.ChessPieces = []pieces.ChessPiece{
+		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 6, Rank: 6},   // Kf6
+		{Color: pieces.White, Kind: pieces.Queen, ImgFile: "pic/chess_pic/queen_light.png", File: 7, Rank: 7}, // Qg7
+		{Color: pieces.Black, Kind: pieces.King, ImgFile: "pic/chess_pic/king_dark.png", File: 8, Rank: 8},    // kh8
+	}
+	moveHistory = []string{"White: a2a3"} // black to move
+	lastAppliedMove = nil
+	resetCastlingState()
+
+	game := RefreshGameSessionOutcome()
+	if game.ID == "" {
+		t.Fatalf("expected game id to be populated")
+	}
+	if game.Type != GameTypeChess {
+		t.Fatalf("expected game type chess, got %q", game.Type)
+	}
+	if game.Mode != GameModeHumanVsHuman {
+		t.Fatalf("expected game mode human_vs_human, got %q", game.Mode)
+	}
+	if game.Result != GameResultWhiteWin {
+		t.Fatalf("expected white win result, got %q", game.Result)
+	}
+	if game.Outcome.Status != "checkmate" {
+		t.Fatalf("expected checkmate outcome, got %q", game.Outcome.Status)
+	}
+}
+
+func TestEvaluateGameOutcome_UserSequenceIsCheckNotMate(t *testing.T) {
+	resetGameSessionForTest()
+	ResetGame()
+
+	sequence := []string{"h2h4", "e7e5", "h1h3", "e5e4", "h3e3", "e8e7", "e3e4"}
+	for _, mv := range sequence {
+		if _, err := ApplyMoveByCommand(mv); err != nil {
+			t.Fatalf("expected move %s to succeed, got: %v", mv, err)
+		}
+	}
+
+	outcome := EvaluateGameOutcome()
+	if outcome.Status != "check" {
+		t.Fatalf("expected check outcome, got %q", outcome.Status)
+	}
+	if outcome.CheckedSide != "black" {
+		t.Fatalf("expected checked side black, got %q", outcome.CheckedSide)
+	}
+	if outcome.LegalMoves <= 0 {
+		t.Fatalf("expected legal moves for black, got %d", outcome.LegalMoves)
+	}
+}
+
+func TestResetGame_RestoresInitialState(t *testing.T) {
+	pieces.ChessPieces = []pieces.ChessPiece{
+		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 4, Rank: 4},
+	}
+	moveHistory = []string{"White: e2e4", "Black: e7e5"}
+	lastAppliedMove = &LastMove{FromFile: 5, FromRank: 7, ToFile: 5, ToRank: 5, PieceKind: pieces.Pawn, Color: pieces.Black}
+	whiteKingMoved = true
+
+	ResetGame()
+
+	if len(pieces.ChessPieces) != len(initialPiecesSnapshot) {
+		t.Fatalf("expected initial piece count %d, got %d", len(initialPiecesSnapshot), len(pieces.ChessPieces))
+	}
+	if len(moveHistory) != 0 {
+		t.Fatalf("expected move history to be cleared")
+	}
+	if lastAppliedMove != nil {
+		t.Fatalf("expected last move to be cleared")
+	}
+	if whiteKingMoved || blackKingMoved || whiteRookAMoved || whiteRookHMoved || blackRookAMoved || blackRookHMoved {
+		t.Fatalf("expected castling state to be reset")
+	}
+}

@@ -13,9 +13,14 @@
   const capturedBlackValue = document.getElementById("game_info_captured_black");
   const winProbWhiteValue = document.getElementById("game_info_winprob_white");
   const winProbBlackValue = document.getElementById("game_info_winprob_black");
+  const resultWhiteValue = document.getElementById("game_info_result_white");
+  const resultBlackValue = document.getElementById("game_info_result_black");
   const moveHistoryWhiteList = document.getElementById("chess_move_history_white");
   const moveHistoryBlackList = document.getElementById("chess_move_history_black");
+  const newGameButton = document.getElementById("chess_new_game");
   const moveSound = new Audio("/sounds/chess_movement.wav");
+  const CHECK_CLASS = "game_info_col_in_check";
+  let gameOver = false;
 
   if (!input || !button || !status || !moveHistoryWhiteList || !moveHistoryBlackList) return;
 
@@ -36,6 +41,88 @@
     blackColumnCells.forEach((cell) => {
       cell.classList.toggle("game_info_col_active", !isWhiteTurn);
     });
+  };
+
+  const renderCheckState = (checkedSide) => {
+    const side = String(checkedSide || "").toLowerCase();
+    const whiteChecked = side === "white";
+    const blackChecked = side === "black";
+    whiteColumnCells.forEach((cell) => {
+      cell.classList.toggle(CHECK_CLASS, whiteChecked);
+    });
+    blackColumnCells.forEach((cell) => {
+      cell.classList.toggle(CHECK_CLASS, blackChecked);
+    });
+  };
+
+  const capitalize = (text) => {
+    const value = String(text || "").toLowerCase();
+    if (!value) return "";
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  };
+
+  const renderGameOutcome = (game) => {
+    const outcome = game?.outcome || game || {};
+    const statusValue = String(outcome?.status || "").toLowerCase();
+    const gameResult = String(game?.result || "in_progress").toLowerCase();
+    const resetResultClasses = (el) => {
+      if (!el) return;
+      el.classList.remove("game_info_result_win", "game_info_result_loss", "game_info_result_draw");
+    };
+
+    if (resultWhiteValue && resultBlackValue) {
+      resetResultClasses(resultWhiteValue);
+      resetResultClasses(resultBlackValue);
+      if (gameResult === "white_win") {
+        resultWhiteValue.textContent = "Result: WIN";
+        resultBlackValue.textContent = "Result: LOSS";
+        resultWhiteValue.classList.add("game_info_result_win");
+        resultBlackValue.classList.add("game_info_result_loss");
+      } else if (gameResult === "black_win") {
+        resultWhiteValue.textContent = "Result: LOSS";
+        resultBlackValue.textContent = "Result: WIN";
+        resultWhiteValue.classList.add("game_info_result_loss");
+        resultBlackValue.classList.add("game_info_result_win");
+      } else if (gameResult === "draw") {
+        resultWhiteValue.textContent = "Result: DRAW";
+        resultBlackValue.textContent = "Result: DRAW";
+        resultWhiteValue.classList.add("game_info_result_draw");
+        resultBlackValue.classList.add("game_info_result_draw");
+      } else {
+        resultWhiteValue.textContent = "Result: PLAYING";
+        resultBlackValue.textContent = "Result: PLAYING";
+      }
+    }
+    if (statusValue === "checkmate") {
+      const winner = capitalize(outcome?.winner);
+      const loser = capitalize(outcome?.loser);
+      setStatus(`Checkmate! ${winner} wins. ${loser} loses.`, "error");
+      input.disabled = true;
+      button.disabled = true;
+      gameOver = true;
+      return;
+    }
+
+    if (statusValue === "stalemate") {
+      setStatus("Draw by stalemate.", "success");
+      input.disabled = true;
+      button.disabled = true;
+      gameOver = true;
+      return;
+    }
+
+    input.disabled = false;
+    button.disabled = false;
+    gameOver = false;
+
+    if (statusValue === "check") {
+      const checked = capitalize(outcome?.checkedSide);
+      const legalMoves = Number(outcome?.legalMoves || 0);
+      setStatus(`${checked} is in check. Legal moves available: ${legalMoves}.`, "error");
+      return;
+    }
+
+    setStatus("Command submitted", "success");
   };
 
   const INITIAL_COUNTS = {
@@ -282,6 +369,11 @@
 
   // send the movement command to backend
   const submitCommand = async () => {
+    if (gameOver) {
+      setStatus("Game has ended. Refresh to start a new game.", "error");
+      return;
+    }
+
     const command = input.value.trim();
     if (!command) {
       setStatus("Please enter a chess movement command.", "error");
@@ -312,7 +404,6 @@
       }
 
       input.value = "";
-      setStatus("Command submitted", "success");
       const usedStateRender = renderBoardFromState(result.state);
       if (!usedStateRender) {
         applyMoveOnBoard(
@@ -324,6 +415,8 @@
       }
       renderMoveHistory(result.history);
       renderCurrentTurn(result.currentTurn);
+      renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
+      renderGameOutcome(result.game);
       // Always compute from the rendered board so capture info matches what user sees.
       renderGameInfo(extractBoardStateFromDOM(), result.captured);
       try {
@@ -340,6 +433,33 @@
   };
 
   button.addEventListener("click", submitCommand);
+  if (newGameButton) {
+    newGameButton.addEventListener("click", async () => {
+      try {
+        const response = await fetch("/game/new", { method: "POST" });
+        if (!response.ok) {
+          const errorMessage = (await response.text()).trim();
+          setStatus(errorMessage || "Failed to start a new game.", "error");
+          return;
+        }
+        const result = await response.json();
+        renderBoardFromState(result.state);
+        renderMoveHistory(result.history);
+        renderCurrentTurn(result.currentTurn);
+        renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
+        renderGameOutcome(result.game);
+        renderGameInfo(extractBoardStateFromDOM(), result.captured);
+        input.value = "";
+        input.disabled = false;
+        button.disabled = false;
+        gameOver = false;
+        setStatus("New game started.", "success");
+        input.focus();
+      } catch (_error) {
+        setStatus("Network error. Please try again.", "error");
+      }
+    });
+  }
   input.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -348,6 +468,8 @@
   });
 
   renderGameInfo(extractBoardStateFromDOM());
+  renderCheckState("");
+  renderGameOutcome({ status: "in_progress", result: "in_progress" });
   const activeSide = document.querySelector(".game_info_side.game_info_col_active");
   if (activeSide?.textContent) {
     renderCurrentTurn(activeSide.textContent.trim());

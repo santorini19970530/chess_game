@@ -12,6 +12,7 @@ func resetChessPieces() {
 	moveHistory = nil
 	lastAppliedMove = nil
 	resetCastlingState()
+	resetGameSessionForTest()
 }
 
 func pieceAt(file, rank int) (pieces.ChessPiece, bool) {
@@ -343,5 +344,53 @@ func TestApplyMoveByCommand_CastlingQueenSide_SAN(t *testing.T) {
 	rook, ok := pieceAt(4, 1)
 	if !ok || rook.Kind != pieces.Rook || rook.Color != pieces.White {
 		t.Fatalf("expected white rook on d1 after castling")
+	}
+}
+
+func TestApplyMoveByCommand_RejectsMoveLeavingOwnKingInCheck(t *testing.T) {
+	pieces.ChessPieces = []pieces.ChessPiece{
+		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 5, Rank: 1}, // Ke1
+		{Color: pieces.White, Kind: pieces.Rook, ImgFile: "pic/chess_pic/rook_light.png", File: 5, Rank: 2}, // Re2
+		{Color: pieces.Black, Kind: pieces.Rook, ImgFile: "pic/chess_pic/rook_dark.png", File: 5, Rank: 8},  // re8
+		{Color: pieces.Black, Kind: pieces.King, ImgFile: "pic/chess_pic/king_dark.png", File: 1, Rank: 8},  // ka8
+	}
+	moveHistory = nil
+	lastAppliedMove = nil
+
+	if _, err := ApplyMoveByCommand("e2f2"); err == nil {
+		t.Fatalf("expected move that exposes own king to be rejected")
+	}
+}
+
+func TestApplyMoveByCommand_CheckedSideLabel_AfterCheckingMove(t *testing.T) {
+	pieces.ChessPieces = []pieces.ChessPiece{
+		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 1, Rank: 1}, // Ka1
+		{Color: pieces.White, Kind: pieces.Rook, ImgFile: "pic/chess_pic/rook_light.png", File: 5, Rank: 1}, // Re1
+		{Color: pieces.Black, Kind: pieces.King, ImgFile: "pic/chess_pic/king_dark.png", File: 5, Rank: 8},  // ke8
+	}
+	moveHistory = nil
+	lastAppliedMove = nil
+
+	if _, err := ApplyMoveByCommand("e1e7"); err != nil {
+		t.Fatalf("expected checking move e1e7 to succeed, got error: %v", err)
+	}
+	if got := CheckedSideLabel(); got != "black" {
+		t.Fatalf("expected checked side to be black, got %q", got)
+	}
+}
+
+func TestApplyMoveByCommand_CastlingThroughAttackedSquareRejected(t *testing.T) {
+	pieces.ChessPieces = []pieces.ChessPiece{
+		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 5, Rank: 1}, // Ke1
+		{Color: pieces.White, Kind: pieces.Rook, ImgFile: "pic/chess_pic/rook_light.png", File: 8, Rank: 1}, // Rh1
+		{Color: pieces.Black, Kind: pieces.Rook, ImgFile: "pic/chess_pic/rook_dark.png", File: 6, Rank: 8},  // rf8 attacks f1
+		{Color: pieces.Black, Kind: pieces.King, ImgFile: "pic/chess_pic/king_dark.png", File: 1, Rank: 8},  // ka8
+	}
+	moveHistory = nil
+	lastAppliedMove = nil
+	resetCastlingState()
+
+	if _, err := ApplyMoveByCommand("e1g1"); err == nil {
+		t.Fatalf("expected castling through attacked square to be rejected")
 	}
 }
