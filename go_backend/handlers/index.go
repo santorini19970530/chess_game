@@ -46,6 +46,14 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 
 	// build dynamic main content html in sequence
 	var mainHTMLCode strings.Builder
+	currentTurnLabel := sessionpkg.CurrentTurnLabel()
+	whiteTurnClass := "game_info_col_white"
+	blackTurnClass := "game_info_col_black"
+	if currentTurnLabel == "White" {
+		whiteTurnClass += " game_info_col_active"
+	} else {
+		blackTurnClass += " game_info_col_active"
+	}
 
 	// left panel
 	mainHTMLCode.WriteString(`<div class="game_panel">`)
@@ -56,12 +64,36 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 
 	// right panel
 	mainHTMLCode.WriteString(`<div class="game_panel_right_top">`)
-	mainHTMLCode.WriteString(`<h2>Game Information</h2>`)
-	mainHTMLCode.WriteString(`<ul>`)
-	mainHTMLCode.WriteString(`<li>Status: waiting for first move</li>`)
-	mainHTMLCode.WriteString(`<li>Current turn: <span id="current_turn_value">` + sessionpkg.CurrentTurnLabel() + `</span></li>`)
-	mainHTMLCode.WriteString(`<li>Win probability: to be developed</li>`)
-	mainHTMLCode.WriteString(`</ul>`)
+	mainHTMLCode.WriteString(`<div class="game_info_table" role="table" aria-label="Game information table">`)
+	mainHTMLCode.WriteString(`<div class="game_info_row game_info_header" role="row">`)
+	mainHTMLCode.WriteString(`<div id="game_info_side_white" class="game_info_cell game_info_side ` + whiteTurnClass + `" role="columnheader">White</div>`)
+	mainHTMLCode.WriteString(`<div id="game_info_side_black" class="game_info_cell game_info_side ` + blackTurnClass + `" role="columnheader">Black</div>`)
+	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`<div class="game_info_row" role="row">`)
+	mainHTMLCode.WriteString(`<div class="game_info_cell ` + whiteTurnClass + `" role="cell"><span id="game_info_captured_white" class="game_info_item_value game_info_capture_value"></span></div>`)
+	mainHTMLCode.WriteString(`<div class="game_info_cell ` + blackTurnClass + `" role="cell"><span id="game_info_captured_black" class="game_info_item_value game_info_capture_value"></span></div>`)
+	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`<div class="game_info_row" role="row">`)
+	mainHTMLCode.WriteString(`<div class="game_info_cell ` + whiteTurnClass + `" role="cell"><span id="game_info_time_white" class="game_info_item_value">⏱ --:--</span></div>`)
+	mainHTMLCode.WriteString(`<div class="game_info_cell ` + blackTurnClass + `" role="cell"><span id="game_info_time_black" class="game_info_item_value">⏱ --:--</span></div>`)
+	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`<div class="game_info_row" role="row">`)
+	mainHTMLCode.WriteString(`<div class="game_info_cell ` + whiteTurnClass + `" role="cell"><span id="game_info_winprob_white" class="game_info_item_value">◎ TBD</span></div>`)
+	mainHTMLCode.WriteString(`<div class="game_info_cell ` + blackTurnClass + `" role="cell"><span id="game_info_winprob_black" class="game_info_item_value">◎ TBD</span></div>`)
+	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`<div class="chess_move_history_panels">`)
+	mainHTMLCode.WriteString(`<div class="chess_move_history_panel">`)
+	mainHTMLCode.WriteString(`<ol id="chess_move_history_white" class="chess_move_history_list">`)
+	mainHTMLCode.WriteString(`<li class="chess_move_history_placeholder">No moves yet.</li>`)
+	mainHTMLCode.WriteString(`</ol>`)
+	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`<div class="chess_move_history_panel">`)
+	mainHTMLCode.WriteString(`<ol id="chess_move_history_black" class="chess_move_history_list">`)
+	mainHTMLCode.WriteString(`<li class="chess_move_history_placeholder">No moves yet.</li>`)
+	mainHTMLCode.WriteString(`</ol>`)
+	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`</div>`)
 	mainHTMLCode.WriteString(`</div>`)
 
 	mainHTMLCode.WriteString(`<div class="game_panel_right_bottom">`)
@@ -71,23 +103,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`<button id="chess_command_submit" type="button">Submit</button>`)
 	mainHTMLCode.WriteString(`</div>`)
 	mainHTMLCode.WriteString(`<p id="chess_command_status" class="command_status" role="status" aria-live="polite"></p>`)
-	mainHTMLCode.WriteString(`<div class="chess_move_history_section">`)
-	mainHTMLCode.WriteString(`<h3 class="chess_move_history_title">Move history</h3>`)
-	mainHTMLCode.WriteString(`<div class="chess_move_history_panels">`)
-	mainHTMLCode.WriteString(`<div class="chess_move_history_panel">`)
-	mainHTMLCode.WriteString(`<h4 class="chess_move_history_side_title">White</h4>`)
-	mainHTMLCode.WriteString(`<ol id="chess_move_history_white" class="chess_move_history_list">`)
-	mainHTMLCode.WriteString(`<li class="chess_move_history_placeholder">No moves yet.</li>`)
-	mainHTMLCode.WriteString(`</ol>`)
-	mainHTMLCode.WriteString(`</div>`)
-	mainHTMLCode.WriteString(`<div class="chess_move_history_panel">`)
-	mainHTMLCode.WriteString(`<h4 class="chess_move_history_side_title">Black</h4>`)
-	mainHTMLCode.WriteString(`<ol id="chess_move_history_black" class="chess_move_history_list">`)
-	mainHTMLCode.WriteString(`<li class="chess_move_history_placeholder">No moves yet.</li>`)
-	mainHTMLCode.WriteString(`</ol>`)
-	mainHTMLCode.WriteString(`</div>`)
-	mainHTMLCode.WriteString(`</div>`)
-	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`<textarea id="game_info_notes" class="game_info_notes_box" placeholder="Reserved for future use" rows="3" readonly></textarea>`)
 	mainHTMLCode.WriteString(`</div>`)
 	mainHTMLCode.WriteString(`<script src="/scripts/chess_command.js"></script>`)
 
@@ -133,12 +149,12 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 	expectedColor := sessionpkg.CurrentTurnColor()
 	parsed, err := commandpkg.ParseCommandForColor(commandText, expectedColor)
 	if err != nil {
-		log.Printf("warning: invalid chess command format: %q", commandText)
-		http.Error(w, "Invalid command format (use e2e4 or ng1f3)", http.StatusBadRequest)
+		log.Printf("warning: invalid chess command: %q (%v)", commandText, err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if err := commandpkg.ParseAndLogCommandForColor(commandText, expectedColor); err != nil {
-		http.Error(w, "Invalid command format (use e2e4 or ng1f3)", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -150,8 +166,9 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := struct {
-		Command string `json:"command"`
+		Command     string                     `json:"command"`
 		CurrentTurn string `json:"currentTurn"`
+		Captured    sessionpkg.CapturedSummary `json:"captured"`
 		From    struct {
 			File string `json:"file"`
 			Rank int    `json:"rank"`
@@ -163,8 +180,9 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 		History []string               `json:"history"`
 		State   []sessionpkg.PieceState `json:"state"`
 	}{
-		Command: normalizedMove,
+		Command:     normalizedMove,
 		CurrentTurn: sessionpkg.CurrentTurnLabel(),
+		Captured:    sessionpkg.GetCapturedSummary(),
 		History: sessionpkg.GetMoveHistory(),
 		State:   sessionpkg.GetBoardState(),
 	}

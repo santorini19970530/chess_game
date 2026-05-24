@@ -57,10 +57,19 @@ func (c *ChessBoard) DrawChessBoardSquares() template.HTML {
 
 	htmlBuilder.WriteString(`<div class="chess_board">`)
 
-	pieceAt := make(map[string]string, len(pieces.ChessPieces))
+	type pieceRender struct {
+		src   string
+		color string
+		kind  string
+	}
+	pieceAt := make(map[string]pieceRender, len(pieces.ChessPieces))
 	for _, p := range pieces.ChessPieces {
 		key := fmt.Sprintf("%d_%d", p.File, p.Rank)
-		pieceAt[key] = "/" + p.ImgFile
+		pieceAt[key] = pieceRender{
+			src:   "/" + p.ImgFile,
+			color: string(p.Color),
+			kind:  string(p.Kind),
+		}
 	}
 
 	for _, square := range c.squares {
@@ -81,12 +90,14 @@ func (c *ChessBoard) DrawChessBoardSquares() template.HTML {
 		)
 
 		// draw also the chess piece if there is
-		if src, ok := pieceAt[key]; ok {
+		if pieceMeta, ok := pieceAt[key]; ok {
 			fmt.Fprintf(
 				&htmlBuilder,
-				`<img class="piece_img" src="%s" alt="piece_%s" draggable="false">`,
-				src,
+				`<img class="piece_img" src="%s" alt="piece_%s" data-color="%s" data-kind="%s" draggable="false">`,
+				pieceMeta.src,
 				key,
+				pieceMeta.color,
+				pieceMeta.kind,
 			)
 		}
 		htmlBuilder.WriteString(`</div>`)

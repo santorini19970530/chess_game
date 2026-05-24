@@ -153,15 +153,71 @@ main {
   flex-direction: column;
 }
 
-.game_panel_right_top h2 {
-  font-size: 1.1rem;
-  margin-bottom: 10px;
+.game_info_table {
+  border: 1px solid #2d2d2d;
+  border-radius: 8px;
+  background: #0f0f0f;
+  overflow: hidden;
 }
 
-.game_panel_right_top ul {
-  list-style: disc;
-  padding-left: 20px;
-  line-height: 1.8;
+.game_info_row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid #252525;
+}
+
+.game_info_row:last-child {
+  border-bottom: none;
+}
+
+.game_info_header {
+  background: #1b1b1b;
+  font-weight: 700;
+}
+
+.game_info_cell {
+  padding: 8px 10px;
+  font-size: 0.92rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.game_info_side {
+  text-align: center;
+}
+
+.game_info_item_value {
+  display: block;
+  line-height: 1.4;
+}
+
+.game_info_capture_value {
+  font-size: 1.34rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.game_info_col_active {
+  background: #2a3d2f;
+  color: #b8f5c3;
+  font-weight: 700;
+}
+
+.game_info_notes_box {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  background: #0f0f0f;
+  color: #f5f5f5;
+  padding: 10px 12px;
+  min-height: 78px;
+  resize: none;
+}
+
+.game_info_notes_box[readonly] {
+  opacity: 0.8;
+  cursor: not-allowed;
 }
 
 .game_panel_right_bottom label {
@@ -307,7 +363,7 @@ main {
     height: 100%;
     display: grid;
     grid-template-columns: minmax(0, 1fr) clamp(280px, 30vw, 400px);
-    grid-template-rows: 1fr 1fr;
+    grid-template-rows: 1.35fr 0.65fr;
     grid-template-areas:
       "left rightTop"
       "left rightBottom";

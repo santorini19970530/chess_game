@@ -9,7 +9,7 @@ import (
 )
 
 var commandFormatPattern = regexp.MustCompile(`^(?:[a-h][1-8][a-h][1-8][qrbn]?|[prnbqk][a-h][1-8][a-h][1-8])$`)
-var sanPattern = regexp.MustCompile(`^([kqrbn])?([a-h1-8]{0,2})(x)?([a-h][1-8])(?:=([qrbn]))?$`)
+var sanPattern = regexp.MustCompile(`^([pkqrbn])?([a-h1-8]{0,2})(x)?([a-h][1-8])(?:=([qrbn]))?$`)
 
 type castleMove struct {
 	fromFile int
@@ -27,7 +27,7 @@ func ParseCommandForColor(command string, expectedColor pieces.PieceColor) (Pars
 	if !commandFormatPattern.MatchString(command) {
 		parsedSAN, err := parseSANCommand(command, expectedColor)
 		if err != nil {
-			return ParsedCommand{}, fmt.Errorf("invalid command format")
+			return ParsedCommand{}, err
 		}
 		return parsedSAN, nil
 	}
@@ -179,6 +179,8 @@ func parseCastleSAN(raw string, queenSide bool, expectedColor pieces.PieceColor)
 
 func kindFromSANPiece(ch byte) pieces.PieceKind {
 	switch ch {
+	case 'p':
+		return pieces.Pawn
 	case 'k':
 		return pieces.King
 	case 'q':
