@@ -169,6 +169,12 @@
   .grid {
     display: grid;
   }
+  .table {
+    display: table;
+  }
+  .capitalize {
+    text-transform: capitalize;
+  }
 }
 * {
   margin: 0px;
@@ -176,7 +182,7 @@
   box-sizing: border-box;
 }
 html {
-  zoom: 0.8;
+  zoom: 0.65;
 }
 html, body {
   background-color: #000000;
@@ -215,13 +221,13 @@ h1 {
 }
 main {
   flex: 1 1 0;
-  width: min(1800px, calc(100% - 12px));
-  max-width: 1800px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
   padding: 12px;
   background: #111111;
   border: 1px solid #2a2a2a;
-  border-radius: 12px;
+  border-radius: 0;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -235,10 +241,10 @@ main {
   flex-direction: column;
   gap: 16px;
 }
-.game_panel_left, .game_panel_right_top, .game_panel_right_bottom {
+.game_panel_left, .game_panel_config, .game_panel_right_top, .game_panel_right_bottom {
   background: #171717;
   border: 1px solid #2d2d2d;
-  border-radius: 10px;
+  border-radius: 0;
   padding: 16px;
   min-width: 0;
   overflow: visible;
@@ -251,6 +257,21 @@ main {
   align-items: center;
   justify-content: center;
   padding: 4px;
+}
+.game_panel_config {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.game_panel_config select, .game_panel_config input, .game_panel_config textarea, .game_panel_config button {
+  width: 100%;
+  border: 1px solid #3a3a3a;
+  background: #0f0f0f;
+  color: #f5f5f5;
+  padding: 6px 8px;
+}
+.config_panel_title {
+  margin-bottom: 4px;
 }
 .chess_board_wrapper {
   --board-size: min(92vw, 640px);
@@ -299,14 +320,66 @@ main {
   display: flex;
   flex-direction: column;
 }
-.game_panel_right_top h2 {
-  font-size: 1.1rem;
-  margin-bottom: 10px;
+.game_info_table {
+  border: 1px solid #2d2d2d;
+  border-radius: 0;
+  background: #0f0f0f;
+  overflow: hidden;
 }
-.game_panel_right_top ul {
-  list-style: disc;
-  padding-left: 20px;
-  line-height: 1.8;
+.game_info_row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid #252525;
+}
+.game_info_row:last-child {
+  border-bottom: none;
+}
+.game_info_header {
+  background: #1b1b1b;
+  font-weight: 700;
+}
+.game_info_cell {
+  padding: 8px 10px;
+  font-size: 0.92rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.game_info_side {
+  text-align: center;
+}
+.game_info_item_value {
+  display: block;
+  line-height: 1.4;
+}
+.game_info_capture_value {
+  font-size: 1.34rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.game_info_col_active {
+  background: #4a2f12;
+  color: #ffd3a1;
+  font-weight: 700;
+}
+.game_info_col_in_check {
+  background: #4a1f1f;
+  color: #ffb3b3;
+  font-weight: 700;
+}
+.game_info_notes_box {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid #3a3a3a;
+  border-radius: 0;
+  background: #0f0f0f;
+  color: #f5f5f5;
+  padding: 10px 12px;
+  min-height: 78px;
+  resize: none;
+}
+.game_info_notes_box[readonly] {
+  opacity: 0.8;
+  cursor: not-allowed;
 }
 .game_panel_right_bottom label {
   display: block;
@@ -316,22 +389,30 @@ main {
 .command_row {
   display: flex;
   gap: 10px;
+  flex-wrap: nowrap;
+  align-items: center;
 }
 .command_row input {
-  flex: 1;
-  padding: 10px 12px;
-  border-radius: 8px;
+  flex: 0 1 45%;
+  max-width: 240px;
+  min-width: 100px;
+  padding: 2px 8px;
+  height: 26px;
+  border-radius: 0;
   border: 1px solid #3a3a3a;
   background: #0f0f0f;
   color: #f5f5f5;
 }
 .command_row button {
-  padding: 10px 14px;
-  border-radius: 8px;
+  flex: 0 0 auto;
+  padding: 5px 14px;
+  height: 36px;
+  border-radius: 0;
   border: 1px solid #4a4a4a;
   background: #262626;
   color: #f5f5f5;
   cursor: pointer;
+  white-space: nowrap;
 }
 .chess_move_history_section {
   margin-top: 16px;
@@ -372,7 +453,7 @@ main {
   overflow-y: auto;
   line-height: 1.6;
   border: 1px solid #2d2d2d;
-  border-radius: 8px;
+  border-radius: 0;
   background: #0f0f0f;
   padding: 10px 12px;
 }
@@ -431,12 +512,15 @@ main {
     min-height: 0;
     height: 100%;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) clamp(280px, 30vw, 400px);
-    grid-template-rows: 1fr 1fr;
-    grid-template-areas: "left rightTop" "left rightBottom";
+    grid-template-columns: 280px minmax(0, 1fr) 520px;
+    grid-template-rows: 1.35fr 0.65fr;
+    grid-template-areas: "config left rightTop" "config left rightBottom";
     overflow: hidden;
   }
-  .game_panel_left, .game_panel_right_top, .game_panel_right_bottom {
+  .game_panel_left, .game_panel_config, .game_panel_right_top, .game_panel_right_bottom {
+    .game_panel_config {
+      grid-area: config;
+    }
     min-height: 0;
     overflow: auto;
   }
@@ -456,6 +540,18 @@ main {
     --board-size: min(100cqw, 100cqh, 100%);
     max-height: 100%;
   }
+}
+.game_info_result_win {
+  color: #95f2a4;
+  font-weight: 800;
+}
+.game_info_result_loss {
+  color: #ff9f9f;
+  font-weight: 800;
+}
+.game_info_result_draw {
+  color: #cfd3ff;
+  font-weight: 800;
 }
 @media (max-width: 900px) {
   .chess_move_history_panels {
