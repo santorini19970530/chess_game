@@ -138,6 +138,11 @@ func (h *Handler) NewGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := sessionpkg.ArchiveActiveGameIfNeeded(); err != nil {
+		http.Error(w, "Failed to archive current game", http.StatusInternalServerError)
+		log.Printf("archive game failed: %v", err)
+		return
+	}
 	sessionpkg.ResetGame()
 	game := sessionpkg.RefreshGameSessionOutcome()
 	response := struct {
@@ -211,6 +216,13 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 	}
 
 	finalGame := sessionpkg.RefreshGameSessionOutcome()
+	if finalGame.Result != sessionpkg.GameResultInProgress {
+		if err := sessionpkg.ArchiveActiveGameIfNeeded(); err != nil {
+			http.Error(w, "Failed to archive completed game", http.StatusInternalServerError)
+			log.Printf("archive completed game failed: %v", err)
+			return
+		}
+	}
 
 	response := struct {
 		Command     string                     `json:"command"`
