@@ -183,3 +183,110 @@ func TestApplyMoveByCommand_EnPassant_UCI(t *testing.T) {
 		t.Fatalf("expected captured black pawn at d5 to be removed")
 	}
 }
+
+func TestApplyMoveByCommand_PawnPromotion_Queen(t *testing.T) {
+	pieces.ChessPieces = []pieces.ChessPiece{
+		{Color: pieces.White, Kind: pieces.Pawn, ImgFile: "pic/chess_pic/pawn_light.png", File: 5, Rank: 7}, // e7
+	}
+	moveHistory = nil
+	lastAppliedMove = nil
+
+	normalized, err := ApplyMoveByCommand("e7e8q")
+	if err != nil {
+		t.Fatalf("expected promotion e7e8q to succeed, got error: %v", err)
+	}
+	if normalized != "e7e8q" {
+		t.Fatalf("expected normalized move e7e8q, got %q", normalized)
+	}
+
+	p, ok := pieceAt(5, 8)
+	if !ok {
+		t.Fatalf("expected promoted piece on e8")
+	}
+	if p.Kind != pieces.Queen || p.Color != pieces.White {
+		t.Fatalf("expected white queen on e8, got kind=%v color=%v", p.Kind, p.Color)
+	}
+	if p.ImgFile != "pic/chess_pic/queen_light.png" {
+		t.Fatalf("expected queen image, got %q", p.ImgFile)
+	}
+}
+
+func TestApplyMoveByCommand_PawnUnderpromotion_Knight(t *testing.T) {
+	pieces.ChessPieces = []pieces.ChessPiece{
+		{Color: pieces.Black, Kind: pieces.Pawn, ImgFile: "pic/chess_pic/pawn_dark.png", File: 1, Rank: 2}, // a2
+	}
+	moveHistory = []string{"White: h2h3"} // black to move
+	lastAppliedMove = nil
+
+	normalized, err := ApplyMoveByCommand("a2a1n")
+	if err != nil {
+		t.Fatalf("expected underpromotion a2a1n to succeed, got error: %v", err)
+	}
+	if normalized != "a2a1n" {
+		t.Fatalf("expected normalized move a2a1n, got %q", normalized)
+	}
+
+	p, ok := pieceAt(1, 1)
+	if !ok {
+		t.Fatalf("expected promoted piece on a1")
+	}
+	if p.Kind != pieces.Knight || p.Color != pieces.Black {
+		t.Fatalf("expected black knight on a1, got kind=%v color=%v", p.Kind, p.Color)
+	}
+	if p.ImgFile != "pic/chess_pic/knight_dark.png" {
+		t.Fatalf("expected knight image, got %q", p.ImgFile)
+	}
+}
+
+func TestApplyMoveByCommand_PawnPromotion_SAN(t *testing.T) {
+	pieces.ChessPieces = []pieces.ChessPiece{
+		{Color: pieces.White, Kind: pieces.Pawn, ImgFile: "pic/chess_pic/pawn_light.png", File: 5, Rank: 7}, // e7
+	}
+	moveHistory = nil
+	lastAppliedMove = nil
+
+	normalized, err := ApplyMoveByCommand("e8=Q")
+	if err != nil {
+		t.Fatalf("expected SAN promotion e8=Q to succeed, got error: %v", err)
+	}
+	if normalized != "e7e8q" {
+		t.Fatalf("expected normalized move e7e8q, got %q", normalized)
+	}
+
+	p, ok := pieceAt(5, 8)
+	if !ok || p.Kind != pieces.Queen || p.Color != pieces.White {
+		t.Fatalf("expected white queen on e8 after SAN promotion")
+	}
+}
+
+func TestApplyMoveByCommand_PawnPromotion_SANWithoutEquals(t *testing.T) {
+	pieces.ChessPieces = []pieces.ChessPiece{
+		{Color: pieces.White, Kind: pieces.Pawn, ImgFile: "pic/chess_pic/pawn_light.png", File: 5, Rank: 7}, // e7
+	}
+	moveHistory = nil
+	lastAppliedMove = nil
+
+	normalized, err := ApplyMoveByCommand("e8Q")
+	if err != nil {
+		t.Fatalf("expected SAN promotion e8Q to succeed, got error: %v", err)
+	}
+	if normalized != "e7e8q" {
+		t.Fatalf("expected normalized move e7e8q, got %q", normalized)
+	}
+}
+
+func TestApplyMoveByCommand_PawnPromotion_StockfishUppercase(t *testing.T) {
+	pieces.ChessPieces = []pieces.ChessPiece{
+		{Color: pieces.White, Kind: pieces.Pawn, ImgFile: "pic/chess_pic/pawn_light.png", File: 5, Rank: 7}, // e7
+	}
+	moveHistory = nil
+	lastAppliedMove = nil
+
+	normalized, err := ApplyMoveByCommand("e7e8Q")
+	if err != nil {
+		t.Fatalf("expected stockfish-style promotion e7e8Q to succeed, got error: %v", err)
+	}
+	if normalized != "e7e8q" {
+		t.Fatalf("expected normalized move e7e8q, got %q", normalized)
+	}
+}

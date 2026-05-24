@@ -50,6 +50,10 @@ func ApplyMoveByCommand(commandText string) (string, error) {
 	if moveColor != expectedColor {
 		return "", fmt.Errorf("wrong turn: expected %s to move", expectedColor)
 	}
+	requiresPromotion, promotionKind, err := resolvePromotion(sourcePiece, parsed.ToRank, parsed.Promotion)
+	if err != nil {
+		return "", err
+	}
 
 	if enPassant {
 		if err := ApplyEnPassantMove(fromFile, parsed.FromRank, toFile, parsed.ToRank); err != nil {
@@ -57,6 +61,11 @@ func ApplyMoveByCommand(commandText string) (string, error) {
 		}
 	} else {
 		if err := ApplyMove(fromFile, parsed.FromRank, toFile, parsed.ToRank); err != nil {
+			return "", err
+		}
+	}
+	if requiresPromotion {
+		if err := ApplyPromotion(toFile, parsed.ToRank, moveColor, promotionKind); err != nil {
 			return "", err
 		}
 	}
@@ -152,4 +161,57 @@ func toEngineLastMove(mv *LastMove) *engine.LastMoveInfo {
 		Color:          mv.Color,
 		PawnDoubleStep: mv.PawnDoubleStep,
 	}
+}
+
+func resolvePromotion(source pieces.ChessPiece, toRank int, promotion string) (bool, pieces.PieceKind, error) {
+	reachesLastRank := (source.Color == pieces.White && toRank == 8) || (source.Color == pieces.Black && toRank == 1)
+	if source.Kind != pieces.Pawn {
+		if promotion != "" {
+			return false, "", fmt.Errorf("promotion only allowed for pawn")
+		}
+		return false, "", nil
+	}
+
+	if reachesLastRank && promotion == "" {
+		return false, "", fmt.Errorf("promotion piece required (q/r/b/n)")
+	}
+	if !reachesLastRank && promotion != "" {
+		return false, "", fmt.Errorf("promotion only allowed when pawn reaches last rank")
+	}
+	if !reachesLastRank {
+		return false, "", nil
+	}
+
+	switch promotion {
+	case "q":
+		return true, pieces.Queen, nil
+	case "r":
+		return true, pieces.Rook, nil
+	case "b":
+		return true, pieces.Bishop, nil
+	case "n":
+		return true, pieces.Knight, nil
+	default:
+		return false, "", fmt.Errorf("invalid promotion piece (use q/r/b/n)")
+	}
+}
+
+func ApplyPromotion(file, rank int, color pieces.PieceColor, promotedKind pieces.PieceKind) error {
+	for i := range pieces.ChessPieces {
+		p := &pieces.ChessPieces[i]
+		if p.File == file && p.Rank == rank && p.Color == color {
+			p.Kind = promotedKind
+			p.ImgFile = promotedPieceImage(promotedKind, color)
+			return nil
+		}
+	}
+	return fmt.Errorf("promotion target piece not found")
+}
+
+func promotedPieceImage(kind pieces.PieceKind, color pieces.PieceColor) string {
+	tone := "light"
+	if color == pieces.Black {
+		tone = "dark"
+	}
+	return fmt.Sprintf("pic/chess_pic/%s_%s.png", string(kind), tone)
 }

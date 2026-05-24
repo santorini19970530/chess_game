@@ -9,7 +9,7 @@ import (
 )
 
 var commandFormatPattern = regexp.MustCompile(`^(?:[a-h][1-8][a-h][1-8][qrbn]?|[prnbqk][a-h][1-8][a-h][1-8])$`)
-var sanPattern = regexp.MustCompile(`^([pkqrbn])?([a-h1-8]{0,2})(x)?([a-h][1-8])(?:=([qrbn]))?$`)
+var sanPattern = regexp.MustCompile(`^([pkqrbn])?([a-h1-8]{0,2})(x)?([a-h][1-8])(?:=?([qrbn]))?$`)
 
 type castleMove struct {
 	fromFile int
