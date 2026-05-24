@@ -5,6 +5,7 @@ package session
 
 import (
 	"fmt"
+	"strings"
 
 	pieces "go_backend/game/piece"
 )
@@ -13,6 +14,8 @@ import (
 var moveHistory []string
 var currentTurnOverride *pieces.PieceColor
 var currentTurnPinned bool
+var halfmoveClock int
+var positionCounts map[string]int
 
 type LastMove struct {
 	FromFile       int
@@ -199,6 +202,127 @@ func OpponentColor(color pieces.PieceColor) pieces.PieceColor {
 		return pieces.Black
 	}
 	return pieces.White
+}
+
+func resetDrawTracking() {
+	halfmoveClock = 0
+	positionCounts = make(map[string]int)
+	recordCurrentPosition()
+}
+
+func recordDrawStateAfterMove(movedKind pieces.PieceKind, capture bool) {
+	if movedKind == pieces.Pawn || capture {
+		halfmoveClock = 0
+	} else {
+		halfmoveClock++
+	}
+	recordCurrentPosition()
+}
+
+func GetHalfmoveClock() int {
+	return halfmoveClock
+}
+
+func GetCurrentPositionRepetitionCount() int {
+	key := currentPositionKey()
+	return positionCounts[key]
+}
+
+func currentPositionKey() string {
+	return fmt.Sprintf("%s %s %s %s",
+		boardToKey(),
+		string(CurrentTurnColor()),
+		castlingRightsKey(),
+		enPassantTargetKey(),
+	)
+}
+
+func recordCurrentPosition() {
+	if positionCounts == nil {
+		positionCounts = make(map[string]int)
+	}
+	key := currentPositionKey()
+	positionCounts[key]++
+}
+
+func boardToKey() string {
+	var out strings.Builder
+	for rank := 8; rank >= 1; rank-- {
+		empty := 0
+		for file := 1; file <= 8; file++ {
+			p, found := getPieceAt(file, rank)
+			if !found {
+				empty++
+				continue
+			}
+			if empty > 0 {
+				out.WriteString(fmt.Sprintf("%d", empty))
+				empty = 0
+			}
+			out.WriteRune(pieceToFENRune(p))
+		}
+		if empty > 0 {
+			out.WriteString(fmt.Sprintf("%d", empty))
+		}
+		if rank > 1 {
+			out.WriteRune('/')
+		}
+	}
+	return out.String()
+}
+
+func pieceToFENRune(p pieces.ChessPiece) rune {
+	var ch rune
+	switch p.Kind {
+	case pieces.Pawn:
+		ch = 'p'
+	case pieces.Rook:
+		ch = 'r'
+	case pieces.Knight:
+		ch = 'n'
+	case pieces.Bishop:
+		ch = 'b'
+	case pieces.Queen:
+		ch = 'q'
+	case pieces.King:
+		ch = 'k'
+	default:
+		ch = 'x'
+	}
+	if p.Color == pieces.White {
+		return ch - ('a' - 'A')
+	}
+	return ch
+}
+
+func castlingRightsKey() string {
+	rights := ""
+	if CanCastleByState(pieces.White, true) {
+		rights += "K"
+	}
+	if CanCastleByState(pieces.White, false) {
+		rights += "Q"
+	}
+	if CanCastleByState(pieces.Black, true) {
+		rights += "k"
+	}
+	if CanCastleByState(pieces.Black, false) {
+		rights += "q"
+	}
+	if rights == "" {
+		return "-"
+	}
+	return rights
+}
+
+func enPassantTargetKey() string {
+	mv := GetLastMove()
+	if mv == nil || !mv.PawnDoubleStep {
+		return "-"
+	}
+	targetRank := (mv.FromRank + mv.ToRank) / 2
+	fileChar := byte('a' + mv.ToFile - 1)
+	return fmt.Sprintf("%c%d", fileChar, targetRank)
 }
 
 // temporary storage for the current state of the board

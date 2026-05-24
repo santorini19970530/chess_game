@@ -342,6 +342,12 @@ func gameResultFromOutcome(outcome GameOutcome) GameResult {
 		return GameResultInProgress
 	case "stalemate":
 		return GameResultDraw
+	case "draw_insufficient_material":
+		return GameResultDraw
+	case "draw_threefold_repetition":
+		return GameResultDraw
+	case "draw_fifty_move_rule":
+		return GameResultDraw
 	default:
 		return GameResultInProgress
 	}

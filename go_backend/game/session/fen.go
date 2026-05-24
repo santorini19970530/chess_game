@@ -41,6 +41,15 @@ func ApplyFEN(fen string) error {
 	} else {
 		SetCastlingStateFromFEN(castlingRights)
 	}
+	lastAppliedMove = nil
+	resetDrawTracking()
+	if len(parts) >= 5 {
+		halfmove, err := parseInt(parts[4])
+		if err != nil {
+			return fmt.Errorf("invalid FEN halfmove clock")
+		}
+		halfmoveClock = halfmove
+	}
 	return nil
 }
 
@@ -116,4 +125,15 @@ func fenCharToPiece(ch rune, file, rank int) (pieces.ChessPiece, error) {
 		File:    file,
 		Rank:    rank,
 	}, nil
+}
+
+func parseInt(v string) (int, error) {
+	n := 0
+	for _, ch := range v {
+		if ch < '0' || ch > '9' {
+			return 0, fmt.Errorf("invalid integer")
+		}
+		n = n*10 + int(ch-'0')
+	}
+	return n, nil
 }

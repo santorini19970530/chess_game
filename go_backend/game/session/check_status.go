@@ -34,6 +34,30 @@ func EvaluateGameOutcome() GameOutcome {
 	hasLegalMove := legalMoves > 0
 
 	if hasLegalMove {
+		if isInsufficientMaterialDraw() {
+			return GameOutcome{
+				Status:     "draw_insufficient_material",
+				LegalMoves: legalMoves,
+				Message:    "Draw by insufficient material.",
+			}
+		}
+		if isThreefoldRepetitionDraw() {
+			return GameOutcome{
+				Status:     "draw_threefold_repetition",
+				LegalMoves: legalMoves,
+				Message:    "Draw by threefold repetition.",
+			}
+		}
+		if isFiftyMoveDraw() {
+			return GameOutcome{
+				Status:     "draw_fifty_move_rule",
+				LegalMoves: legalMoves,
+				Message:    "Draw by 50-move rule.",
+			}
+		}
+	}
+
+	if hasLegalMove {
 		if inCheck {
 			return GameOutcome{
 				Status:      "check",

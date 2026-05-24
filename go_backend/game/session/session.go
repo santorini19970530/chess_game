@@ -16,5 +16,6 @@ func ResetGame() {
 	lastAppliedMove = nil
 	resetCastlingState()
 	resetTurnOverride()
+	resetDrawTracking()
 	resetGameSessionForTest()
 }

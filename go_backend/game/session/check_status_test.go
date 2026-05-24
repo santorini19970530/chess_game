@@ -144,6 +144,55 @@ func TestUpdateGameConfig_WithFENForcesSingleGameAndLoadsPosition(t *testing.T) 
 	}
 }
 
+func TestEvaluateGameOutcome_DrawByInsufficientMaterial(t *testing.T) {
+	resetGameSessionForTest()
+	resetTurnOverride()
+	pieces.ChessPieces = []pieces.ChessPiece{
+		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 5, Rank: 1},
+		{Color: pieces.Black, Kind: pieces.King, ImgFile: "pic/chess_pic/king_dark.png", File: 5, Rank: 8},
+	}
+	moveHistory = nil
+	lastAppliedMove = nil
+	resetCastlingState()
+	resetDrawTracking()
+
+	outcome := EvaluateGameOutcome()
+	if outcome.Status != "draw_insufficient_material" {
+		t.Fatalf("expected draw_insufficient_material, got %q", outcome.Status)
+	}
+}
+
+func TestEvaluateGameOutcome_DrawByFiftyMoveRule(t *testing.T) {
+	resetGameSessionForTest()
+	resetTurnOverride()
+	pieces.ChessPieces = []pieces.ChessPiece{
+		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 5, Rank: 1},
+		{Color: pieces.White, Kind: pieces.Rook, ImgFile: "pic/chess_pic/rook_light.png", File: 1, Rank: 1},
+		{Color: pieces.Black, Kind: pieces.King, ImgFile: "pic/chess_pic/king_dark.png", File: 5, Rank: 8},
+	}
+	moveHistory = nil
+	lastAppliedMove = nil
+	resetCastlingState()
+	resetDrawTracking()
+	halfmoveClock = 100
+
+	outcome := EvaluateGameOutcome()
+	if outcome.Status != "draw_fifty_move_rule" {
+		t.Fatalf("expected draw_fifty_move_rule, got %q", outcome.Status)
+	}
+}
+
+func TestEvaluateGameOutcome_DrawByThreefoldRepetition(t *testing.T) {
+	resetGameSessionForTest()
+	ResetGame()
+	positionCounts[currentPositionKey()] = 3
+
+	outcome := EvaluateGameOutcome()
+	if outcome.Status != "draw_threefold_repetition" {
+		t.Fatalf("expected draw_threefold_repetition, got %q", outcome.Status)
+	}
+}
+
 func TestResetGame_RestoresInitialState(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 4, Rank: 4},

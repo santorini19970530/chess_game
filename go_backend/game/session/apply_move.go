@@ -25,6 +25,7 @@ func ApplyMoveByCommand(commandText string) (string, error) {
 	if !found {
 		return "", fmt.Errorf("There is no piece at source square")
 	}
+	_, destinationOccupied := getPieceAt(toFile, parsed.ToRank)
 
 	moveColor, err := engine.ValidateMove(fromFile, parsed.FromRank, toFile, parsed.ToRank, parsed.PieceCode)
 	enPassant := false
@@ -41,7 +42,6 @@ func ApplyMoveByCommand(commandText string) (string, error) {
 			moveColor = sourcePiece.Color
 			castling = true
 		} else {
-			_, destinationOccupied := getPieceAt(toFile, parsed.ToRank)
 			adjacentPawn, adjacentPawnFound := getPieceAt(toFile, parsed.FromRank)
 			lastMove := toEngineLastMove(GetLastMove())
 			if sourcePiece.Kind == pieces.Pawn && engine.CanEnPassant(
@@ -109,6 +109,8 @@ func ApplyMoveByCommand(commandText string) (string, error) {
 	AppendMoveHistory(parsed.Normalized, moveColor)
 	SetCurrentTurnColor(OpponentColor(moveColor))
 	RecordLastMove(fromFile, parsed.FromRank, toFile, parsed.ToRank, sourcePiece.Kind, moveColor)
+	captureOccurred := enPassant || destinationOccupied
+	recordDrawStateAfterMove(sourcePiece.Kind, captureOccurred)
 	return parsed.Normalized, nil
 }
 

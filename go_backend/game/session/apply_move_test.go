@@ -12,6 +12,8 @@ func resetChessPieces() {
 	moveHistory = nil
 	lastAppliedMove = nil
 	resetCastlingState()
+	resetTurnOverride()
+	resetDrawTracking()
 	resetGameSessionForTest()
 }
 

@@ -72,6 +72,13 @@
     const outcome = game?.outcome || game || {};
     const statusValue = String(outcome?.status || "").toLowerCase();
     const gameResult = String(game?.result || "in_progress").toLowerCase();
+    const drawReasonText = () => {
+      if (statusValue === "stalemate") return "draw by stalemate";
+      if (statusValue === "draw_insufficient_material") return "draw by insufficient material";
+      if (statusValue === "draw_threefold_repetition") return "draw by threefold repetition";
+      if (statusValue === "draw_fifty_move_rule") return "draw by 50-move rule";
+      return "draw";
+    };
     const resetResultClasses = (el) => {
       if (!el) return;
       el.classList.remove("game_info_result_win", "game_info_result_loss", "game_info_result_draw");
@@ -91,8 +98,9 @@
         resultWhiteValue.classList.add("game_info_result_loss");
         resultBlackValue.classList.add("game_info_result_win");
       } else if (gameResult === "draw") {
-        resultWhiteValue.textContent = "Result: DRAW";
-        resultBlackValue.textContent = "Result: DRAW";
+        const drawLabel = `Result: ${drawReasonText()}`;
+        resultWhiteValue.textContent = drawLabel;
+        resultBlackValue.textContent = drawLabel;
         resultWhiteValue.classList.add("game_info_result_draw");
         resultBlackValue.classList.add("game_info_result_draw");
       } else {
@@ -113,6 +121,14 @@
 
     if (statusValue === "stalemate") {
       setStatus("Draw by stalemate.", "success");
+      input.disabled = true;
+      button.disabled = true;
+      if (flagButton) flagButton.disabled = true;
+      gameOver = true;
+      return;
+    }
+    if (statusValue.startsWith("draw_")) {
+      setStatus(outcome?.message || "Game drawn.", "success");
       input.disabled = true;
       button.disabled = true;
       if (flagButton) flagButton.disabled = true;
