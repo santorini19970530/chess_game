@@ -11,6 +11,7 @@ func resetChessPieces() {
 	pieces.ChessPieces = append([]pieces.ChessPiece(nil), initialChessPieces...)
 	moveHistory = nil
 	lastAppliedMove = nil
+	resetCastlingState()
 }
 
 func pieceAt(file, rank int) (pieces.ChessPiece, bool) {
@@ -288,5 +289,59 @@ func TestApplyMoveByCommand_PawnPromotion_StockfishUppercase(t *testing.T) {
 	}
 	if normalized != "e7e8q" {
 		t.Fatalf("expected normalized move e7e8q, got %q", normalized)
+	}
+}
+
+func TestApplyMoveByCommand_CastlingKingSide_UCI(t *testing.T) {
+	pieces.ChessPieces = []pieces.ChessPiece{
+		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 5, Rank: 1},
+		{Color: pieces.White, Kind: pieces.Rook, ImgFile: "pic/chess_pic/rook_light.png", File: 8, Rank: 1},
+	}
+	moveHistory = nil
+	lastAppliedMove = nil
+	resetCastlingState()
+
+	normalized, err := ApplyMoveByCommand("e1g1")
+	if err != nil {
+		t.Fatalf("expected castling e1g1 to succeed, got error: %v", err)
+	}
+	if normalized != "e1g1" {
+		t.Fatalf("expected normalized move e1g1, got %q", normalized)
+	}
+
+	king, ok := pieceAt(7, 1)
+	if !ok || king.Kind != pieces.King || king.Color != pieces.White {
+		t.Fatalf("expected white king on g1 after castling")
+	}
+	rook, ok := pieceAt(6, 1)
+	if !ok || rook.Kind != pieces.Rook || rook.Color != pieces.White {
+		t.Fatalf("expected white rook on f1 after castling")
+	}
+}
+
+func TestApplyMoveByCommand_CastlingQueenSide_SAN(t *testing.T) {
+	pieces.ChessPieces = []pieces.ChessPiece{
+		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 5, Rank: 1},
+		{Color: pieces.White, Kind: pieces.Rook, ImgFile: "pic/chess_pic/rook_light.png", File: 1, Rank: 1},
+	}
+	moveHistory = nil
+	lastAppliedMove = nil
+	resetCastlingState()
+
+	normalized, err := ApplyMoveByCommand("O-O-O")
+	if err != nil {
+		t.Fatalf("expected SAN castling O-O-O to succeed, got error: %v", err)
+	}
+	if normalized != "e1c1" {
+		t.Fatalf("expected normalized move e1c1, got %q", normalized)
+	}
+
+	king, ok := pieceAt(3, 1)
+	if !ok || king.Kind != pieces.King || king.Color != pieces.White {
+		t.Fatalf("expected white king on c1 after castling")
+	}
+	rook, ok := pieceAt(4, 1)
+	if !ok || rook.Kind != pieces.Rook || rook.Color != pieces.White {
+		t.Fatalf("expected white rook on d1 after castling")
 	}
 }

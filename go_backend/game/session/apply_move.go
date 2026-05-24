@@ -28,23 +28,36 @@ func ApplyMoveByCommand(commandText string) (string, error) {
 
 	moveColor, err := engine.ValidateMove(fromFile, parsed.FromRank, toFile, parsed.ToRank, parsed.PieceCode)
 	enPassant := false
+	castling := false
 	if err != nil {
-		_, destinationOccupied := getPieceAt(toFile, parsed.ToRank)
-		adjacentPawn, adjacentPawnFound := getPieceAt(toFile, parsed.FromRank)
-		lastMove := toEngineLastMove(GetLastMove())
-		if sourcePiece.Kind == pieces.Pawn && engine.CanEnPassant(
+		kingSide := toFile == 7
+		queenSide := toFile == 3
+		if sourcePiece.Kind == pieces.King && (kingSide || queenSide) && engine.CanCastle(
 			sourcePiece,
 			fromFile, parsed.FromRank,
 			toFile, parsed.ToRank,
-			destinationOccupied,
-			lastMove,
-			adjacentPawn,
-			adjacentPawnFound,
+			CanCastleByState(sourcePiece.Color, kingSide),
 		) {
 			moveColor = sourcePiece.Color
-			enPassant = true
+			castling = true
 		} else {
-			return "", err
+			_, destinationOccupied := getPieceAt(toFile, parsed.ToRank)
+			adjacentPawn, adjacentPawnFound := getPieceAt(toFile, parsed.FromRank)
+			lastMove := toEngineLastMove(GetLastMove())
+			if sourcePiece.Kind == pieces.Pawn && engine.CanEnPassant(
+				sourcePiece,
+				fromFile, parsed.FromRank,
+				toFile, parsed.ToRank,
+				destinationOccupied,
+				lastMove,
+				adjacentPawn,
+				adjacentPawnFound,
+			) {
+				moveColor = sourcePiece.Color
+				enPassant = true
+			} else {
+				return "", err
+			}
 		}
 	}
 	if moveColor != expectedColor {
@@ -59,6 +72,10 @@ func ApplyMoveByCommand(commandText string) (string, error) {
 		if err := ApplyEnPassantMove(fromFile, parsed.FromRank, toFile, parsed.ToRank); err != nil {
 			return "", err
 		}
+	} else if castling {
+		if err := ApplyCastlingMove(fromFile, parsed.FromRank, toFile, parsed.ToRank); err != nil {
+			return "", err
+		}
 	} else {
 		if err := ApplyMove(fromFile, parsed.FromRank, toFile, parsed.ToRank); err != nil {
 			return "", err
@@ -68,6 +85,14 @@ func ApplyMoveByCommand(commandText string) (string, error) {
 		if err := ApplyPromotion(toFile, parsed.ToRank, moveColor, promotionKind); err != nil {
 			return "", err
 		}
+	}
+	RecordPieceMoveForCastling(sourcePiece.Kind, moveColor, fromFile, parsed.FromRank)
+	if castling {
+		rookFromFile := 1
+		if toFile == 7 {
+			rookFromFile = 8
+		}
+		RecordPieceMoveForCastling(pieces.Rook, moveColor, rookFromFile, parsed.FromRank)
 	}
 	AppendMoveHistory(parsed.Normalized, moveColor)
 	RecordLastMove(fromFile, parsed.FromRank, toFile, parsed.ToRank, sourcePiece.Kind, moveColor)
@@ -136,6 +161,39 @@ func ApplyEnPassantMove(fromFile, fromRank, toFile, toRank int) error {
 	sourcePiece = &pieces.ChessPieces[sourceIdx]
 	sourcePiece.Move(toFile, toRank)
 	log.Printf("en passant applied: %d%d -> %d%d", fromFile, fromRank, toFile, toRank)
+	return nil
+}
+
+func ApplyCastlingMove(fromFile, fromRank, toFile, toRank int) error {
+	kingIdx := -1
+	rookIdx := -1
+	rookFromFile := 1
+	rookToFile := 4
+	if toFile == 7 {
+		rookFromFile = 8
+		rookToFile = 6
+	}
+
+	for i := range pieces.ChessPieces {
+		p := &pieces.ChessPieces[i]
+		if p.File == fromFile && p.Rank == fromRank {
+			kingIdx = i
+		}
+		if p.File == rookFromFile && p.Rank == fromRank {
+			rookIdx = i
+		}
+	}
+	if kingIdx == -1 {
+		return fmt.Errorf("king not found for castling")
+	}
+	if rookIdx == -1 {
+		return fmt.Errorf("rook not found for castling")
+	}
+
+	pieces.ChessPieces[kingIdx].Move(toFile, toRank)
+	pieces.ChessPieces[rookIdx].Move(rookToFile, fromRank)
+	log.Printf("castling applied: king %d%d -> %d%d, rook %d%d -> %d%d",
+		fromFile, fromRank, toFile, toRank, rookFromFile, fromRank, rookToFile, fromRank)
 	return nil
 }
 

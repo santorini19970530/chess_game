@@ -24,6 +24,13 @@ type LastMove struct {
 
 var lastAppliedMove *LastMove
 
+var whiteKingMoved bool
+var blackKingMoved bool
+var whiteRookAMoved bool
+var whiteRookHMoved bool
+var blackRookAMoved bool
+var blackRookHMoved bool
+
 // append the movement command to the history string
 func AppendMoveHistory(command string, color pieces.PieceColor) {
 	sideLabel := "White"
@@ -76,6 +83,56 @@ func GetLastMove() *LastMove {
 	}
 	copied := *lastAppliedMove
 	return &copied
+}
+
+func RecordPieceMoveForCastling(kind pieces.PieceKind, color pieces.PieceColor, fromFile, fromRank int) {
+	switch kind {
+	case pieces.King:
+		if color == pieces.White {
+			whiteKingMoved = true
+		} else if color == pieces.Black {
+			blackKingMoved = true
+		}
+	case pieces.Rook:
+		if color == pieces.White && fromRank == 1 {
+			if fromFile == 1 {
+				whiteRookAMoved = true
+			}
+			if fromFile == 8 {
+				whiteRookHMoved = true
+			}
+		}
+		if color == pieces.Black && fromRank == 8 {
+			if fromFile == 1 {
+				blackRookAMoved = true
+			}
+			if fromFile == 8 {
+				blackRookHMoved = true
+			}
+		}
+	}
+}
+
+func CanCastleByState(color pieces.PieceColor, kingSide bool) bool {
+	if color == pieces.White {
+		if kingSide {
+			return !whiteKingMoved && !whiteRookHMoved
+		}
+		return !whiteKingMoved && !whiteRookAMoved
+	}
+	if kingSide {
+		return !blackKingMoved && !blackRookHMoved
+	}
+	return !blackKingMoved && !blackRookAMoved
+}
+
+func resetCastlingState() {
+	whiteKingMoved = false
+	blackKingMoved = false
+	whiteRookAMoved = false
+	whiteRookHMoved = false
+	blackRookAMoved = false
+	blackRookHMoved = false
 }
 
 // temporary storage for the current state of the board

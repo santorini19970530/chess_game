@@ -58,9 +58,73 @@ func CanEnPassant(
 	return adjacentPawn.Kind == pieces.Pawn && adjacentPawn.Color != source.Color
 }
 
+// CanCastle validates king-side / queen-side castling conditions,
+// excluding check-related rules for now.
+func CanCastle(
+	source pieces.ChessPiece,
+	fromFile, fromRank, toFile, toRank int,
+	castlingRightsAvailable bool,
+) bool {
+	if source.Kind != pieces.King {
+		return false
+	}
+	if !castlingRightsAvailable {
+		return false
+	}
+	if fromFile != 5 {
+		return false
+	}
+	if source.Color == pieces.White && fromRank != 1 {
+		return false
+	}
+	if source.Color == pieces.Black && fromRank != 8 {
+		return false
+	}
+	if toRank != fromRank {
+		return false
+	}
+
+	kingSide := toFile == 7
+	queenSide := toFile == 3
+	if !kingSide && !queenSide {
+		return false
+	}
+
+	rookFromFile := 1
+	if kingSide {
+		rookFromFile = 8
+	}
+	rook, rookFound := getPieceAt(rookFromFile, fromRank)
+	if !rookFound || rook.Kind != pieces.Rook || rook.Color != source.Color {
+		return false
+	}
+
+	// Squares between king and rook must be empty.
+	pathFiles := []int{6, 7}
+	if queenSide {
+		pathFiles = []int{4, 3, 2}
+	}
+	for _, f := range pathFiles {
+		if _, occupied := getPieceAt(f, fromRank); occupied {
+			return false
+		}
+	}
+
+	return true
+}
+
 func absInt(v int) int {
 	if v < 0 {
 		return -v
 	}
 	return v
+}
+
+func getPieceAt(file, rank int) (pieces.ChessPiece, bool) {
+	for _, p := range pieces.ChessPieces {
+		if p.File == file && p.Rank == rank {
+			return p, true
+		}
+	}
+	return pieces.ChessPiece{}, false
 }
