@@ -19,6 +19,12 @@
   const moveHistoryWhiteList = document.getElementById("chess_move_history_white");
   const moveHistoryBlackList = document.getElementById("chess_move_history_black");
   const newGameButton = document.getElementById("chess_new_game");
+  const gameTypeSelect = document.getElementById("game_type");
+  const gameModeSelect = document.getElementById("game_mode");
+  const humanSideSelect = document.getElementById("human_side");
+  const aiGameCountInput = document.getElementById("ai_game_count");
+  const fenInput = document.getElementById("fen_input");
+  const configApplyButton = document.getElementById("game_config_apply");
   const moveSound = new Audio("/sounds/chess_movement.wav");
   const CHECK_CLASS = "game_info_col_in_check";
   let gameOver = false;
@@ -135,7 +141,28 @@
       return;
     }
 
-    setStatus("Command submitted", "success");
+    setStatus("", "success");
+  };
+
+  const updateSetupControlState = () => {
+    const mode = String(gameModeSelect?.value || "human_vs_human");
+    const fenProvided = Boolean(String(fenInput?.value || "").trim());
+    if (humanSideSelect) humanSideSelect.disabled = mode === "ai_vs_ai";
+    if (aiGameCountInput) {
+      aiGameCountInput.disabled = mode !== "ai_vs_ai";
+      if (fenProvided) aiGameCountInput.value = "1";
+    }
+  };
+
+  const renderGameConfig = (game) => {
+    const cfg = game?.config;
+    if (!cfg) return;
+    if (gameTypeSelect) gameTypeSelect.value = String(game.type || "chess");
+    if (gameModeSelect) gameModeSelect.value = String(game.mode || "human_vs_human");
+    if (humanSideSelect) humanSideSelect.value = String(cfg.humanColor || "white");
+    if (aiGameCountInput) aiGameCountInput.value = String(cfg.aiGameCount || 1);
+    if (fenInput) fenInput.value = String(cfg.startFen || "");
+    updateSetupControlState();
   };
 
   const INITIAL_COUNTS = {
@@ -430,6 +457,7 @@
       renderCurrentTurn(result.currentTurn);
       renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
       renderGameOutcome(result.game);
+      renderGameConfig(result.game);
       // Always compute from the rendered board so capture info matches what user sees.
       renderGameInfo(extractBoardStateFromDOM(), result.captured);
       try {
@@ -446,6 +474,39 @@
   };
 
   button.addEventListener("click", submitCommand);
+  if (gameModeSelect) gameModeSelect.addEventListener("change", updateSetupControlState);
+  if (fenInput) fenInput.addEventListener("input", updateSetupControlState);
+  if (configApplyButton) {
+    configApplyButton.addEventListener("click", async () => {
+      try {
+        const mode = String(gameModeSelect?.value || "human_vs_human");
+        const fen = String(fenInput?.value || "").trim();
+        const aiCount = fen ? "1" : String(aiGameCountInput?.value || "1");
+        const body = new URLSearchParams({
+          type: String(gameTypeSelect?.value || "chess"),
+          mode,
+          humanColor: String(humanSideSelect?.value || "white"),
+          aiGameCount: aiCount,
+          fen,
+        });
+        const response = await fetch("/game/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: body.toString(),
+        });
+        if (!response.ok) {
+          const errorMessage = (await response.text()).trim();
+          setStatus(errorMessage || "Failed to apply game setup.", "error");
+          return;
+        }
+        const result = await response.json();
+        renderGameConfig(result.game);
+        setStatus("Game setup applied. Click New Game to start.", "success");
+      } catch (_error) {
+        setStatus("Network error. Please try again.", "error");
+      }
+    });
+  }
   if (flagButton) {
     flagButton.addEventListener("click", async () => {
       if (gameOver) {
@@ -464,6 +525,7 @@
         renderCurrentTurn(result.currentTurn);
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
         renderGameOutcome(result.game);
+        renderGameConfig(result.game);
         renderGameInfo(extractBoardStateFromDOM(), result.captured);
       } catch (_error) {
         setStatus("Network error. Please try again.", "error");
@@ -485,6 +547,7 @@
         renderCurrentTurn(result.currentTurn);
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
         renderGameOutcome(result.game);
+        renderGameConfig(result.game);
         renderGameInfo(extractBoardStateFromDOM(), result.captured);
         input.value = "";
         input.disabled = false;
@@ -508,6 +571,11 @@
   renderGameInfo(extractBoardStateFromDOM());
   renderCheckState("");
   renderGameOutcome({ status: "in_progress", result: "in_progress" });
+  renderGameConfig({
+    type: "chess",
+    mode: "human_vs_human",
+    config: { humanColor: "white", aiGameCount: 1, startFen: "" },
+  });
   const activeSide = document.querySelector(".game_info_side.game_info_col_active");
   if (activeSide?.textContent) {
     renderCurrentTurn(activeSide.textContent.trim());

@@ -159,23 +159,7 @@
     display: none !important;
   }
 }
-@layer utilities {
-  .static {
-    position: static;
-  }
-  .start {
-    inset-inline-start: var(--spacing);
-  }
-  .grid {
-    display: grid;
-  }
-  .table {
-    display: table;
-  }
-  .capitalize {
-    text-transform: capitalize;
-  }
-}
+@layer utilities;
 * {
   margin: 0px;
   padding: 0px;
@@ -241,7 +225,7 @@ main {
   flex-direction: column;
   gap: 16px;
 }
-.game_panel_left, .game_panel_right_top, .game_panel_right_bottom {
+.game_panel_left, .game_panel_config, .game_panel_right_top, .game_panel_right_bottom {
   background: #171717;
   border: 1px solid #2d2d2d;
   border-radius: 0;
@@ -257,6 +241,21 @@ main {
   align-items: center;
   justify-content: center;
   padding: 4px;
+}
+.game_panel_config {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.game_panel_config select, .game_panel_config input, .game_panel_config textarea, .game_panel_config button {
+  width: 100%;
+  border: 1px solid #3a3a3a;
+  background: #0f0f0f;
+  color: #f5f5f5;
+  padding: 6px 8px;
+}
+.config_panel_title {
+  margin-bottom: 4px;
 }
 .chess_board_wrapper {
   --board-size: min(92vw, 640px);
@@ -390,8 +389,8 @@ main {
 }
 .command_row button {
   flex: 0 0 auto;
-  padding: 6px 10px;
-  height: 28px;
+  padding: 5px 14px;
+  height: 36px;
   border-radius: 0;
   border: 1px solid #4a4a4a;
   background: #262626;
@@ -497,12 +496,15 @@ main {
     min-height: 0;
     height: 100%;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 520px;
+    grid-template-columns: 280px minmax(0, 1fr) 520px;
     grid-template-rows: 1.35fr 0.65fr;
-    grid-template-areas: "left rightTop" "left rightBottom";
+    grid-template-areas: "config left rightTop" "config left rightBottom";
     overflow: hidden;
   }
-  .game_panel_left, .game_panel_right_top, .game_panel_right_bottom {
+  .game_panel_left, .game_panel_config, .game_panel_right_top, .game_panel_right_bottom {
+    .game_panel_config {
+      grid-area: config;
+    }
     min-height: 0;
     overflow: auto;
   }

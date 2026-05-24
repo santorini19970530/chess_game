@@ -119,6 +119,31 @@ func TestFlagCurrentTurn_SetsWinLossOutcome(t *testing.T) {
 	}
 }
 
+func TestUpdateGameConfig_WithFENForcesSingleGameAndLoadsPosition(t *testing.T) {
+	resetGameSessionForTest()
+	ResetGame()
+
+	fen := "8/8/8/8/8/8/4k3/4K3 b - - 0 1"
+	game, err := UpdateGameConfig(GameModeAIVsAI, GameTypeChess, "white", 20, fen)
+	if err != nil {
+		t.Fatalf("expected config update success, got %v", err)
+	}
+	if game.Config.AIGameCount != 1 {
+		t.Fatalf("expected fen to force ai game count 1, got %d", game.Config.AIGameCount)
+	}
+
+	started, err := StartConfiguredNewGame()
+	if err != nil {
+		t.Fatalf("expected configured new game success, got %v", err)
+	}
+	if started.Config.StartFEN != fen {
+		t.Fatalf("expected fen to persist in config")
+	}
+	if CurrentTurnColor() != pieces.Black {
+		t.Fatalf("expected black to move from FEN")
+	}
+}
+
 func TestResetGame_RestoresInitialState(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 4, Rank: 4},

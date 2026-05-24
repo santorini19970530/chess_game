@@ -15,5 +15,6 @@ func ResetGame() {
 	moveHistory = nil
 	lastAppliedMove = nil
 	resetCastlingState()
+	resetTurnOverride()
 	resetGameSessionForTest()
 }

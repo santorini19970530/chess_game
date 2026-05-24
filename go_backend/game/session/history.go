@@ -11,6 +11,8 @@ import (
 
 // temporary storage for the movement history
 var moveHistory []string
+var currentTurnOverride *pieces.PieceColor
+var currentTurnPinned bool
 
 type LastMove struct {
 	FromFile       int
@@ -51,6 +53,15 @@ func GetMoveHistory() []string {
 // CurrentTurnColor returns whose move should be next.
 // White starts at move 1, then alternates each successful move.
 func CurrentTurnColor() pieces.PieceColor {
+	if currentTurnOverride != nil {
+		if !currentTurnPinned && len(moveHistory) == 0 && lastAppliedMove == nil {
+			// If tests or manual setup clear runtime history, fall back to standard start turn.
+			currentTurnOverride = nil
+		}
+	}
+	if currentTurnOverride != nil {
+		return *currentTurnOverride
+	}
 	if len(moveHistory)%2 == 0 {
 		return pieces.White
 	}
@@ -133,6 +144,61 @@ func resetCastlingState() {
 	whiteRookHMoved = false
 	blackRookAMoved = false
 	blackRookHMoved = false
+}
+
+func SetCurrentTurnColor(color pieces.PieceColor) {
+	c := color
+	currentTurnOverride = &c
+	currentTurnPinned = false
+}
+
+func SetCurrentTurnColorPinned(color pieces.PieceColor) {
+	c := color
+	currentTurnOverride = &c
+	currentTurnPinned = true
+}
+
+func AdvanceTurnColor() {
+	SetCurrentTurnColor(OpponentColor(CurrentTurnColor()))
+}
+
+func resetTurnOverride() {
+	currentTurnOverride = nil
+	currentTurnPinned = false
+}
+
+func SetCastlingStateFromFEN(rights string) {
+	resetCastlingState()
+	whiteKingMoved = true
+	blackKingMoved = true
+	whiteRookAMoved = true
+	whiteRookHMoved = true
+	blackRookAMoved = true
+	blackRookHMoved = true
+
+	for _, ch := range rights {
+		switch ch {
+		case 'K':
+			whiteKingMoved = false
+			whiteRookHMoved = false
+		case 'Q':
+			whiteKingMoved = false
+			whiteRookAMoved = false
+		case 'k':
+			blackKingMoved = false
+			blackRookHMoved = false
+		case 'q':
+			blackKingMoved = false
+			blackRookAMoved = false
+		}
+	}
+}
+
+func OpponentColor(color pieces.PieceColor) pieces.PieceColor {
+	if color == pieces.White {
+		return pieces.Black
+	}
+	return pieces.White
 }
 
 // temporary storage for the current state of the board

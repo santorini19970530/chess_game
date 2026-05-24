@@ -6,6 +6,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	chessboard "go_backend/game/board"
 	commandpkg "go_backend/game/command"
 	sessionpkg "go_backend/game/session"
@@ -57,6 +58,21 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 
 	// left panel
 	mainHTMLCode.WriteString(`<div class="game_panel">`)
+
+	mainHTMLCode.WriteString(`<div class="game_panel_config">`)
+	mainHTMLCode.WriteString(`<h3 class="config_panel_title">Setup New Games</h3>`)
+	mainHTMLCode.WriteString(`<label for="game_type">Game</label>`)
+	mainHTMLCode.WriteString(`<select id="game_type"><option value="chess">Chess</option><option value="xianqi">Xiangqi</option><option value="shogi">Shogi</option></select>`)
+	mainHTMLCode.WriteString(`<label for="game_mode">Mode</label>`)
+	mainHTMLCode.WriteString(`<select id="game_mode"><option value="human_vs_human">Human vs Human</option><option value="human_vs_ai">Human vs AI</option><option value="ai_vs_ai">AI vs AI</option></select>`)
+	mainHTMLCode.WriteString(`<label for="human_side">Human's side</label>`)
+	mainHTMLCode.WriteString(`<select id="human_side"><option value="white">White</option><option value="black">Black</option></select>`)
+	mainHTMLCode.WriteString(`<label for="ai_game_count">AI game count</label>`)
+	mainHTMLCode.WriteString(`<input id="ai_game_count" type="number" min="1" value="1" />`)
+	mainHTMLCode.WriteString(`<label for="fen_input">Starting FEN (optional)</label>`)
+	mainHTMLCode.WriteString(`<textarea id="fen_input" rows="3" placeholder="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>`)
+	mainHTMLCode.WriteString(`<button id="game_config_apply" type="button">Apply Setup</button>`)
+	mainHTMLCode.WriteString(`</div>`)
 
 	mainHTMLCode.WriteString(`<div class="game_panel_left">`)
 	mainHTMLCode.WriteString(string(generateChessBoard()))
@@ -144,8 +160,11 @@ func (h *Handler) NewGame(w http.ResponseWriter, r *http.Request) {
 		log.Printf("archive game failed: %v", err)
 		return
 	}
-	sessionpkg.ResetGame()
-	game := sessionpkg.RefreshGameSessionOutcome()
+	game, err := sessionpkg.StartConfiguredNewGame()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	response := struct {
 		CurrentTurn string                     `json:"currentTurn"`
 		CheckedSide string                     `json:"checkedSide"`
@@ -164,6 +183,43 @@ func (h *Handler) NewGame(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Response encode error", http.StatusInternalServerError)
+	}
+}
+
+func (h *Handler) UpdateGameConfig(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid configuration payload", http.StatusBadRequest)
+		return
+	}
+
+	mode := sessionpkg.GameMode(strings.TrimSpace(r.FormValue("mode")))
+	gameType := sessionpkg.GameType(strings.TrimSpace(r.FormValue("type")))
+	humanColor := strings.TrimSpace(r.FormValue("humanColor"))
+	fen := strings.TrimSpace(r.FormValue("fen"))
+	aiGameCount := 1
+	if raw := strings.TrimSpace(r.FormValue("aiGameCount")); raw != "" {
+		if _, err := fmt.Sscanf(raw, "%d", &aiGameCount); err != nil {
+			http.Error(w, "invalid ai game count", http.StatusBadRequest)
+			return
+		}
+	}
+
+	game, err := sessionpkg.UpdateGameConfig(mode, gameType, humanColor, aiGameCount, fen)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(struct {
+		Game sessionpkg.GameSession `json:"game"`
+	}{Game: game}); err != nil {
 		http.Error(w, "Response encode error", http.StatusInternalServerError)
 	}
 }

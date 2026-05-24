@@ -107,6 +107,7 @@ func ApplyMoveByCommand(commandText string) (string, error) {
 		RecordPieceMoveForCastling(pieces.Rook, moveColor, rookFromFile, parsed.FromRank)
 	}
 	AppendMoveHistory(parsed.Normalized, moveColor)
+	SetCurrentTurnColor(OpponentColor(moveColor))
 	RecordLastMove(fromFile, parsed.FromRank, toFile, parsed.ToRank, sourcePiece.Kind, moveColor)
 	return parsed.Normalized, nil
 }
