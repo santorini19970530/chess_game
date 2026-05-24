@@ -104,6 +104,10 @@ func RefreshGameSessionOutcome() GameSession {
 	gameSessionMu.Lock()
 	defer gameSessionMu.Unlock()
 
+	if activeGame.Outcome.Status == "resigned" && activeGame.Result != GameResultInProgress {
+		return activeGame
+	}
+
 	activeGame.Outcome = outcome
 	activeGame.Result = gameResultFromOutcome(outcome)
 	activeGame.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
@@ -133,6 +137,9 @@ func ArchiveActiveGameIfNeeded() error {
 		return nil
 	}
 	history := GetMoveHistory()
+	if flagEntry := archiveFlagEntry(gameSnapshot); flagEntry != "" {
+		history = append(history, flagEntry)
+	}
 	state := GetBoardState()
 	captured := GetCapturedSummary()
 	gameSessionMu.Unlock()
@@ -194,6 +201,30 @@ func saveArchivedGames(records []ArchivedGame) error {
 	return os.WriteFile(archivePath, bytes, 0o644)
 }
 
+func FlagCurrentTurn() GameSession {
+	side := CurrentTurnColor()
+	winner := opponentOf(side)
+
+	gameSessionMu.Lock()
+	defer gameSessionMu.Unlock()
+
+	activeGame.Outcome = GameOutcome{
+		Status:     "resigned",
+		Winner:     string(winner),
+		Loser:      string(side),
+		LegalMoves: 0,
+		Message:    sideLabel(side) + " flagged. " + sideLabel(winner) + " wins.",
+	}
+	if winner == "white" {
+		activeGame.Result = GameResultWhiteWin
+	} else {
+		activeGame.Result = GameResultBlackWin
+	}
+	activeGame.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	activeGame.Archived = false
+	return activeGame
+}
+
 func toArchivedPieceState(state []PieceState) []ArchivedPieceState {
 	out := make([]ArchivedPieceState, 0, len(state))
 	for _, p := range state {
@@ -205,6 +236,20 @@ func toArchivedPieceState(state []PieceState) []ArchivedPieceState {
 		})
 	}
 	return out
+}
+
+func archiveFlagEntry(game GameSession) string {
+	if game.Outcome.Status != "resigned" || game.Outcome.Loser == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s: flag", sideLabelFromText(game.Outcome.Loser))
+}
+
+func sideLabelFromText(side string) string {
+	if side == "black" {
+		return "Black"
+	}
+	return "White"
 }
 
 func gameResultFromOutcome(outcome GameOutcome) GameResult {

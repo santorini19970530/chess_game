@@ -103,6 +103,22 @@ func TestEvaluateGameOutcome_UserSequenceIsCheckNotMate(t *testing.T) {
 	}
 }
 
+func TestFlagCurrentTurn_SetsWinLossOutcome(t *testing.T) {
+	resetGameSessionForTest()
+	ResetGame()
+
+	game := FlagCurrentTurn() // white to move initially, so white flags and black wins.
+	if game.Outcome.Status != "resigned" {
+		t.Fatalf("expected resigned outcome, got %q", game.Outcome.Status)
+	}
+	if game.Outcome.Loser != "white" || game.Outcome.Winner != "black" {
+		t.Fatalf("expected loser=white winner=black, got loser=%q winner=%q", game.Outcome.Loser, game.Outcome.Winner)
+	}
+	if game.Result != GameResultBlackWin {
+		t.Fatalf("expected black win result, got %q", game.Result)
+	}
+}
+
 func TestResetGame_RestoresInitialState(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 4, Rank: 4},

@@ -6,6 +6,7 @@
 (() => {
   const input = document.getElementById("chess_command");
   const button = document.getElementById("chess_command_submit");
+  const flagButton = document.getElementById("chess_flag");
   const status = document.getElementById("chess_command_status");
   const whiteColumnCells = document.querySelectorAll(".game_info_col_white");
   const blackColumnCells = document.querySelectorAll(".game_info_col_black");
@@ -99,6 +100,7 @@
       setStatus(`Checkmate! ${winner} wins. ${loser} loses.`, "error");
       input.disabled = true;
       button.disabled = true;
+      if (flagButton) flagButton.disabled = true;
       gameOver = true;
       return;
     }
@@ -107,12 +109,23 @@
       setStatus("Draw by stalemate.", "success");
       input.disabled = true;
       button.disabled = true;
+      if (flagButton) flagButton.disabled = true;
+      gameOver = true;
+      return;
+    }
+
+    if (statusValue === "resigned") {
+      setStatus(outcome?.message || "Game ended by flag.", "error");
+      input.disabled = true;
+      button.disabled = true;
+      if (flagButton) flagButton.disabled = true;
       gameOver = true;
       return;
     }
 
     input.disabled = false;
     button.disabled = false;
+    if (flagButton) flagButton.disabled = false;
     gameOver = false;
 
     if (statusValue === "check") {
@@ -433,6 +446,30 @@
   };
 
   button.addEventListener("click", submitCommand);
+  if (flagButton) {
+    flagButton.addEventListener("click", async () => {
+      if (gameOver) {
+        setStatus("Game has ended. Start a new game.", "error");
+        return;
+      }
+      try {
+        const response = await fetch("/game/flag", { method: "POST" });
+        if (!response.ok) {
+          const errorMessage = (await response.text()).trim();
+          setStatus(errorMessage || "Failed to flag game.", "error");
+          return;
+        }
+        const result = await response.json();
+        renderMoveHistory(result.history);
+        renderCurrentTurn(result.currentTurn);
+        renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
+        renderGameOutcome(result.game);
+        renderGameInfo(extractBoardStateFromDOM(), result.captured);
+      } catch (_error) {
+        setStatus("Network error. Please try again.", "error");
+      }
+    });
+  }
   if (newGameButton) {
     newGameButton.addEventListener("click", async () => {
       try {
@@ -452,6 +489,7 @@
         input.value = "";
         input.disabled = false;
         button.disabled = false;
+        if (flagButton) flagButton.disabled = false;
         gameOver = false;
         setStatus("New game started.", "success");
         input.focus();

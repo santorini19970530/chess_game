@@ -182,7 +182,7 @@
   box-sizing: border-box;
 }
 html {
-  zoom: 0.8;
+  zoom: 0.65;
 }
 html, body {
   background-color: #000000;
@@ -221,13 +221,13 @@ h1 {
 }
 main {
   flex: 1 1 0;
-  width: min(1800px, calc(100% - 12px));
-  max-width: 1800px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
   padding: 12px;
   background: #111111;
   border: 1px solid #2a2a2a;
-  border-radius: 12px;
+  border-radius: 0;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -244,7 +244,7 @@ main {
 .game_panel_left, .game_panel_right_top, .game_panel_right_bottom {
   background: #171717;
   border: 1px solid #2d2d2d;
-  border-radius: 10px;
+  border-radius: 0;
   padding: 16px;
   min-width: 0;
   overflow: visible;
@@ -307,7 +307,7 @@ main {
 }
 .game_info_table {
   border: 1px solid #2d2d2d;
-  border-radius: 8px;
+  border-radius: 0;
   background: #0f0f0f;
   overflow: hidden;
 }
@@ -355,7 +355,7 @@ main {
   width: 100%;
   margin-top: 10px;
   border: 1px solid #3a3a3a;
-  border-radius: 8px;
+  border-radius: 0;
   background: #0f0f0f;
   color: #f5f5f5;
   padding: 10px 12px;
@@ -374,22 +374,30 @@ main {
 .command_row {
   display: flex;
   gap: 10px;
+  flex-wrap: nowrap;
+  align-items: center;
 }
 .command_row input {
-  flex: 1;
-  padding: 10px 12px;
-  border-radius: 8px;
+  flex: 0 1 45%;
+  max-width: 240px;
+  min-width: 100px;
+  padding: 2px 8px;
+  height: 26px;
+  border-radius: 0;
   border: 1px solid #3a3a3a;
   background: #0f0f0f;
   color: #f5f5f5;
 }
 .command_row button {
-  padding: 10px 14px;
-  border-radius: 8px;
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  height: 28px;
+  border-radius: 0;
   border: 1px solid #4a4a4a;
   background: #262626;
   color: #f5f5f5;
   cursor: pointer;
+  white-space: nowrap;
 }
 .chess_move_history_section {
   margin-top: 16px;
@@ -430,7 +438,7 @@ main {
   overflow-y: auto;
   line-height: 1.6;
   border: 1px solid #2d2d2d;
-  border-radius: 8px;
+  border-radius: 0;
   background: #0f0f0f;
   padding: 10px 12px;
 }
@@ -489,7 +497,7 @@ main {
     min-height: 0;
     height: 100%;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) clamp(380px, 40vw, 560px);
+    grid-template-columns: minmax(0, 1fr) 520px;
     grid-template-rows: 1.35fr 0.65fr;
     grid-template-areas: "left rightTop" "left rightBottom";
     overflow: hidden;

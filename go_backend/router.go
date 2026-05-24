@@ -84,4 +84,5 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 	mux.HandleFunc("/", h.Index) // index
 	mux.HandleFunc("/command", h.SubmitChessCommand)
 	mux.HandleFunc("/game/new", h.NewGame)
+	mux.HandleFunc("/game/flag", h.FlagGame)
 }

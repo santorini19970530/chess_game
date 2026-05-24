@@ -105,6 +105,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`<div class="command_row">`)
 	mainHTMLCode.WriteString(`<input id="chess_command" type="text" placeholder="e2e4" />`)
 	mainHTMLCode.WriteString(`<button id="chess_command_submit" type="button">Submit</button>`)
+	mainHTMLCode.WriteString(`<button id="chess_flag" type="button">Flag</button>`)
 	mainHTMLCode.WriteString(`<button id="chess_new_game" type="button">New Game</button>`)
 	mainHTMLCode.WriteString(`</div>`)
 	mainHTMLCode.WriteString(`<p id="chess_command_status" class="command_status" role="status" aria-live="polite"></p>`)
@@ -167,6 +168,52 @@ func (h *Handler) NewGame(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *Handler) FlagGame(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	currentGame := sessionpkg.RefreshGameSessionOutcome()
+	if currentGame.Result != sessionpkg.GameResultInProgress {
+		message := currentGame.Outcome.Message
+		if message == "" {
+			message = "Game already ended."
+		}
+		http.Error(w, message, http.StatusConflict)
+		return
+	}
+
+	game := sessionpkg.FlagCurrentTurn()
+	if err := sessionpkg.ArchiveActiveGameIfNeeded(); err != nil {
+		http.Error(w, "Failed to archive flagged game", http.StatusInternalServerError)
+		log.Printf("archive flagged game failed: %v", err)
+		return
+	}
+
+	response := struct {
+		CurrentTurn string                     `json:"currentTurn"`
+		CheckedSide string                     `json:"checkedSide"`
+		Game        sessionpkg.GameSession     `json:"game"`
+		Captured    sessionpkg.CapturedSummary `json:"captured"`
+		History     []string                   `json:"history"`
+		State       []sessionpkg.PieceState    `json:"state"`
+	}{
+		CurrentTurn: sessionpkg.CurrentTurnLabel(),
+		CheckedSide: sessionpkg.CheckedSideLabel(),
+		Game:        game,
+		Captured:    sessionpkg.GetCapturedSummary(),
+		History:     sessionpkg.GetMoveHistory(),
+		State:       sessionpkg.GetBoardState(),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Response encode error", http.StatusInternalServerError)
+	}
+}
+
 // SubmitChessCommand receives input from command textbox and send to server for processing
 func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -187,7 +234,7 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	currentGame := sessionpkg.RefreshGameSessionOutcome()
-	if currentGame.Outcome.Status == "checkmate" || currentGame.Outcome.Status == "stalemate" {
+	if currentGame.Result != sessionpkg.GameResultInProgress {
 		message := currentGame.Outcome.Message
 		if message == "" {
 			message = "Game already ended."

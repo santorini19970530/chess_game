@@ -77,3 +77,36 @@ func TestArchiveActiveGameIfNeeded_WritesJSONSnapshot(t *testing.T) {
 		t.Fatalf("expected white pawn on e4 in archived state")
 	}
 }
+
+func TestArchiveActiveGameIfNeeded_IncludesFlaggedByInHistory(t *testing.T) {
+	resetGameSessionForTest()
+	ResetGame()
+
+	tempDir := t.TempDir()
+	previousArchivePath := archivePath
+	archivePath = filepath.Join(tempDir, "game_history.json")
+	t.Cleanup(func() { archivePath = previousArchivePath })
+
+	FlagCurrentTurn() // White flags at game start.
+	if err := ArchiveActiveGameIfNeeded(); err != nil {
+		t.Fatalf("expected archive to succeed, got: %v", err)
+	}
+
+	records, err := loadArchivedGames()
+	if err != nil {
+		t.Fatalf("expected archive json to be readable: %v", err)
+	}
+	if len(records) != 1 {
+		t.Fatalf("expected 1 archived game, got %d", len(records))
+	}
+	found := false
+	for _, entry := range records[0].History {
+		if entry == "White: flag" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected history to include flag entry with side")
+	}
+}
