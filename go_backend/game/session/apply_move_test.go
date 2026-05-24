@@ -21,23 +21,11 @@ func pieceAt(file, rank int) (pieces.ChessPiece, bool) {
 	return pieces.ChessPiece{}, false
 }
 
-func TestApplyMoveByCommand_BlackPawnDoubleStep_UCI(t *testing.T) {
+func TestApplyMoveByCommand_BlackPawnDoubleStep_UCIRejectedOnWhiteTurn(t *testing.T) {
 	resetChessPieces()
 
-	normalized, err := ApplyMoveByCommand("e7e5")
-	if err != nil {
-		t.Fatalf("expected black pawn double step to succeed, got error: %v", err)
-	}
-	if normalized != "e7e5" {
-		t.Fatalf("expected normalized move e7e5, got %q", normalized)
-	}
-
-	blackPawn, ok := pieceAt(5, 5)
-	if !ok {
-		t.Fatalf("expected piece on e5 after move")
-	}
-	if blackPawn.Kind != pieces.Pawn || blackPawn.Color != pieces.Black {
-		t.Fatalf("expected black pawn on e5, got kind=%v color=%v", blackPawn.Kind, blackPawn.Color)
+	if _, err := ApplyMoveByCommand("e7e5"); err == nil {
+		t.Fatalf("expected black pawn double step to fail on white turn")
 	}
 }
 
@@ -65,23 +53,11 @@ func TestApplyMoveByCommand_BlackPawnDoubleStep_SANAfterWhiteMove(t *testing.T) 
 	}
 }
 
-func TestApplyMoveByCommand_BlackPawnDoubleStep_SANFromInitialPosition(t *testing.T) {
+func TestApplyMoveByCommand_BlackPawnDoubleStep_SANFromInitialPositionRejected(t *testing.T) {
 	resetChessPieces()
 
-	normalized, err := ApplyMoveByCommand("g5")
-	if err != nil {
-		t.Fatalf("expected SAN g5 to resolve to black pawn start double step, got error: %v", err)
-	}
-	if normalized != "g7g5" {
-		t.Fatalf("expected normalized move g7g5, got %q", normalized)
-	}
-
-	blackPawn, ok := pieceAt(7, 5)
-	if !ok {
-		t.Fatalf("expected piece on g5 after move")
-	}
-	if blackPawn.Kind != pieces.Pawn || blackPawn.Color != pieces.Black {
-		t.Fatalf("expected black pawn on g5, got kind=%v color=%v", blackPawn.Kind, blackPawn.Color)
+	if _, err := ApplyMoveByCommand("g5"); err == nil {
+		t.Fatalf("expected SAN g5 to fail on white turn")
 	}
 }
 
@@ -92,6 +68,9 @@ func TestApplyMoveByCommand_QueenStrategy(t *testing.T) {
 	if _, err := ApplyMoveByCommand("d2d4"); err != nil {
 		t.Fatalf("expected setup move d2d4 to succeed, got error: %v", err)
 	}
+	if _, err := ApplyMoveByCommand("a7a6"); err != nil {
+		t.Fatalf("expected black reply a7a6 to succeed, got error: %v", err)
+	}
 
 	if _, err := ApplyMoveByCommand("d1d3"); err != nil {
 		t.Fatalf("expected queen move d1d3 to succeed, got error: %v", err)
@@ -99,6 +78,9 @@ func TestApplyMoveByCommand_QueenStrategy(t *testing.T) {
 	queen, ok := pieceAt(4, 3)
 	if !ok || queen.Kind != pieces.Queen || queen.Color != pieces.White {
 		t.Fatalf("expected white queen on d3 after move")
+	}
+	if _, err := ApplyMoveByCommand("a6a5"); err != nil {
+		t.Fatalf("expected black reply a6a5 to succeed, got error: %v", err)
 	}
 
 	// Queen cannot move in knight pattern.
@@ -116,6 +98,9 @@ func TestApplyMoveByCommand_KnightStrategy(t *testing.T) {
 	knight, ok := pieceAt(3, 3)
 	if !ok || knight.Kind != pieces.Knight || knight.Color != pieces.White {
 		t.Fatalf("expected white knight on c3 after move")
+	}
+	if _, err := ApplyMoveByCommand("a7a6"); err != nil {
+		t.Fatalf("expected black reply a7a6 to succeed, got error: %v", err)
 	}
 
 	if _, err := ApplyMoveByCommand("c3c5"); err == nil {

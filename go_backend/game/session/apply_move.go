@@ -13,7 +13,8 @@ import (
 )
 
 func ApplyMoveByCommand(commandText string) (string, error) {
-	parsed, err := command.ParseCommandForColor(commandText, CurrentTurnColor())
+	expectedColor := CurrentTurnColor()
+	parsed, err := command.ParseCommandForColor(commandText, expectedColor)
 	if err != nil {
 		return "", err
 	}
@@ -24,6 +25,9 @@ func ApplyMoveByCommand(commandText string) (string, error) {
 	moveColor, err := engine.ValidateMove(fromFile, parsed.FromRank, toFile, parsed.ToRank, parsed.PieceCode)
 	if err != nil {
 		return "", err
+	}
+	if moveColor != expectedColor {
+		return "", fmt.Errorf("wrong turn: expected %s to move", expectedColor)
 	}
 
 	if err := ApplyMove(fromFile, parsed.FromRank, toFile, parsed.ToRank); err != nil {

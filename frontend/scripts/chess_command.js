@@ -7,6 +7,7 @@
   const input = document.getElementById("chess_command");
   const button = document.getElementById("chess_command_submit");
   const status = document.getElementById("chess_command_status");
+  const currentTurnValue = document.getElementById("current_turn_value");
   const moveHistoryWhiteList = document.getElementById("chess_move_history_white");
   const moveHistoryBlackList = document.getElementById("chess_move_history_black");
   const moveSound = new Audio("/sounds/chess_movement.wav");
@@ -19,6 +20,11 @@
   const setStatus = (message, type) => {
     status.textContent = message;
     status.className = `command_status ${type}`;
+  };
+
+  const renderCurrentTurn = (turnText) => {
+    if (!currentTurnValue || !turnText) return;
+    currentTurnValue.textContent = turnText;
   };
 
   // update move history from backend source of truth
@@ -106,6 +112,9 @@
       setStatus("Please enter a chess movement command.", "error");
       return;
     }
+    if (currentTurnValue?.textContent) {
+      console.info(`Submitting move on ${currentTurnValue.textContent} turn`);
+    }
 
     try {
       const body = new URLSearchParams({ command });
@@ -134,12 +143,16 @@
       input.value = "";
       setStatus("Command submitted", "success");
       renderMoveHistory(result.history);
+      renderCurrentTurn(result.currentTurn);
       applyMoveOnBoard(
         result.from.file,
         String(result.from.rank),
         result.to.file,
         String(result.to.rank)
       );
+      if (result.currentTurn) {
+        console.info(`Next turn: ${result.currentTurn}`);
+      }
       try {
         moveSound.currentTime = 0;
         await moveSound.play();

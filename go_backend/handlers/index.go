@@ -59,7 +59,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`<h2>Game Information</h2>`)
 	mainHTMLCode.WriteString(`<ul>`)
 	mainHTMLCode.WriteString(`<li>Status: waiting for first move</li>`)
-	mainHTMLCode.WriteString(`<li>Current turn: White</li>`)
+	mainHTMLCode.WriteString(`<li>Current turn: <span id="current_turn_value">` + sessionpkg.CurrentTurnLabel() + `</span></li>`)
 	mainHTMLCode.WriteString(`<li>Win probability: to be developed</li>`)
 	mainHTMLCode.WriteString(`</ul>`)
 	mainHTMLCode.WriteString(`</div>`)
@@ -151,6 +151,7 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 
 	response := struct {
 		Command string `json:"command"`
+		CurrentTurn string `json:"currentTurn"`
 		From    struct {
 			File string `json:"file"`
 			Rank int    `json:"rank"`
@@ -163,6 +164,7 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 		State   []sessionpkg.PieceState `json:"state"`
 	}{
 		Command: normalizedMove,
+		CurrentTurn: sessionpkg.CurrentTurnLabel(),
 		History: sessionpkg.GetMoveHistory(),
 		State:   sessionpkg.GetBoardState(),
 	}

@@ -121,19 +121,6 @@ func parseSANCommand(command string, expectedColor pieces.PieceColor) (ParsedCom
 		rankHint,
 		expectedColor,
 	)
-	if candidateCount == 0 && expectedColor != "" {
-		// Fallback for current non-turn-enforced flow: allow SAN resolution
-		// from either side when no expected-color candidate exists.
-		fromFile, fromRank, candidateCount = findSANCandidate(
-			targetKind,
-			targetFile,
-			targetRank,
-			isCapture,
-			fileHint,
-			rankHint,
-			"",
-		)
-	}
 
 	if candidateCount == 0 {
 		return ParsedCommand{}, fmt.Errorf("no san source piece found")
@@ -169,9 +156,6 @@ func parseCastleSAN(raw string, queenSide bool, expectedColor pieces.PieceColor)
 	}
 
 	selected, candidateCount := findCastleCandidate(moves, expectedColor)
-	if candidateCount == 0 && expectedColor != "" {
-		selected, candidateCount = findCastleCandidate(moves, "")
-	}
 
 	if candidateCount == 0 {
 		return ParsedCommand{}, fmt.Errorf("cannot castle in current position")

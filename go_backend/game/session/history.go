@@ -38,6 +38,14 @@ func CurrentTurnColor() pieces.PieceColor {
 	return pieces.Black
 }
 
+// CurrentTurnLabel returns a frontend-friendly turn label.
+func CurrentTurnLabel() string {
+	if CurrentTurnColor() == pieces.Black {
+		return "Black"
+	}
+	return "White"
+}
+
 // temporary storage for the current state of the board
 type PieceState struct {
 	Color   string `json:"color"`
