@@ -25,11 +25,19 @@
   const aiGameCountInput = document.getElementById("ai_game_count");
   const fenInput = document.getElementById("fen_input");
   const configApplyButton = document.getElementById("game_config_apply");
+  const boardElement = document.querySelector(".chess_board");
+  const promotionPicker = document.getElementById("promotion_picker");
   const moveSound = new Audio("/sounds/chess_movement.wav");
   const CHECK_CLASS = "game_info_col_in_check";
+  const SELECTED_PIECE_CLASS = "piece_img_selected";
   let gameOver = false;
+  let currentTurn = "white";
+  let selectedSquareSequence = null;
+  let dragSourceSequence = null;
+  let isSubmitting = false;
+  let pendingPromotionResolve = null;
 
-  if (!input || !button || !status || !moveHistoryWhiteList || !moveHistoryBlackList) return;
+  if (!input || !button || !status || !moveHistoryWhiteList || !moveHistoryBlackList || !boardElement) return;
 
   input.focus();
 
@@ -42,6 +50,7 @@
   const renderCurrentTurn = (turnText) => {
     if (!turnText) return;
     const isWhiteTurn = turnText.toLowerCase() === "white";
+    currentTurn = isWhiteTurn ? "white" : "black";
     whiteColumnCells.forEach((cell) => {
       cell.classList.toggle("game_info_col_active", isWhiteTurn);
     });
@@ -370,6 +379,111 @@
     return `.chess_board_square[data-sequence="${sequence}"]`;
   };
 
+  const sequenceToSquare = (sequence) => {
+    const seq = Number(sequence);
+    if (Number.isNaN(seq) || seq < 0 || seq > 63) return "";
+    const fileChar = String.fromCharCode("a".charCodeAt(0) + (seq % 8));
+    const rankNum = 8 - Math.floor(seq / 8);
+    return `${fileChar}${rankNum}`;
+  };
+
+  const moveCommandFromSequence = (fromSequence, toSequence) => {
+    const fromSquare = sequenceToSquare(fromSequence);
+    const toSquare = sequenceToSquare(toSequence);
+    if (!fromSquare || !toSquare) return "";
+    return `${fromSquare}${toSquare}`;
+  };
+
+  const rankFromSequence = (sequence) => {
+    const seq = Number(sequence);
+    if (Number.isNaN(seq) || seq < 0 || seq > 63) return NaN;
+    return 8 - Math.floor(seq / 8);
+  };
+
+  const getSquareElement = (target) =>
+    target instanceof Element ? target.closest(".chess_board_square[data-sequence]") : null;
+
+  const getSquareSequence = (square) => {
+    if (!square) return NaN;
+    return Number(square.getAttribute("data-sequence"));
+  };
+
+  const getPieceOnSquare = (square) => square?.querySelector(".piece_img") || null;
+
+  const isCurrentTurnPiece = (square) => {
+    const piece = getPieceOnSquare(square);
+    if (!piece) return false;
+    const pieceColor = String(piece.getAttribute("data-color") || "").toLowerCase();
+    return pieceColor === currentTurn;
+  };
+
+  const requiresPromotion = (fromSequence, toSequence) => {
+    const fromSquare = boardElement.querySelector(
+      `.chess_board_square[data-sequence="${Number(fromSequence)}"]`
+    );
+    const piece = getPieceOnSquare(fromSquare);
+    if (!piece) return false;
+    const kind = String(piece.getAttribute("data-kind") || "").toLowerCase();
+    if (kind !== "pawn") return false;
+    const color = String(piece.getAttribute("data-color") || "").toLowerCase();
+    const targetRank = rankFromSequence(toSequence);
+    if (Number.isNaN(targetRank)) return false;
+    return (color === "white" && targetRank === 8) || (color === "black" && targetRank === 1);
+  };
+
+  const closePromotionPicker = () => {
+    if (!promotionPicker) return;
+    promotionPicker.classList.remove("promotion_picker_visible");
+    promotionPicker.classList.add("promotion_picker_hidden");
+    promotionPicker.setAttribute("aria-hidden", "true");
+  };
+
+  const openPromotionPicker = () => {
+    if (!promotionPicker) return;
+    promotionPicker.classList.remove("promotion_picker_hidden");
+    promotionPicker.classList.add("promotion_picker_visible");
+    promotionPicker.setAttribute("aria-hidden", "false");
+  };
+
+  const requestPromotionChoice = () =>
+    new Promise((resolve) => {
+      if (!promotionPicker) {
+        resolve("q");
+        return;
+      }
+      pendingPromotionResolve = resolve;
+      openPromotionPicker();
+    });
+
+  const resolvePromotionChoice = (pieceCode) => {
+    if (!pendingPromotionResolve) return;
+    const resolver = pendingPromotionResolve;
+    pendingPromotionResolve = null;
+    closePromotionPicker();
+    resolver(pieceCode);
+  };
+
+  const clearSelectedSquare = () => {
+    selectedSquareSequence = null;
+    boardElement
+      .querySelectorAll(`.piece_img.${SELECTED_PIECE_CLASS}`)
+      .forEach((piece) => piece.classList.remove(SELECTED_PIECE_CLASS));
+  };
+
+  const setSelectedSquare = (sequence) => {
+    clearSelectedSquare();
+    selectedSquareSequence = Number(sequence);
+    if (Number.isNaN(selectedSquareSequence)) {
+      selectedSquareSequence = null;
+      return;
+    }
+    const selectedSquare = boardElement.querySelector(
+      `.chess_board_square[data-sequence="${selectedSquareSequence}"]`
+    );
+    const selectedPiece = getPieceOnSquare(selectedSquare);
+    if (selectedPiece) selectedPiece.classList.add(SELECTED_PIECE_CLASS);
+  };
+
   // move chess piece
   const applyMoveOnBoard = (fromFile, fromRank, toFile, toRank) => {
     const fromSquare = document.querySelector(
@@ -414,7 +528,7 @@
       img.className = "piece_img";
       img.src = piece.imgFile.startsWith("/") ? piece.imgFile : `/${piece.imgFile}`;
       img.alt = `piece_${piece.file}_${piece.rank}`;
-      img.setAttribute("draggable", "false");
+      img.setAttribute("draggable", "true");
       if (piece.color) img.setAttribute("data-color", String(piece.color).toLowerCase());
       if (piece.kind) img.setAttribute("data-kind", String(piece.kind).toLowerCase());
       square.appendChild(img);
@@ -424,17 +538,19 @@
   };
 
   // send the movement command to backend
-  const submitCommand = async () => {
+  const submitCommand = async (commandText = "") => {
+    if (isSubmitting) return false;
     if (gameOver) {
       setStatus("Game has ended. Refresh to start a new game.", "error");
-      return;
+      return false;
     }
 
-    const command = input.value.trim();
+    const command = String(commandText || input.value).trim();
     if (!command) {
       setStatus("Please enter a chess movement command.", "error");
-      return;
+      return false;
     }
+    isSubmitting = true;
     try {
       const body = new URLSearchParams({ command });
       const response = await fetch("/command", {
@@ -449,17 +565,17 @@
         setStatus(errorMessage || "Invalid command format", "error");
         input.focus();
 
-        return;
+        return false;
       }
 
       const result = await response.json();
       if (!result?.from || !result?.to) {
         setStatus("Invalid move response from server", "error");
         input.focus();
-        return;
+        return false;
       }
 
-      input.value = "";
+      input.value = input.value.trim() === command ? "" : input.value;
       const usedStateRender = renderBoardFromState(result.state);
       if (!usedStateRender) {
         applyMoveOnBoard(
@@ -483,10 +599,139 @@
         // ignore play errors
       }
       input.focus();
+      return true;
     } catch (_error) {
       setStatus("Network error. Please try again.", "error");
       input.focus();
+      return false;
+    } finally {
+      isSubmitting = false;
     }
+  };
+
+  const submitBoardMove = async (fromSequence, toSequence) => {
+    let command = moveCommandFromSequence(fromSequence, toSequence);
+    if (!command) return false;
+    if (requiresPromotion(fromSequence, toSequence)) {
+      const promotionChoice = await requestPromotionChoice();
+      if (!promotionChoice) return false;
+      command += promotionChoice;
+    }
+    return submitCommand(command);
+  };
+
+  const initMouseMoveControls = () => {
+    boardElement.addEventListener("click", async (event) => {
+      if (gameOver || isSubmitting || pendingPromotionResolve) return;
+      const targetSquare = getSquareElement(event.target);
+      if (!targetSquare) return;
+
+      const targetSequence = getSquareSequence(targetSquare);
+      if (Number.isNaN(targetSequence)) return;
+      const targetHasCurrentTurnPiece = isCurrentTurnPiece(targetSquare);
+
+      if (selectedSquareSequence == null) {
+        if (targetHasCurrentTurnPiece) {
+          setSelectedSquare(targetSequence);
+        }
+        return;
+      }
+
+      if (targetSequence === selectedSquareSequence) {
+        clearSelectedSquare();
+        return;
+      }
+
+      if (targetHasCurrentTurnPiece) {
+        // Transfer selection to another same-side piece.
+        setSelectedSquare(targetSequence);
+        return;
+      }
+
+      const moved = await submitBoardMove(selectedSquareSequence, targetSequence);
+      if (moved) clearSelectedSquare();
+    });
+
+    boardElement.addEventListener("dragstart", (event) => {
+      if (gameOver || isSubmitting || pendingPromotionResolve) {
+        event.preventDefault();
+        return;
+      }
+      const piece = event.target instanceof Element ? event.target.closest(".piece_img") : null;
+      if (!piece) return;
+      const sourceSquare = getSquareElement(piece);
+      if (!sourceSquare || !isCurrentTurnPiece(sourceSquare)) {
+        event.preventDefault();
+        return;
+      }
+      const sourceSequence = getSquareSequence(sourceSquare);
+      if (Number.isNaN(sourceSequence)) {
+        event.preventDefault();
+        return;
+      }
+      dragSourceSequence = sourceSequence;
+      setSelectedSquare(sourceSequence);
+      piece.classList.add("piece_img_dragging");
+      event.dataTransfer?.setData("text/plain", String(sourceSequence));
+      if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+    });
+
+    boardElement.addEventListener("dragover", (event) => {
+      const targetSquare = getSquareElement(event.target);
+      if (!targetSquare) return;
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+    });
+
+    boardElement.addEventListener("drop", async (event) => {
+      if (gameOver || isSubmitting || pendingPromotionResolve) return;
+      const targetSquare = getSquareElement(event.target);
+      if (!targetSquare) return;
+      event.preventDefault();
+
+      let sourceSequence = dragSourceSequence;
+      if (sourceSequence == null) {
+        const payload = Number(event.dataTransfer?.getData("text/plain"));
+        if (!Number.isNaN(payload)) sourceSequence = payload;
+      }
+      const targetSequence = getSquareSequence(targetSquare);
+      if (sourceSequence == null || Number.isNaN(targetSequence) || sourceSequence === targetSequence) {
+        return;
+      }
+
+      const moved = await submitBoardMove(sourceSequence, targetSequence);
+      if (moved) clearSelectedSquare();
+    });
+
+    boardElement.addEventListener("dragend", (event) => {
+      const piece = event.target instanceof Element ? event.target.closest(".piece_img") : null;
+      if (piece) piece.classList.remove("piece_img_dragging");
+      dragSourceSequence = null;
+    });
+  };
+
+  const initPromotionPicker = () => {
+    if (!promotionPicker) return;
+    closePromotionPicker();
+    promotionPicker
+      .querySelectorAll(".promotion_choice_btn[data-promotion]")
+      .forEach((buttonEl) => {
+        buttonEl.addEventListener("click", () => {
+          const choice = String(buttonEl.getAttribute("data-promotion") || "").toLowerCase();
+          if (!choice) return;
+          resolvePromotionChoice(choice);
+        });
+      });
+    promotionPicker.addEventListener("click", (event) => {
+      if (event.target === promotionPicker && pendingPromotionResolve) {
+        resolvePromotionChoice("");
+      }
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && pendingPromotionResolve) {
+        resolvePromotionChoice("");
+      }
+    });
   };
 
   button.addEventListener("click", submitCommand);
@@ -543,6 +788,8 @@
         renderGameOutcome(result.game);
         renderGameConfig(result.game);
         renderGameInfo(extractBoardStateFromDOM(), result.captured);
+        resolvePromotionChoice("");
+        clearSelectedSquare();
       } catch (_error) {
         setStatus("Network error. Please try again.", "error");
       }
@@ -570,6 +817,8 @@
         button.disabled = false;
         if (flagButton) flagButton.disabled = false;
         gameOver = false;
+        resolvePromotionChoice("");
+        clearSelectedSquare();
         setStatus("New game started.", "success");
         input.focus();
       } catch (_error) {
@@ -583,6 +832,8 @@
       submitCommand();
     }
   });
+  initPromotionPicker();
+  initMouseMoveControls();
 
   renderGameInfo(extractBoardStateFromDOM());
   renderCheckState("");
