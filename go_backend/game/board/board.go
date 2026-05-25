@@ -93,7 +93,7 @@ func (c *ChessBoard) DrawChessBoardSquares() template.HTML {
 		if pieceMeta, ok := pieceAt[key]; ok {
 			fmt.Fprintf(
 				&htmlBuilder,
-				`<img class="piece_img" src="%s" alt="piece_%s" data-color="%s" data-kind="%s" draggable="false">`,
+				`<img class="piece_img" src="%s" alt="piece_%s" data-color="%s" data-kind="%s" draggable="true">`,
 				pieceMeta.src,
 				key,
 				pieceMeta.color,
