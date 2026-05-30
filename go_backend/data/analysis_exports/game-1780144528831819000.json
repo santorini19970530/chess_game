@@ -1,0 +1,989 @@
+{
+  "game_id": "game-1780144528831819000",
+  "result": "white_win",
+  "game": {
+    "id": "game-1780144528831819000",
+    "mode": "human_vs_human",
+    "type": "chess",
+    "config": {
+      "humanColor": "white",
+      "aiGameCount": 1,
+      "startFen": ""
+    },
+    "result": "white_win",
+    "outcome": {
+      "status": "checkmate",
+      "winner": "white",
+      "loser": "black",
+      "checkedSide": "black",
+      "legalMoves": 0,
+      "message": "Checkmate! White wins."
+    },
+    "createdAt": "2026-05-30T12:35:28Z",
+    "updatedAt": "2026-05-30T12:36:36Z"
+  },
+  "history": [
+    "White: f2f4",
+    "Black: d7d5",
+    "White: g1f3",
+    "Black: d5d4",
+    "White: f3d4",
+    "Black: d8d5",
+    "White: e2e4",
+    "Black: c7c6",
+    "White: e4d5",
+    "Black: c8d7",
+    "White: d5c6",
+    "Black: b8a6",
+    "White: c6b7",
+    "Black: a6c7",
+    "White: b7a8q",
+    "Black: d7c8",
+    "White: a8c8"
+  ],
+  "move_analysis": [
+    {
+      "move_number": 1,
+      "command": "f2f4",
+      "analysis": {
+        "request_id": "game-1780144528831819000-move-1",
+        "status": "ok",
+        "source": "heuristic",
+        "fen": "rnbqkbnr/pppppppp/8/8/5P2/8/PPPPP1PP/RNBQKBNR b KQkq f3 0 1",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 4000,
+          "material_white": 4000,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 0,
+        "win_chance_white": 0.5,
+        "win_chance_black": 0.5,
+        "threat_summary": "Position is roughly balanced.",
+        "best_move_uci": "e7e6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e7e6",
+            "san": "e6",
+            "score": 20
+          },
+          {
+            "rank": 2,
+            "uci": "e7e5",
+            "san": "e5",
+            "score": 20
+          },
+          {
+            "rank": 3,
+            "uci": "d7d5",
+            "san": "d5",
+            "score": 16
+          },
+          {
+            "rank": 4,
+            "uci": "d7d6",
+            "san": "d6",
+            "score": 14
+          },
+          {
+            "rank": 5,
+            "uci": "g8f6",
+            "san": "Nf6",
+            "score": 4
+          }
+        ],
+        "latency_ms": 4
+      }
+    },
+    {
+      "move_number": 2,
+      "command": "d7d5",
+      "analysis": {
+        "request_id": "game-1780144528831819000-move-2",
+        "status": "ok",
+        "source": "heuristic",
+        "fen": "rnbqkbnr/ppp1pppp/8/3p4/5P2/8/PPPPP1PP/RNBQKBNR w KQkq d6 0 2",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 4000,
+          "material_white": 4000,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -16,
+        "win_chance_white": 0.4867,
+        "win_chance_black": 0.5133,
+        "threat_summary": "Position is roughly balanced.",
+        "best_move_uci": "e2e3",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e2e3",
+            "san": "e3",
+            "score": 4
+          },
+          {
+            "rank": 2,
+            "uci": "e2e4",
+            "san": "e4",
+            "score": 4
+          },
+          {
+            "rank": 3,
+            "uci": "d2d4",
+            "san": "d4",
+            "score": -6
+          },
+          {
+            "rank": 4,
+            "uci": "g1f3",
+            "san": "Nf3",
+            "score": -8
+          },
+          {
+            "rank": 5,
+            "uci": "e1f2",
+            "san": "Kf2",
+            "score": -8
+          }
+        ],
+        "latency_ms": 5
+      }
+    },
+    {
+      "move_number": 3,
+      "command": "g1f3",
+      "analysis": {
+        "request_id": "game-1780144528831819000-move-3",
+        "status": "ok",
+        "source": "heuristic",
+        "fen": "rnbqkbnr/ppp1pppp/8/3p4/5P2/5N2/PPPPP1PP/RNBQKB1R b KQkq - 1 2",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 4000,
+          "material_white": 4000,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -8,
+        "win_chance_white": 0.4933,
+        "win_chance_black": 0.5067,
+        "threat_summary": "Position is roughly balanced.",
+        "best_move_uci": "d8d6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d8d6",
+            "san": "Qd6",
+            "score": 34
+          },
+          {
+            "rank": 2,
+            "uci": "e7e5",
+            "san": "e5",
+            "score": 28
+          },
+          {
+            "rank": 3,
+            "uci": "e7e6",
+            "san": "e6",
+            "score": 20
+          },
+          {
+            "rank": 4,
+            "uci": "c8f5",
+            "san": "Bf5",
+            "score": 18
+          },
+          {
+            "rank": 5,
+            "uci": "c8g4",
+            "san": "Bg4",
+            "score": 16
+          }
+        ],
+        "latency_ms": 11
+      }
+    },
+    {
+      "move_number": 4,
+      "command": "d5d4",
+      "analysis": {
+        "request_id": "game-1780144528831819000-move-4",
+        "status": "ok",
+        "source": "heuristic",
+        "fen": "rnbqkbnr/ppp1pppp/8/8/3p1P2/5N2/PPPPP1PP/RNBQKB1R w KQkq - 0 3",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 4000,
+          "material_white": 4000,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -12,
+        "win_chance_white": 0.49,
+        "win_chance_black": 0.51,
+        "threat_summary": "Position is roughly balanced.",
+        "best_move_uci": "f3d4",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "f3d4",
+            "san": "Nxd4",
+            "score": 90
+          },
+          {
+            "rank": 2,
+            "uci": "e2e3",
+            "san": "e3",
+            "score": 0
+          },
+          {
+            "rank": 3,
+            "uci": "d2d3",
+            "san": "d3",
+            "score": 0
+          },
+          {
+            "rank": 4,
+            "uci": "f3e5",
+            "san": "Ne5",
+            "score": -2
+          },
+          {
+            "rank": 5,
+            "uci": "e2e4",
+            "san": "e4",
+            "score": -2
+          }
+        ],
+        "latency_ms": 6
+      }
+    },
+    {
+      "move_number": 5,
+      "command": "f3d4",
+      "analysis": {
+        "request_id": "game-1780144528831819000-move-5",
+        "status": "ok",
+        "source": "heuristic",
+        "fen": "rnbqkbnr/ppp1pppp/8/8/3N1P2/8/PPPPP1PP/RNBQKB1R b KQkq - 0 3",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 100,
+          "material_black": 3900,
+          "material_white": 4000,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 90,
+        "win_chance_white": 0.5744,
+        "win_chance_black": 0.4256,
+        "threat_summary": "Position is roughly balanced.",
+        "best_move_uci": "d8d4",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d8d4",
+            "san": "Qxd4",
+            "score": 278
+          },
+          {
+            "rank": 2,
+            "uci": "d8d5",
+            "san": "Qd5",
+            "score": -58
+          },
+          {
+            "rank": 3,
+            "uci": "d8d6",
+            "san": "Qd6",
+            "score": -64
+          },
+          {
+            "rank": 4,
+            "uci": "e7e5",
+            "san": "e5",
+            "score": -68
+          },
+          {
+            "rank": 5,
+            "uci": "e7e6",
+            "san": "e6",
+            "score": -78
+          }
+        ],
+        "latency_ms": 8
+      }
+    },
+    {
+      "move_number": 6,
+      "command": "d8d5",
+      "analysis": {
+        "request_id": "game-1780144528831819000-move-6",
+        "status": "ok",
+        "source": "heuristic",
+        "fen": "rnb1kbnr/ppp1pppp/8/3q4/3N1P2/8/PPPPP1PP/RNBQKB1R w KQkq - 1 4",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 100,
+          "material_black": 3900,
+          "material_white": 4000,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 58,
+        "win_chance_white": 0.5482,
+        "win_chance_black": 0.4518,
+        "threat_summary": "Position is roughly balanced.",
+        "best_move_uci": "e2e4",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e2e4",
+            "san": "e4",
+            "score": 84
+          },
+          {
+            "rank": 2,
+            "uci": "e2e3",
+            "san": "e3",
+            "score": 78
+          },
+          {
+            "rank": 3,
+            "uci": "c2c4",
+            "san": "c4",
+            "score": 70
+          },
+          {
+            "rank": 4,
+            "uci": "d4e6",
+            "san": "Ne6",
+            "score": 68
+          },
+          {
+            "rank": 5,
+            "uci": "d4f5",
+            "san": "Nf5",
+            "score": 68
+          }
+        ],
+        "latency_ms": 6
+      }
+    },
+    {
+      "move_number": 7,
+      "command": "e2e4",
+      "analysis": {
+        "request_id": "game-1780144528831819000-move-7",
+        "status": "ok",
+        "source": "heuristic",
+        "fen": "rnb1kbnr/ppp1pppp/8/3q4/3NPP2/8/PPPP2PP/RNBQKB1R b KQkq e3 0 4",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 100,
+          "material_black": 3900,
+          "material_white": 4000,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 84,
+        "win_chance_white": 0.5695,
+        "win_chance_black": 0.4305,
+        "threat_summary": "Position is roughly balanced.",
+        "best_move_uci": "d5d4",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d5d4",
+            "san": "Qxd4",
+            "score": 258
+          },
+          {
+            "rank": 2,
+            "uci": "d5e4",
+            "san": "Qxe4+",
+            "score": 109
+          },
+          {
+            "rank": 3,
+            "uci": "d5a2",
+            "san": "Qxa2",
+            "score": 8
+          },
+          {
+            "rank": 4,
+            "uci": "c8g4",
+            "san": "Bg4",
+            "score": -70
+          },
+          {
+            "rank": 5,
+            "uci": "d5b5",
+            "san": "Qb5",
+            "score": -76
+          }
+        ],
+        "latency_ms": 14
+      }
+    },
+    {
+      "move_number": 8,
+      "command": "c7c6",
+      "analysis": {
+        "request_id": "game-1780144528831819000-move-8",
+        "status": "ok",
+        "source": "heuristic",
+        "fen": "rnb1kbnr/pp2pppp/2p5/3q4/3NPP2/8/PPPP2PP/RNBQKB1R w KQkq - 0 5",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 100,
+          "material_black": 3900,
+          "material_white": 4000,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 90,
+        "win_chance_white": 0.5744,
+        "win_chance_black": 0.4256,
+        "threat_summary": "Position is roughly balanced.",
+        "best_move_uci": "e4d5",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e4d5",
+            "san": "exd5",
+            "score": 1020
+          },
+          {
+            "rank": 2,
+            "uci": "d4c6",
+            "san": "Nxc6",
+            "score": 188
+          },
+          {
+            "rank": 3,
+            "uci": "d1h5",
+            "san": "Qh5",
+            "score": 118
+          },
+          {
+            "rank": 4,
+            "uci": "d1g4",
+            "san": "Qg4",
+            "score": 114
+          },
+          {
+            "rank": 5,
+            "uci": "d1f3",
+            "san": "Qf3",
+            "score": 106
+          }
+        ],
+        "latency_ms": 10
+      }
+    },
+    {
+      "move_number": 9,
+      "command": "e4d5",
+      "analysis": {
+        "request_id": "game-1780144528831819000-move-9",
+        "status": "ok",
+        "source": "heuristic",
+        "fen": "rnb1kbnr/pp2pppp/2p5/3P4/3N1P2/8/PPPP2PP/RNBQKB1R b KQkq - 0 5",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 1000,
+          "material_black": 3000,
+          "material_white": 4000,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 1020,
+        "win_chance_white": 0.9677,
+        "win_chance_black": 0.0323,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "c6d5",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "c6d5",
+            "san": "cxd5",
+            "score": -918
+          },
+          {
+            "rank": 2,
+            "uci": "c8g4",
+            "san": "Bg4",
+            "score": -1006
+          },
+          {
+            "rank": 3,
+            "uci": "e7e5",
+            "san": "e5",
+            "score": -1008
+          },
+          {
+            "rank": 4,
+            "uci": "c8f5",
+            "san": "Bf5",
+            "score": -1012
+          },
+          {
+            "rank": 5,
+            "uci": "g8f6",
+            "san": "Nf6",
+            "score": -1014
+          }
+        ],
+        "latency_ms": 7
+      }
+    },
+    {
+      "move_number": 10,
+      "command": "c8d7",
+      "analysis": {
+        "request_id": "game-1780144528831819000-move-10",
+        "status": "ok",
+        "source": "heuristic",
+        "fen": "rn2kbnr/pp1bpppp/2p5/3P4/3N1P2/8/PPPP2PP/RNBQKB1R w KQkq - 1 6",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 1000,
+          "material_black": 3000,
+          "material_white": 4000,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 1024,
+        "win_chance_white": 0.9681,
+        "win_chance_black": 0.0319,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "d4c6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d4c6",
+            "san": "Nxc6",
+            "score": 1126
+          },
+          {
+            "rank": 2,
+            "uci": "d5c6",
+            "san": "dxc6",
+            "score": 1122
+          },
+          {
+            "rank": 3,
+            "uci": "d1h5",
+            "san": "Qh5",
+            "score": 1050
+          },
+          {
+            "rank": 4,
+            "uci": "d1g4",
+            "san": "Qg4",
+            "score": 1044
+          },
+          {
+            "rank": 5,
+            "uci": "d1f3",
+            "san": "Qf3",
+            "score": 1042
+          }
+        ],
+        "latency_ms": 13
+      }
+    },
+    {
+      "move_number": 11,
+      "command": "d5c6",
+      "analysis": {
+        "request_id": "game-1780144528831819000-move-11",
+        "status": "ok",
+        "source": "heuristic",
+        "fen": "rn2kbnr/pp1bpppp/2P5/8/3N1P2/8/PPPP2PP/RNBQKB1R b KQkq - 0 6",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 1100,
+          "material_black": 2900,
+          "material_white": 4000,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 1122,
+        "win_chance_white": 0.9768,
+        "win_chance_black": 0.0232,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "b8c6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "b8c6",
+            "san": "Nxc6",
+            "score": -1006
+          },
+          {
+            "rank": 2,
+            "uci": "d7c6",
+            "san": "Bxc6",
+            "score": -1016
+          },
+          {
+            "rank": 3,
+            "uci": "b7c6",
+            "san": "bxc6",
+            "score": -1026
+          },
+          {
+            "rank": 4,
+            "uci": "d7g4",
+            "san": "Bg4",
+            "score": -1106
+          },
+          {
+            "rank": 5,
+            "uci": "e7e5",
+            "san": "e5",
+            "score": -1108
+          }
+        ],
+        "latency_ms": 9
+      }
+    },
+    {
+      "move_number": 12,
+      "command": "b8a6",
+      "analysis": {
+        "request_id": "game-1780144528831819000-move-12",
+        "status": "ok",
+        "source": "heuristic",
+        "fen": "r3kbnr/pp1bpppp/n1P5/8/3N1P2/8/PPPP2PP/RNBQKB1R w KQkq - 1 7",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 1100,
+          "material_black": 2900,
+          "material_white": 4000,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 1114,
+        "win_chance_white": 0.9762,
+        "win_chance_black": 0.0238,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "c6d7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "c6d7",
+            "san": "cxd7+",
+            "score": 1543
+          },
+          {
+            "rank": 2,
+            "uci": "f1a6",
+            "san": "Bxa6",
+            "score": 1448
+          },
+          {
+            "rank": 3,
+            "uci": "c6b7",
+            "san": "cxb7",
+            "score": 1230
+          },
+          {
+            "rank": 4,
+            "uci": "d1h5",
+            "san": "Qh5",
+            "score": 1148
+          },
+          {
+            "rank": 5,
+            "uci": "d1g4",
+            "san": "Qg4",
+            "score": 1134
+          }
+        ],
+        "latency_ms": 14
+      }
+    },
+    {
+      "move_number": 13,
+      "command": "c6b7",
+      "analysis": {
+        "request_id": "game-1780144528831819000-move-13",
+        "status": "ok",
+        "source": "heuristic",
+        "fen": "r3kbnr/pP1bpppp/n7/8/3N1P2/8/PPPP2PP/RNBQKB1R b KQkq - 0 7",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 1200,
+          "material_black": 2800,
+          "material_white": 4000,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 1230,
+        "win_chance_white": 0.9837,
+        "win_chance_black": 0.0163,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "a8b8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "a8b8",
+            "san": "Rb8",
+            "score": -1214
+          },
+          {
+            "rank": 2,
+            "uci": "e7e5",
+            "san": "e5",
+            "score": -1216
+          },
+          {
+            "rank": 3,
+            "uci": "a8c8",
+            "san": "Rc8",
+            "score": -1220
+          },
+          {
+            "rank": 4,
+            "uci": "d7g4",
+            "san": "Bg4",
+            "score": -1220
+          },
+          {
+            "rank": 5,
+            "uci": "a6c5",
+            "san": "Nc5",
+            "score": -1220
+          }
+        ],
+        "latency_ms": 12
+      }
+    },
+    {
+      "move_number": 14,
+      "command": "a6c7",
+      "analysis": {
+        "request_id": "game-1780144528831819000-move-14",
+        "status": "ok",
+        "source": "heuristic",
+        "fen": "r3kbnr/pPnbpppp/8/8/3N1P2/8/PPPP2PP/RNBQKB1R w KQkq - 1 8",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 1200,
+          "material_black": 2800,
+          "material_white": 4000,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 1226,
+        "win_chance_white": 0.9835,
+        "win_chance_black": 0.0165,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "b7a8q",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "b7a8q",
+            "san": "bxa8=Q+",
+            "score": 2617
+          },
+          {
+            "rank": 2,
+            "uci": "b7a8r",
+            "san": "bxa8=R+",
+            "score": 2207
+          },
+          {
+            "rank": 3,
+            "uci": "b7b8q",
+            "san": "b8=Q+",
+            "score": 2119
+          },
+          {
+            "rank": 4,
+            "uci": "b7a8b",
+            "san": "bxa8=B",
+            "score": 1954
+          },
+          {
+            "rank": 5,
+            "uci": "b7a8n",
+            "san": "bxa8=N",
+            "score": 1938
+          }
+        ],
+        "latency_ms": 12
+      }
+    },
+    {
+      "move_number": 15,
+      "command": "b7a8q",
+      "analysis": {
+        "request_id": "game-1780144528831819000-move-15",
+        "status": "ok",
+        "source": "heuristic",
+        "fen": "Q3kbnr/p1nbpppp/8/8/3N1P2/8/PPPP2PP/RNBQKB1R b KQkq - 0 8",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": true,
+          "material_balance_white_minus_black": 2500,
+          "material_black": 2300,
+          "material_white": 4800,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": true,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 2617,
+        "win_chance_white": 0.9998,
+        "win_chance_black": 0.0002,
+        "threat_summary": "black king is in check.",
+        "best_move_uci": "c7a8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "c7a8",
+            "san": "Nxa8",
+            "score": -1620
+          },
+          {
+            "rank": 2,
+            "uci": "d7c8",
+            "san": "Bc8",
+            "score": -2544
+          }
+        ],
+        "latency_ms": 1
+      }
+    },
+    {
+      "move_number": 16,
+      "command": "d7c8",
+      "analysis": {
+        "request_id": "game-1780144528831819000-move-16",
+        "status": "ok",
+        "source": "heuristic",
+        "fen": "Q1b1kbnr/p1n1pppp/8/8/3N1P2/8/PPPP2PP/RNBQKB1R w KQkq - 1 9",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 2500,
+          "material_black": 2300,
+          "material_white": 4800,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 2544,
+        "win_chance_white": 0.9998,
+        "win_chance_black": 0.0002,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "a8c8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "a8c8",
+            "san": "Qxc8#",
+            "score": 100000
+          },
+          {
+            "rank": 2,
+            "uci": "a8a7",
+            "san": "Qxa7",
+            "score": 2638
+          },
+          {
+            "rank": 3,
+            "uci": "a8c6",
+            "san": "Qc6+",
+            "score": 2635
+          },
+          {
+            "rank": 4,
+            "uci": "f1b5",
+            "san": "Bb5+",
+            "score": 2625
+          },
+          {
+            "rank": 5,
+            "uci": "d1h5",
+            "san": "Qh5",
+            "score": 2578
+          }
+        ],
+        "latency_ms": 26
+      }
+    }
+  ],
+  "exported_at": "2026-05-30T12:36:36Z"
+}

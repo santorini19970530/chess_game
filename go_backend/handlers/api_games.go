@@ -14,27 +14,27 @@ import (
 func (h *Handler) APIGames(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid game payload", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "Invalid game payload")
 		return
 	}
 	mode, gameType, humanColor, aiGameCount, fen, err := readGameConfigFromRequest(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	game, err := sessionpkg.CreateGame(mode, gameType, humanColor, aiGameCount, fen)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	log.Printf("api create game %s mode=%s type=%s", gameIDLabel(game.ID), game.Mode, game.Type)
 	snapshot, err := sessionpkg.BuildSnapshotByID(game.ID)
 	if err != nil {
-		http.Error(w, "Failed to load game state", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to load game state")
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -47,7 +47,7 @@ func (h *Handler) APIGames(w http.ResponseWriter, r *http.Request) {
 		HistoryDetailed: snapshot.HistoryDetailed,
 		State:           snapshot.State,
 	}); err != nil {
-		http.Error(w, "Response encode error", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "Response encode error")
 	}
 }
 
@@ -55,7 +55,7 @@ func (h *Handler) APIGameRoutes(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/games/")
 	path = strings.Trim(path, "/")
 	if path == "" {
-		http.NotFound(w, r)
+		writeJSONError(w, http.StatusNotFound, "API route not found")
 		return
 	}
 	parts := strings.Split(path, "/")
@@ -68,28 +68,28 @@ func (h *Handler) APIGameRoutes(w http.ResponseWriter, r *http.Request) {
 		h.postAPIGameMove(w, r, gameID)
 		return
 	}
-	http.NotFound(w, r)
+	writeJSONError(w, http.StatusNotFound, "API route not found")
 }
 
 func (h *Handler) getAPIGameByID(w http.ResponseWriter, r *http.Request, gameID string) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	if err := sessionpkg.ActivateGame(gameID); err != nil {
-		http.Error(w, "Game session not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "Game session not found")
 		return
 	}
 	game, err := sessionpkg.RefreshGameSessionOutcomeByID(gameID)
 	if err != nil {
-		http.Error(w, "Game session not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "Game session not found")
 		return
 	}
 	log.Printf("api get game %s result=%s", gameIDLabel(gameID), game.Result)
 	snapshot, err := sessionpkg.BuildSnapshotByID(gameID)
 	if err != nil {
-		http.Error(w, "Failed to load game state", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to load game state")
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -102,29 +102,29 @@ func (h *Handler) getAPIGameByID(w http.ResponseWriter, r *http.Request, gameID 
 		HistoryDetailed: snapshot.HistoryDetailed,
 		State:           snapshot.State,
 	}); err != nil {
-		http.Error(w, "Response encode error", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "Response encode error")
 	}
 }
 
 func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID string) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid command payload", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "Invalid command payload")
 		return
 	}
 	commandText := strings.ToLower(strings.TrimSpace(r.FormValue("command")))
 	if commandText == "" {
-		http.Error(w, "Empty command", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "Empty command")
 		return
 	}
 
 	currentGame, err := sessionpkg.RefreshGameSessionOutcomeByID(gameID)
 	if err != nil {
-		http.Error(w, "Game session not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "Game session not found")
 		return
 	}
 	if currentGame.Result != sessionpkg.GameResultInProgress {
@@ -132,44 +132,44 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 		if message == "" {
 			message = "Game already ended."
 		}
-		http.Error(w, message, http.StatusConflict)
+		writeJSONError(w, http.StatusConflict, message)
 		return
 	}
 	turnColor, err := sessionpkg.CurrentTurnColorByID(gameID)
 	if err != nil {
-		http.Error(w, "Game session not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "Game session not found")
 		return
 	}
 	expectedColor := pieces.PieceColor(turnColor)
 	parsed, err := commandpkg.ParseCommandForColor(commandText, expectedColor)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	if err := commandpkg.ParseAndLogCommandForColor(commandText, expectedColor); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	normalizedMove, err := sessionpkg.ApplyMoveByCommandByID(gameID, commandText)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	log.Printf("api move accepted %s command=%s", gameIDLabel(gameID), normalizedMove)
 	finalGame, err := sessionpkg.RefreshGameSessionOutcomeByID(gameID)
 	if err != nil {
-		http.Error(w, "Game session not found", http.StatusNotFound)
+		writeJSONError(w, http.StatusNotFound, "Game session not found")
 		return
 	}
 	if finalGame.Result != sessionpkg.GameResultInProgress {
 		if err := sessionpkg.ArchiveGameIfNeededByID(gameID); err != nil {
-			http.Error(w, "Failed to archive completed game", http.StatusInternalServerError)
+			writeJSONError(w, http.StatusInternalServerError, "Failed to archive completed game")
 			return
 		}
 	}
 	snapshot, err := sessionpkg.BuildSnapshotByID(gameID)
 	if err != nil {
-		http.Error(w, "Failed to load game state", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to load game state")
 		return
 	}
 
@@ -212,6 +212,6 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Response encode error", http.StatusInternalServerError)
+		writeJSONError(w, http.StatusInternalServerError, "Response encode error")
 	}
 }

@@ -757,6 +757,14 @@
   const sequenceByFileRank = (fileNum, rankNum) =>
     (8 - rankNum) * 8 + (fileNum - 1);
 
+  const imagePathFromPiece = (piece) => {
+    const kind = String(piece?.kind || "").toLowerCase();
+    const color = String(piece?.color || "").toLowerCase();
+    if (!kind || !color) return "";
+    const tone = color === "black" ? "dark" : "light";
+    return `/pic/chess_pic/${kind}_${tone}.png`;
+  };
+
   // Full board sync from backend state (handles en passant, castling, promotion)
   const renderBoardFromState = (state) => {
     if (!Array.isArray(state)) return false;
@@ -767,16 +775,18 @@
     });
 
     for (const piece of state) {
-      if (!piece || !piece.file || !piece.rank || !piece.imgFile) continue;
+      if (!piece || !piece.file || !piece.rank) continue;
       const sequence = sequenceByFileRank(piece.file, piece.rank);
       const square = document.querySelector(
         `.chess_board_square[data-sequence="${sequence}"]`
       );
       if (!square) continue;
+      const imagePath = imagePathFromPiece(piece);
+      if (!imagePath) continue;
 
       const img = document.createElement("img");
       img.className = "piece_img";
-      img.src = piece.imgFile.startsWith("/") ? piece.imgFile : `/${piece.imgFile}`;
+      img.src = imagePath;
       img.alt = `piece_${piece.file}_${piece.rank}`;
       img.setAttribute("draggable", "true");
       if (piece.color) img.setAttribute("data-color", String(piece.color).toLowerCase());
