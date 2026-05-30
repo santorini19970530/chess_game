@@ -13,6 +13,15 @@ import (
 )
 
 func ApplyMoveByCommand(commandText string) (string, error) {
+	game, err := lockActiveRuntimeState()
+	if err != nil {
+		return "", err
+	}
+	defer unlockActiveRuntimeState(game)
+	return applyMoveByCommandCurrentLoaded(commandText)
+}
+
+func applyMoveByCommandCurrentLoaded(commandText string) (string, error) {
 	expectedColor := CurrentTurnColor()
 	parsed, err := command.ParseCommandForColor(commandText, expectedColor)
 	if err != nil {

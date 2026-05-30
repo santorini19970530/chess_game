@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	sessionpkg "go_backend/game/session"
 )
@@ -26,8 +27,16 @@ func (h *Handler) GetLegalMoves(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid rank", http.StatusBadRequest)
 		return
 	}
+	gameID := strings.TrimSpace(r.URL.Query().Get("gameId"))
+	if gameID == "" {
+		gameID = sessionpkg.GetGameSession().ID
+	}
 
-	moves := sessionpkg.LegalMovesForSquare(file, rank)
+	moves, err := sessionpkg.LegalMovesForSquareByID(gameID, file, rank)
+	if err != nil {
+		http.Error(w, "game session not found", http.StatusNotFound)
+		return
+	}
 	response := struct {
 		From struct {
 			File int `json:"file"`
