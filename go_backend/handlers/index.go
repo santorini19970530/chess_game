@@ -9,12 +9,25 @@ import (
 	"fmt"
 	chessboard "go_backend/game/board"
 	commandpkg "go_backend/game/command"
+	pieces "go_backend/game/piece"
 	sessionpkg "go_backend/game/session"
 	"html/template"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 )
+
+type gameStateResponse struct {
+	CurrentTurn     string                        `json:"currentTurn"`
+	CheckedSide     string                        `json:"checkedSide"`
+	Game            sessionpkg.GameSession        `json:"game"`
+	Captured        sessionpkg.CapturedSummary    `json:"captured"`
+	Analysis        *analyzerResponse             `json:"analysis,omitempty"`
+	History         []string                      `json:"history"`
+	HistoryDetailed []sessionpkg.MoveHistoryEntry `json:"historyDetailed"`
+	State           []sessionpkg.PieceState       `json:"state"`
+}
 
 // generateChessBoard builds the chessboard html for the index page
 // game state integration (gameSession) will be added later.
@@ -47,6 +60,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 
 	// build dynamic main content html in sequence
 	var mainHTMLCode strings.Builder
+	activeGame := sessionpkg.GetGameSession()
 	currentTurnLabel := sessionpkg.CurrentTurnLabel()
 	whiteTurnClass := "game_info_col_white"
 	blackTurnClass := "game_info_col_black"
@@ -136,6 +150,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`<button id="chess_new_game" type="button">New Game</button>`)
 	mainHTMLCode.WriteString(`</div>`)
 	mainHTMLCode.WriteString(`<p id="chess_command_status" class="command_status" role="status" aria-live="polite"></p>`)
+	mainHTMLCode.WriteString(`<input id="active_game_id" type="hidden" value="` + activeGame.ID + `" />`)
 	mainHTMLCode.WriteString(`<div id="promotion_picker" class="promotion_picker_hidden" role="dialog" aria-modal="true" aria-labelledby="promotion_picker_title">`)
 	mainHTMLCode.WriteString(`<div class="promotion_picker_panel">`)
 	mainHTMLCode.WriteString(`<h4 id="promotion_picker_title">Choose promotion piece</h4>`)
@@ -177,32 +192,48 @@ func (h *Handler) NewGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := sessionpkg.ArchiveActiveGameIfNeeded(); err != nil {
+	gameID := strings.TrimSpace(r.FormValue("gameId"))
+	if gameID == "" {
+		gameID = strings.TrimSpace(r.URL.Query().Get("gameId"))
+	}
+	if gameID == "" {
+		gameID = sessionpkg.GetGameSession().ID
+	}
+	currentGame, err := sessionpkg.GetGameSessionByID(gameID)
+	if err != nil {
+		http.Error(w, "Game session not found", http.StatusNotFound)
+		return
+	}
+	if err := sessionpkg.ArchiveGameIfNeededByID(gameID); err != nil {
 		http.Error(w, "Failed to archive current game", http.StatusInternalServerError)
 		log.Printf("archive game failed: %v", err)
 		return
 	}
-	game, err := sessionpkg.StartConfiguredNewGame()
+	game, err := sessionpkg.CreateGame(
+		currentGame.Mode,
+		currentGame.Type,
+		currentGame.Config.HumanColor,
+		currentGame.Config.AIGameCount,
+		currentGame.Config.StartFEN,
+	)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	response := struct {
-		CurrentTurn     string                        `json:"currentTurn"`
-		CheckedSide     string                        `json:"checkedSide"`
-		Game            sessionpkg.GameSession        `json:"game"`
-		Captured        sessionpkg.CapturedSummary    `json:"captured"`
-		History         []string                      `json:"history"`
-		HistoryDetailed []sessionpkg.MoveHistoryEntry `json:"historyDetailed"`
-		State           []sessionpkg.PieceState       `json:"state"`
-	}{
-		CurrentTurn:     sessionpkg.CurrentTurnLabel(),
-		CheckedSide:     sessionpkg.CheckedSideLabel(),
-		Game:            game,
-		Captured:        sessionpkg.GetCapturedSummary(),
-		History:         sessionpkg.GetMoveHistory(),
-		HistoryDetailed: sessionpkg.GetMoveHistoryDetailed(),
-		State:           sessionpkg.GetBoardState(),
+	log.Printf("new game created from UI %s previous=%s", gameIDLabel(game.ID), gameIDLabel(gameID))
+	snapshot, err := sessionpkg.BuildSnapshotByID(game.ID)
+	if err != nil {
+		http.Error(w, "Failed to load game state", http.StatusInternalServerError)
+		return
+	}
+	response := gameStateResponse{
+		CurrentTurn:     snapshot.CurrentTurn,
+		CheckedSide:     snapshot.CheckedSide,
+		Game:            snapshot.Game,
+		Captured:        snapshot.Captured,
+		History:         snapshot.History,
+		HistoryDetailed: snapshot.HistoryDetailed,
+		State:           snapshot.State,
 	}
 	exportGameAnalysisIfNeeded(game)
 
@@ -222,6 +253,13 @@ func (h *Handler) UpdateGameConfig(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid configuration payload", http.StatusBadRequest)
 		return
 	}
+	gameID := strings.TrimSpace(r.FormValue("gameId"))
+	if gameID == "" {
+		gameID = strings.TrimSpace(r.URL.Query().Get("gameId"))
+	}
+	if gameID == "" {
+		gameID = sessionpkg.GetGameSession().ID
+	}
 
 	mode := sessionpkg.GameMode(strings.TrimSpace(r.FormValue("mode")))
 	gameType := sessionpkg.GameType(strings.TrimSpace(r.FormValue("type")))
@@ -235,11 +273,12 @@ func (h *Handler) UpdateGameConfig(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	game, err := sessionpkg.UpdateGameConfig(mode, gameType, humanColor, aiGameCount, fen)
+	game, err := sessionpkg.UpdateGameConfigByID(gameID, mode, gameType, humanColor, aiGameCount, fen)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	log.Printf("game config updated %s mode=%s type=%s", gameIDLabel(gameID), game.Mode, game.Type)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(struct {
@@ -256,7 +295,22 @@ func (h *Handler) FlagGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	currentGame := sessionpkg.RefreshGameSessionOutcome()
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid payload", http.StatusBadRequest)
+		return
+	}
+	gameID := strings.TrimSpace(r.FormValue("gameId"))
+	if gameID == "" {
+		gameID = strings.TrimSpace(r.URL.Query().Get("gameId"))
+	}
+	if gameID == "" {
+		gameID = sessionpkg.GetGameSession().ID
+	}
+	currentGame, err := sessionpkg.RefreshGameSessionOutcomeByID(gameID)
+	if err != nil {
+		http.Error(w, "Game session not found", http.StatusNotFound)
+		return
+	}
 	if currentGame.Result != sessionpkg.GameResultInProgress {
 		message := currentGame.Outcome.Message
 		if message == "" {
@@ -266,34 +320,35 @@ func (h *Handler) FlagGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	game := sessionpkg.FlagCurrentTurn()
+	game, err := sessionpkg.FlagCurrentTurnByID(gameID)
+	if err != nil {
+		http.Error(w, "Game session not found", http.StatusNotFound)
+		return
+	}
 	log.Printf("game flagged: game_id=%s loser=%s winner=%s", game.ID, game.Outcome.Loser, game.Outcome.Winner)
-	if err := sessionpkg.ArchiveActiveGameIfNeeded(); err != nil {
+	if err := sessionpkg.ArchiveGameIfNeededByID(gameID); err != nil {
 		http.Error(w, "Failed to archive flagged game", http.StatusInternalServerError)
 		log.Printf("archive flagged game failed: %v", err)
 		return
 	}
 	log.Printf("flagged game archived: game_id=%s", game.ID)
 
-	response := struct {
-		CurrentTurn     string                        `json:"currentTurn"`
-		CheckedSide     string                        `json:"checkedSide"`
-		Game            sessionpkg.GameSession        `json:"game"`
-		Captured        sessionpkg.CapturedSummary    `json:"captured"`
-		Analysis        *analyzerResponse             `json:"analysis,omitempty"`
-		History         []string                      `json:"history"`
-		HistoryDetailed []sessionpkg.MoveHistoryEntry `json:"historyDetailed"`
-		State           []sessionpkg.PieceState       `json:"state"`
-	}{
-		CurrentTurn:     sessionpkg.CurrentTurnLabel(),
-		CheckedSide:     sessionpkg.CheckedSideLabel(),
-		Game:            game,
-		Captured:        sessionpkg.GetCapturedSummary(),
-		History:         sessionpkg.GetMoveHistory(),
-		HistoryDetailed: sessionpkg.GetMoveHistoryDetailed(),
-		State:           sessionpkg.GetBoardState(),
+	snapshot, err := sessionpkg.BuildSnapshotByID(gameID)
+	if err != nil {
+		http.Error(w, "Failed to load game state", http.StatusInternalServerError)
+		return
 	}
-	enqueueCurrentPositionAnalysis("flag")
+	response := gameStateResponse{
+		CurrentTurn:     snapshot.CurrentTurn,
+		CheckedSide:     snapshot.CheckedSide,
+		Game:            snapshot.Game,
+		Captured:        snapshot.Captured,
+		History:         snapshot.History,
+		HistoryDetailed: snapshot.HistoryDetailed,
+		State:           snapshot.State,
+	}
+	enqueueCurrentPositionAnalysis(gameID, "flag")
+	log.Printf("game flagged %s loser=%s winner=%s", gameIDLabel(gameID), game.Outcome.Loser, game.Outcome.Winner)
 	exportGameAnalysisIfNeeded(game)
 
 	w.Header().Set("Content-Type", "application/json")
@@ -308,8 +363,11 @@ func (h *Handler) GetLatestAnalysis(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	game := sessionpkg.GetGameSession()
-	status := getLatestAnalysisStatusByGameID(game.ID)
+	gameID := strings.TrimSpace(r.URL.Query().Get("gameId"))
+	if gameID == "" {
+		gameID = sessionpkg.GetGameSession().ID
+	}
+	status := getLatestAnalysisStatusByGameID(gameID)
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(status); err != nil {
 		http.Error(w, "Response encode error", http.StatusInternalServerError)
@@ -330,12 +388,23 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 	}
 
 	commandText := strings.ToLower(strings.TrimSpace(r.FormValue("command")))
+	gameID := strings.TrimSpace(r.FormValue("gameId"))
+	if gameID == "" {
+		gameID = strings.TrimSpace(r.URL.Query().Get("gameId"))
+	}
+	if gameID == "" {
+		gameID = sessionpkg.GetGameSession().ID
+	}
 
 	if commandText == "" {
 		http.Error(w, "Empty command", http.StatusBadRequest)
 		return
 	}
-	currentGame := sessionpkg.RefreshGameSessionOutcome()
+	currentGame, err := sessionpkg.RefreshGameSessionOutcomeByID(gameID)
+	if err != nil {
+		http.Error(w, "Game session not found", http.StatusNotFound)
+		return
+	}
 	if currentGame.Result != sessionpkg.GameResultInProgress {
 		message := currentGame.Outcome.Message
 		if message == "" {
@@ -345,7 +414,12 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expectedColor := sessionpkg.CurrentTurnColor()
+	turnColor, err := sessionpkg.CurrentTurnColorByID(gameID)
+	if err != nil {
+		http.Error(w, "Game session not found", http.StatusNotFound)
+		return
+	}
+	expectedColor := pieces.PieceColor(turnColor)
 	parsed, err := commandpkg.ParseCommandForColor(commandText, expectedColor)
 	if err != nil {
 		log.Printf("warning: invalid chess command: %q (%v)", commandText, err)
@@ -357,22 +431,32 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	normalizedMove, err := sessionpkg.ApplyMoveByCommand(commandText)
+	normalizedMove, err := sessionpkg.ApplyMoveByCommandByID(gameID, commandText)
 	if err != nil {
 		log.Printf("warning: failed to apply command %q: %v", commandText, err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	log.Printf("command accepted %s command=%s", gameIDLabel(gameID), normalizedMove)
 
-	finalGame := sessionpkg.RefreshGameSessionOutcome()
+	finalGame, err := sessionpkg.RefreshGameSessionOutcomeByID(gameID)
+	if err != nil {
+		http.Error(w, "Game session not found", http.StatusNotFound)
+		return
+	}
 	if finalGame.Result != sessionpkg.GameResultInProgress {
-		if err := sessionpkg.ArchiveActiveGameIfNeeded(); err != nil {
+		if err := sessionpkg.ArchiveGameIfNeededByID(gameID); err != nil {
 			http.Error(w, "Failed to archive completed game", http.StatusInternalServerError)
 			log.Printf("archive completed game failed: %v", err)
 			return
 		}
 	}
 
+	snapshot, err := sessionpkg.BuildSnapshotByID(gameID)
+	if err != nil {
+		http.Error(w, "Failed to load game state", http.StatusInternalServerError)
+		return
+	}
 	response := struct {
 		Command     string                     `json:"command"`
 		CurrentTurn string                     `json:"currentTurn"`
@@ -393,13 +477,13 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 		State           []sessionpkg.PieceState       `json:"state"`
 	}{
 		Command:         normalizedMove,
-		CurrentTurn:     sessionpkg.CurrentTurnLabel(),
-		CheckedSide:     sessionpkg.CheckedSideLabel(),
+		CurrentTurn:     snapshot.CurrentTurn,
+		CheckedSide:     snapshot.CheckedSide,
 		Game:            finalGame,
-		Captured:        sessionpkg.GetCapturedSummary(),
-		History:         sessionpkg.GetMoveHistory(),
-		HistoryDetailed: sessionpkg.GetMoveHistoryDetailed(),
-		State:           sessionpkg.GetBoardState(),
+		Captured:        snapshot.Captured,
+		History:         snapshot.History,
+		HistoryDetailed: snapshot.HistoryDetailed,
+		State:           snapshot.State,
 	}
 	response.From.File = string(parsed.FromFile)
 	response.From.Rank = parsed.FromRank
@@ -408,7 +492,7 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 
 	// Testing phase: call Python analyzer after each successful move
 	// and print full response in Go server terminal.
-	enqueueCurrentPositionAnalysis(normalizedMove)
+	enqueueCurrentPositionAnalysis(gameID, normalizedMove)
 	if finalGame.Result != sessionpkg.GameResultInProgress {
 		exportGameAnalysisIfNeeded(finalGame)
 	}
@@ -417,4 +501,29 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, "Response encode error", http.StatusInternalServerError)
 	}
+}
+
+func readGameConfigFromRequest(r *http.Request) (sessionpkg.GameMode, sessionpkg.GameType, string, int, string, error) {
+	mode := sessionpkg.GameMode(strings.TrimSpace(r.FormValue("mode")))
+	if mode == "" {
+		mode = sessionpkg.GameModeHumanVsHuman
+	}
+	gameType := sessionpkg.GameType(strings.TrimSpace(r.FormValue("type")))
+	if gameType == "" {
+		gameType = sessionpkg.GameTypeChess
+	}
+	humanColor := strings.TrimSpace(r.FormValue("humanColor"))
+	if humanColor == "" {
+		humanColor = "white"
+	}
+	fen := strings.TrimSpace(r.FormValue("fen"))
+	aiGameCount := 1
+	if raw := strings.TrimSpace(r.FormValue("aiGameCount")); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil {
+			return "", "", "", 0, "", fmt.Errorf("invalid ai game count")
+		}
+		aiGameCount = parsed
+	}
+	return mode, gameType, humanColor, aiGameCount, fen, nil
 }

@@ -11,6 +11,14 @@ var initialPiecesSnapshot = append([]pieces.ChessPiece(nil), pieces.ChessPieces.
 
 // ResetGame resets board, turn state, move history, and session metadata.
 func ResetGame() {
+	game, err := lockActiveRuntimeState()
+	if err == nil {
+		defer unlockActiveRuntimeState(game)
+	}
+	resetGlobalsToInitialState()
+}
+
+func resetGlobalsToInitialState() {
 	pieces.ChessPieces = append([]pieces.ChessPiece(nil), initialPiecesSnapshot...)
 	moveHistory = nil
 	moveHistoryDetailed = nil
@@ -18,5 +26,4 @@ func ResetGame() {
 	resetCastlingState()
 	resetTurnOverride()
 	resetDrawTracking()
-	resetGameSessionForTest()
 }

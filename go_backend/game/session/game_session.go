@@ -82,9 +82,15 @@ type ArchivedGame struct {
 
 var (
 	gameSessionMu sync.RWMutex
-	activeGame    = newGameSession(GameModeHumanVsHuman, GameTypeChess)
+	runtimeStateMu sync.Mutex
+	sessionStore  = NewSessionStore()
+	activeGameID  string
 	archivePath   = filepath.Join("data", "game_history.json")
 )
+
+func init() {
+	initializeSessionStore()
+}
 
 func newGameSession(mode GameMode, gameType GameType) GameSession {
 	now := time.Now().UTC().Format(time.RFC3339)
@@ -107,24 +113,31 @@ func newGameSession(mode GameMode, gameType GameType) GameSession {
 
 func GetGameSession() GameSession {
 	gameSessionMu.RLock()
-	defer gameSessionMu.RUnlock()
-	return activeGame
+	activeID := activeGameID
+	gameSessionMu.RUnlock()
+	game, ok := sessionStore.Get(activeID)
+	if !ok {
+		return GameSession{}
+	}
+	return game.Session
 }
 
 func RefreshGameSessionOutcome() GameSession {
-	outcome := EvaluateGameOutcome()
+	game, err := lockActiveRuntimeState()
+	if err != nil {
+		return GameSession{}
+	}
+	defer unlockActiveRuntimeState(game)
 
-	gameSessionMu.Lock()
-	defer gameSessionMu.Unlock()
-
-	if activeGame.Outcome.Status == "resigned" && activeGame.Result != GameResultInProgress {
-		return activeGame
+	if game.Session.Outcome.Status == "resigned" && game.Session.Result != GameResultInProgress {
+		return game.Session
 	}
 
-	activeGame.Outcome = outcome
-	activeGame.Result = gameResultFromOutcome(outcome)
-	activeGame.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-	return activeGame
+	outcome := EvaluateGameOutcome()
+	game.Session.Outcome = outcome
+	game.Session.Result = gameResultFromOutcome(outcome)
+	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	return game.Session
 }
 
 func CanAcceptMoves() bool {
@@ -135,19 +148,25 @@ func CanAcceptMoves() bool {
 func resetGameSessionForTest() {
 	gameSessionMu.Lock()
 	defer gameSessionMu.Unlock()
-	activeGame = newGameSession(GameModeHumanVsHuman, GameTypeChess)
+	sessionStore = NewSessionStore()
+	initial := sessionStore.Create(newGameSession(GameModeHumanVsHuman, GameTypeChess))
+	activeGameID = initial.Session.ID
 	resetTurnOverride()
+	initial.syncFromGlobals()
 }
 
 func ArchiveActiveGameIfNeeded() error {
-	gameSessionMu.Lock()
-	if activeGame.Archived {
-		gameSessionMu.Unlock()
+	game, err := lockActiveRuntimeState()
+	if err != nil {
+		return err
+	}
+	if game.Session.Archived {
+		unlockActiveRuntimeState(game)
 		return nil
 	}
-	gameSnapshot := activeGame
+	gameSnapshot := game.Session
 	if gameSnapshot.Result == GameResultInProgress && len(GetMoveHistory()) == 0 {
-		gameSessionMu.Unlock()
+		unlockActiveRuntimeState(game)
 		return nil
 	}
 	history := GetMoveHistory()
@@ -156,7 +175,7 @@ func ArchiveActiveGameIfNeeded() error {
 	}
 	state := GetBoardState()
 	captured := GetCapturedSummary()
-	gameSessionMu.Unlock()
+	unlockActiveRuntimeState(game)
 
 	records, err := loadArchivedGames()
 	if err != nil {
@@ -181,9 +200,12 @@ func ArchiveActiveGameIfNeeded() error {
 		return err
 	}
 
-	gameSessionMu.Lock()
-	activeGame.Archived = true
-	gameSessionMu.Unlock()
+	game, err = lockActiveRuntimeState()
+	if err != nil {
+		return err
+	}
+	game.Session.Archived = true
+	unlockActiveRuntimeState(game)
 	return nil
 }
 
@@ -217,62 +239,61 @@ func saveArchivedGames(records []ArchivedGame) error {
 }
 
 func UpdateGameConfig(mode GameMode, gameType GameType, humanColor string, aiGameCount int, startFEN string) (GameSession, error) {
-	if mode != GameModeHumanVsHuman && mode != GameModeHumanVsAI && mode != GameModeAIVsAI {
-		return GameSession{}, fmt.Errorf("invalid game mode")
-	}
-	if gameType != GameTypeChess && gameType != GameTypeXiangqi && gameType != GameTypeShogi {
-		return GameSession{}, fmt.Errorf("invalid game type")
-	}
-	if humanColor != "white" && humanColor != "black" {
-		return GameSession{}, fmt.Errorf("human side must be white or black")
-	}
-	if aiGameCount < 1 {
-		return GameSession{}, fmt.Errorf("ai game count must be at least 1")
-	}
-	if mode != GameModeAIVsAI {
-		aiGameCount = 1
-	}
-	if startFEN != "" {
-		aiGameCount = 1
-	}
-	if gameType != GameTypeChess {
-		return GameSession{}, fmt.Errorf("only chess is currently supported")
+	normalizedCount, err := validateGameConfig(mode, gameType, humanColor, aiGameCount, startFEN)
+	if err != nil {
+		return GameSession{}, err
 	}
 
-	gameSessionMu.Lock()
-	defer gameSessionMu.Unlock()
-	activeGame.Mode = mode
-	activeGame.Type = gameType
-	activeGame.Config = GameConfig{
+	game, err := lockActiveRuntimeState()
+	if err != nil {
+		return GameSession{}, err
+	}
+	defer unlockActiveRuntimeState(game)
+	game.Session.Mode = mode
+	game.Session.Type = gameType
+	game.Session.Config = GameConfig{
 		HumanColor:  humanColor,
-		AIGameCount: aiGameCount,
+		AIGameCount: normalizedCount,
 		StartFEN:    startFEN,
 	}
-	activeGame.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-	return activeGame, nil
+	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	return game.Session, nil
 }
 
 func StartConfiguredNewGame() (GameSession, error) {
+	currentGame, err := lockActiveRuntimeState()
+	if err != nil {
+		return GameSession{}, err
+	}
+	currentMode := currentGame.Session.Mode
+	currentType := currentGame.Session.Type
+	currentConfig := currentGame.Session.Config
+	unlockActiveRuntimeState(currentGame)
+
+	newSession := newGameSession(currentMode, currentType)
+	newSession.Config = currentConfig
+	created := sessionStore.Create(newSession)
+
 	gameSessionMu.Lock()
-	currentMode := activeGame.Mode
-	currentType := activeGame.Type
-	currentConfig := activeGame.Config
+	activeGameID = created.Session.ID
 	gameSessionMu.Unlock()
 
-	piecesReset()
+	game, err := lockActiveRuntimeState()
+	if err != nil {
+		return GameSession{}, err
+	}
+	defer unlockActiveRuntimeState(game)
 
-	gameSessionMu.Lock()
-	activeGame = newGameSession(currentMode, currentType)
-	activeGame.Config = currentConfig
-	gameSessionMu.Unlock()
-
+	resetGlobalsToInitialState()
 	if currentConfig.StartFEN != "" {
-		if err := ApplyFEN(currentConfig.StartFEN); err != nil {
+		if err := applyFENToCurrentGlobals(currentConfig.StartFEN); err != nil {
 			return GameSession{}, err
 		}
 	}
-
-	return RefreshGameSessionOutcome(), nil
+	game.Session.Outcome = EvaluateGameOutcome()
+	game.Session.Result = gameResultFromOutcome(game.Session.Outcome)
+	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	return game.Session, nil
 }
 
 func piecesReset() {
@@ -280,13 +301,15 @@ func piecesReset() {
 }
 
 func FlagCurrentTurn() GameSession {
+	game, err := lockActiveRuntimeState()
+	if err != nil {
+		return GameSession{}
+	}
+	defer unlockActiveRuntimeState(game)
 	side := CurrentTurnColor()
 	winner := opponentOf(side)
 
-	gameSessionMu.Lock()
-	defer gameSessionMu.Unlock()
-
-	activeGame.Outcome = GameOutcome{
+	game.Session.Outcome = GameOutcome{
 		Status:     "resigned",
 		Winner:     string(winner),
 		Loser:      string(side),
@@ -294,13 +317,13 @@ func FlagCurrentTurn() GameSession {
 		Message:    sideLabel(side) + " flagged. " + sideLabel(winner) + " wins.",
 	}
 	if winner == "white" {
-		activeGame.Result = GameResultWhiteWin
+		game.Session.Result = GameResultWhiteWin
 	} else {
-		activeGame.Result = GameResultBlackWin
+		game.Session.Result = GameResultBlackWin
 	}
-	activeGame.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-	activeGame.Archived = false
-	return activeGame
+	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	game.Session.Archived = false
+	return game.Session
 }
 
 func toArchivedPieceState(state []PieceState) []ArchivedPieceState {
@@ -351,4 +374,102 @@ func gameResultFromOutcome(outcome GameOutcome) GameResult {
 	default:
 		return GameResultInProgress
 	}
+}
+
+func initializeSessionStore() {
+	gameSessionMu.Lock()
+	defer gameSessionMu.Unlock()
+	sessionStore = NewSessionStore()
+	initial := sessionStore.Create(newGameSession(GameModeHumanVsHuman, GameTypeChess))
+	activeGameID = initial.Session.ID
+	initial.bindToGlobals()
+}
+
+func getActiveRuntimeGame() (*RuntimeGame, error) {
+	gameSessionMu.RLock()
+	activeID := activeGameID
+	gameSessionMu.RUnlock()
+	game, ok := sessionStore.Get(activeID)
+	if !ok {
+		return nil, fmt.Errorf("active game session not found: %s", activeID)
+	}
+	return game, nil
+}
+
+func lockActiveRuntimeState() (*RuntimeGame, error) {
+	runtimeStateMu.Lock()
+	game, err := getActiveRuntimeGame()
+	if err != nil {
+		runtimeStateMu.Unlock()
+		return nil, err
+	}
+	return game, nil
+}
+
+func unlockActiveRuntimeState(game *RuntimeGame) {
+	if game != nil {
+		game.syncFromGlobals()
+	}
+	runtimeStateMu.Unlock()
+}
+
+func getRuntimeGameByID(gameID string) (*RuntimeGame, error) {
+	game, ok := sessionStore.Get(gameID)
+	if !ok {
+		return nil, fmt.Errorf("game session not found: %s", gameID)
+	}
+	return game, nil
+}
+
+func lockRuntimeStateByID(gameID string) (*RuntimeGame, error) {
+	runtimeStateMu.Lock()
+	game, err := getRuntimeGameByID(gameID)
+	if err != nil {
+		runtimeStateMu.Unlock()
+		return nil, err
+	}
+	game.bindToGlobals()
+	return game, nil
+}
+
+func unlockRuntimeStateByID(game *RuntimeGame) {
+	if game != nil {
+		game.syncFromGlobals()
+	}
+	runtimeStateMu.Unlock()
+}
+
+func ActivateGame(gameID string) error {
+	if _, err := getRuntimeGameByID(gameID); err != nil {
+		return err
+	}
+	gameSessionMu.Lock()
+	activeGameID = gameID
+	gameSessionMu.Unlock()
+	return nil
+}
+
+func validateGameConfig(mode GameMode, gameType GameType, humanColor string, aiGameCount int, startFEN string) (int, error) {
+	if mode != GameModeHumanVsHuman && mode != GameModeHumanVsAI && mode != GameModeAIVsAI {
+		return 0, fmt.Errorf("invalid game mode")
+	}
+	if gameType != GameTypeChess && gameType != GameTypeXiangqi && gameType != GameTypeShogi {
+		return 0, fmt.Errorf("invalid game type")
+	}
+	if humanColor != "white" && humanColor != "black" {
+		return 0, fmt.Errorf("human side must be white or black")
+	}
+	if aiGameCount < 1 {
+		return 0, fmt.Errorf("ai game count must be at least 1")
+	}
+	if mode != GameModeAIVsAI {
+		aiGameCount = 1
+	}
+	if startFEN != "" {
+		aiGameCount = 1
+	}
+	if gameType != GameTypeChess {
+		return 0, fmt.Errorf("only chess is currently supported")
+	}
+	return aiGameCount, nil
 }

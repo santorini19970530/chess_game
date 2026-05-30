@@ -1,2 +1,0 @@
-// command.go
-package handlers

@@ -36,3 +36,10 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 		log.Printf("template execute error for %s: %v", tmpl, err)
 	}
 }
+
+func gameIDLabel(gameID string) string {
+	if gameID == "" {
+		return "[Game ID: unknown]"
+	}
+	return "[Game ID: " + gameID + "]"
+}

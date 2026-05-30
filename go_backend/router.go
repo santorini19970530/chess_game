@@ -88,4 +88,6 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 	mux.HandleFunc("/game/config", h.UpdateGameConfig)
 	mux.HandleFunc("/game/legal-moves", h.GetLegalMoves)
 	mux.HandleFunc("/game/analysis/latest", h.GetLatestAnalysis)
+	mux.HandleFunc("/api/games", h.APIGames)
+	mux.HandleFunc("/api/games/", h.APIGameRoutes)
 }

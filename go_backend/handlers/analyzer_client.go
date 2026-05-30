@@ -171,34 +171,47 @@ func analysisWorkerLoop() {
 	}
 }
 
-func enqueueCurrentPositionAnalysis(command string) {
-	game := sessionpkg.GetGameSession()
-	history := sessionpkg.GetMoveHistory()
+func enqueueCurrentPositionAnalysis(gameID, command string) {
+	history, err := sessionpkg.MoveHistoryByID(gameID)
+	if err != nil {
+		log.Printf("warning: enqueue analysis failed %s: %v", gameIDLabel(gameID), err)
+		return
+	}
 	moveNumber := len(history)
+	fen, err := sessionpkg.CurrentFENByID(gameID)
+	if err != nil {
+		log.Printf("warning: enqueue analysis failed %s: %v", gameIDLabel(gameID), err)
+		return
+	}
+	color, err := sessionpkg.CurrentTurnColorByID(gameID)
+	if err != nil {
+		log.Printf("warning: enqueue analysis failed %s: %v", gameIDLabel(gameID), err)
+		return
+	}
 	job := analysisJob{
-		GameID:     game.ID,
+		GameID:     gameID,
 		MoveNumber: moveNumber,
 		Command:    command,
 		Request: analyzerRequest{
-			RequestID: fmt.Sprintf("%s-move-%d", game.ID, moveNumber),
-			FEN:       sessionpkg.CurrentFEN(),
-			Color:     string(sessionpkg.CurrentTurnColor()),
+			RequestID: fmt.Sprintf("%s-move-%d", gameID, moveNumber),
+			FEN:       fen,
+			Color:     color,
 			TopK:      5,
 		},
 	}
 
 	analysisStoreMu.Lock()
-	latestRequestedByGame[game.ID] = moveNumber
-	analysisPendingByGame[game.ID] = true
+	latestRequestedByGame[gameID] = moveNumber
+	analysisPendingByGame[gameID] = true
 	analysisStoreMu.Unlock()
 
 	select {
 	case analysisQueue <- job:
 	default:
 		analysisStoreMu.Lock()
-		analysisPendingByGame[game.ID] = false
+		analysisPendingByGame[gameID] = false
 		analysisStoreMu.Unlock()
-		log.Printf("warning: analyzer queue full, dropped job game_id=%s move=%d", game.ID, moveNumber)
+		log.Printf("warning: analyzer queue full, dropped job %s move=%d", gameIDLabel(gameID), moveNumber)
 	}
 }
 
@@ -275,7 +288,7 @@ func exportGameAnalysisIfNeeded(game sessionpkg.GameSession) {
 		GameID:       game.ID,
 		Result:       game.Result,
 		Game:         game,
-		History:      sessionpkg.GetMoveHistory(),
+		History:      historyByGameID(game.ID),
 		MoveAnalysis: records,
 		ExportedAt:   time.Now().UTC().Format(time.RFC3339),
 	}
@@ -297,4 +310,12 @@ func exportGameAnalysisIfNeeded(game sessionpkg.GameSession) {
 		return
 	}
 	log.Printf("analysis export saved: %s", outputPath)
+}
+
+func historyByGameID(gameID string) []string {
+	history, err := sessionpkg.MoveHistoryByID(gameID)
+	if err != nil {
+		return []string{}
+	}
+	return history
 }

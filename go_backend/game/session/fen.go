@@ -12,6 +12,15 @@ import (
 
 // ApplyFEN sets board state, side to move, and castling rights from a FEN string.
 func ApplyFEN(fen string) error {
+	game, err := lockActiveRuntimeState()
+	if err != nil {
+		return err
+	}
+	defer unlockActiveRuntimeState(game)
+	return applyFENToCurrentGlobals(fen)
+}
+
+func applyFENToCurrentGlobals(fen string) error {
 	parts := strings.Fields(strings.TrimSpace(fen))
 	if len(parts) < 4 {
 		return fmt.Errorf("invalid FEN: expected at least 4 fields")

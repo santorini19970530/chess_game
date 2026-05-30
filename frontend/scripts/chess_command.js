@@ -45,8 +45,12 @@
   let pendingPromotionResolve = null;
   let analysisPollTimer = null;
   let cachedAnalysis = null;
+  let currentGameId = "";
 
   if (!input || !button || !status || !moveHistoryWhiteList || !moveHistoryBlackList || !boardElement) return;
+
+  const gameIdInput = document.getElementById("active_game_id");
+  if (gameIdInput?.value) currentGameId = String(gameIdInput.value).trim();
 
   input.focus();
 
@@ -54,6 +58,13 @@
   const setStatus = (message, type) => {
     status.textContent = message;
     status.className = `command_status ${type}`;
+  };
+
+  const syncGameIdFromResult = (result) => {
+    const nextId = String(result?.game?.id || "").trim();
+    if (!nextId) return;
+    currentGameId = nextId;
+    if (gameIdInput) gameIdInput.value = nextId;
   };
 
   const stopAnalysisPolling = () => {
@@ -393,7 +404,8 @@
 
     const pollOnce = async () => {
       try {
-        const response = await fetch("/game/analysis/latest", { method: "GET" });
+        const gameIdParam = currentGameId ? `?gameId=${encodeURIComponent(currentGameId)}` : "";
+        const response = await fetch(`/game/analysis/latest${gameIdParam}`, { method: "GET" });
         if (!response.ok) return;
         const payload = await response.json();
         const latestMoveNumber = Number(payload?.latest_move_number || 0);
@@ -682,8 +694,9 @@
     }
     const requestVersion = ++legalMovesRequestVersion;
     try {
+      const gameIdParam = currentGameId ? `&gameId=${encodeURIComponent(currentGameId)}` : "";
       const response = await fetch(
-        `/game/legal-moves?file=${source.file}&rank=${source.rank}`
+        `/game/legal-moves?file=${source.file}&rank=${source.rank}${gameIdParam}`
       );
       if (!response.ok) {
         if (requestVersion === legalMovesRequestVersion) {
@@ -790,8 +803,12 @@
     }
     isSubmitting = true;
     try {
+      if (!currentGameId) {
+        setStatus("Missing game session. Start a new game first.", "error");
+        return false;
+      }
       const body = new URLSearchParams({ command });
-      const response = await fetch("/command", {
+      const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/move`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: body.toString(),
@@ -807,6 +824,7 @@
       }
 
       const result = await response.json();
+      syncGameIdFromResult(result);
       if (!result?.from || !result?.to) {
         setStatus("Invalid move response from server", "error");
         input.focus();
@@ -1008,6 +1026,7 @@
         const fen = String(fenInput?.value || "").trim();
         const aiCount = fen ? "1" : String(aiGameCountInput?.value || "1");
         const body = new URLSearchParams({
+          gameId: currentGameId,
           type: String(gameTypeSelect?.value || "chess"),
           mode,
           humanColor: String(humanSideSelect?.value || "white"),
@@ -1025,6 +1044,7 @@
           return;
         }
         const result = await response.json();
+        syncGameIdFromResult(result);
         renderGameConfig(result.game);
         setStatus("Game setup applied. Click New Game to start.", "success");
       } catch (_error) {
@@ -1039,13 +1059,19 @@
         return;
       }
       try {
-        const response = await fetch("/game/flag", { method: "POST" });
+        const body = new URLSearchParams({ gameId: currentGameId });
+        const response = await fetch("/game/flag", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: body.toString(),
+        });
         if (!response.ok) {
           const errorMessage = (await response.text()).trim();
           setStatus(errorMessage || "Failed to flag game.", "error");
           return;
         }
         const result = await response.json();
+        syncGameIdFromResult(result);
         renderMoveHistory(result.history, result.historyDetailed);
         renderCurrentTurn(result.currentTurn);
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
@@ -1064,13 +1090,19 @@
   if (newGameButton) {
     newGameButton.addEventListener("click", async () => {
       try {
-        const response = await fetch("/game/new", { method: "POST" });
+        const body = new URLSearchParams({ gameId: currentGameId });
+        const response = await fetch("/game/new", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: body.toString(),
+        });
         if (!response.ok) {
           const errorMessage = (await response.text()).trim();
           setStatus(errorMessage || "Failed to start a new game.", "error");
           return;
         }
         const result = await response.json();
+        syncGameIdFromResult(result);
         renderBoardFromState(result.state);
         renderMoveHistory(result.history, result.historyDetailed);
         renderCurrentTurn(result.currentTurn);
