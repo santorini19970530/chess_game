@@ -60,7 +60,6 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 
 	// build dynamic main content html in sequence
 	var mainHTMLCode strings.Builder
-	activeGame := sessionpkg.GetGameSession()
 	currentTurnLabel := sessionpkg.CurrentTurnLabel()
 	whiteTurnClass := "game_info_col_white"
 	blackTurnClass := "game_info_col_black"
@@ -150,7 +149,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`<button id="chess_new_game" type="button">New Game</button>`)
 	mainHTMLCode.WriteString(`</div>`)
 	mainHTMLCode.WriteString(`<p id="chess_command_status" class="command_status" role="status" aria-live="polite"></p>`)
-	mainHTMLCode.WriteString(`<input id="active_game_id" type="hidden" value="` + activeGame.ID + `" />`)
+	mainHTMLCode.WriteString(`<input id="active_game_id" type="hidden" value="" />`)
 	mainHTMLCode.WriteString(`<div id="promotion_picker" class="promotion_picker_hidden" role="dialog" aria-modal="true" aria-labelledby="promotion_picker_title">`)
 	mainHTMLCode.WriteString(`<div class="promotion_picker_panel">`)
 	mainHTMLCode.WriteString(`<h4 id="promotion_picker_title">Choose promotion piece</h4>`)
