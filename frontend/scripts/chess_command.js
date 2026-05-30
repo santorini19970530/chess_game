@@ -33,10 +33,14 @@
   const moveSound = new Audio("/sounds/chess_movement.wav");
   const CHECK_CLASS = "game_info_col_in_check";
   const SELECTED_PIECE_CLASS = "piece_img_selected";
+  const LEGAL_DESTINATION_CLASS = "chess_board_square_legal_destination";
+  const LEGAL_PROMOTION_DESTINATION_CLASS = "chess_board_square_legal_promotion";
+  const LEGAL_CAPTURE_DESTINATION_CLASS = "chess_board_square_legal_capture";
   let gameOver = false;
   let currentTurn = "white";
   let selectedSquareSequence = null;
   let dragSourceSequence = null;
+  let legalMovesRequestVersion = 0;
   let isSubmitting = false;
   let pendingPromotionResolve = null;
   let analysisPollTimer = null;
@@ -553,6 +557,15 @@
     return 8 - Math.floor(seq / 8);
   };
 
+  const fileRankFromSequence = (sequence) => {
+    const seq = Number(sequence);
+    if (Number.isNaN(seq) || seq < 0 || seq > 63) return null;
+    return {
+      file: (seq % 8) + 1,
+      rank: 8 - Math.floor(seq / 8),
+    };
+  };
+
   const getSquareElement = (target) =>
     target instanceof Element ? target.closest(".chess_board_square[data-sequence]") : null;
 
@@ -618,9 +631,77 @@
 
   const clearSelectedSquare = () => {
     selectedSquareSequence = null;
+    legalMovesRequestVersion += 1;
     boardElement
       .querySelectorAll(`.piece_img.${SELECTED_PIECE_CLASS}`)
       .forEach((piece) => piece.classList.remove(SELECTED_PIECE_CLASS));
+    boardElement
+      .querySelectorAll(`.${LEGAL_DESTINATION_CLASS}, .${LEGAL_PROMOTION_DESTINATION_CLASS}, .${LEGAL_CAPTURE_DESTINATION_CLASS}`)
+      .forEach((square) => {
+        square.classList.remove(LEGAL_DESTINATION_CLASS);
+        square.classList.remove(LEGAL_PROMOTION_DESTINATION_CLASS);
+        square.classList.remove(LEGAL_CAPTURE_DESTINATION_CLASS);
+      });
+  };
+
+  const highlightLegalDestinations = (moves) => {
+    boardElement
+      .querySelectorAll(`.${LEGAL_DESTINATION_CLASS}, .${LEGAL_PROMOTION_DESTINATION_CLASS}, .${LEGAL_CAPTURE_DESTINATION_CLASS}`)
+      .forEach((square) => {
+        square.classList.remove(LEGAL_DESTINATION_CLASS);
+        square.classList.remove(LEGAL_PROMOTION_DESTINATION_CLASS);
+        square.classList.remove(LEGAL_CAPTURE_DESTINATION_CLASS);
+      });
+    if (!Array.isArray(moves)) return;
+    for (const move of moves) {
+      const fileNum = Number(move?.file);
+      const rankNum = Number(move?.rank);
+      if (Number.isNaN(fileNum) || Number.isNaN(rankNum)) continue;
+      const sequence = sequenceByFileRank(fileNum, rankNum);
+      const square = boardElement.querySelector(
+        `.chess_board_square[data-sequence="${sequence}"]`
+      );
+      if (!square) continue;
+      const isCapture = Boolean(move?.isCapture);
+      if (isCapture) {
+        square.classList.add(LEGAL_CAPTURE_DESTINATION_CLASS);
+      } else {
+        square.classList.add(LEGAL_DESTINATION_CLASS);
+      }
+      if (Boolean(move?.requiresPromotion)) {
+        square.classList.add(LEGAL_PROMOTION_DESTINATION_CLASS);
+      }
+    }
+  };
+
+  const loadLegalDestinationsForSelection = async (sequence) => {
+    const source = fileRankFromSequence(sequence);
+    if (!source) {
+      highlightLegalDestinations([]);
+      return;
+    }
+    const requestVersion = ++legalMovesRequestVersion;
+    try {
+      const response = await fetch(
+        `/game/legal-moves?file=${source.file}&rank=${source.rank}`
+      );
+      if (!response.ok) {
+        if (requestVersion === legalMovesRequestVersion) {
+          highlightLegalDestinations([]);
+        }
+        return;
+      }
+      const result = await response.json();
+      if (requestVersion !== legalMovesRequestVersion) return;
+      if (selectedSquareSequence !== Number(sequence)) return;
+      highlightLegalDestinations(
+        Array.isArray(result?.legalMoves) ? result.legalMoves : []
+      );
+    } catch (_error) {
+      if (requestVersion === legalMovesRequestVersion) {
+        highlightLegalDestinations([]);
+      }
+    }
   };
 
   const setSelectedSquare = (sequence) => {
@@ -634,7 +715,10 @@
       `.chess_board_square[data-sequence="${selectedSquareSequence}"]`
     );
     const selectedPiece = getPieceOnSquare(selectedSquare);
-    if (selectedPiece) selectedPiece.classList.add(SELECTED_PIECE_CLASS);
+    if (selectedPiece) {
+      selectedPiece.classList.add(SELECTED_PIECE_CLASS);
+      void loadLegalDestinationsForSelection(selectedSquareSequence);
+    }
   };
 
   // move chess piece
@@ -765,6 +849,7 @@
       // Always compute from the rendered board so capture info matches what user sees.
       const boardStateForInfo = extractBoardStateFromDOM();
       renderGameInfo(boardStateForInfo, result.captured, result.analysis);
+      clearSelectedSquare();
       if (result.analysis) {
         stopAnalysisPolling();
       } else {

@@ -216,3 +216,30 @@ func TestResetGame_RestoresInitialState(t *testing.T) {
 		t.Fatalf("expected castling state to be reset")
 	}
 }
+
+func TestLegalMovesForSquare_CurrentTurnPieceOnly(t *testing.T) {
+	resetGameSessionForTest()
+	ResetGame()
+
+	whiteMoves := LegalMovesForSquare(5, 2) // e2 pawn on white turn
+	if len(whiteMoves) == 0 {
+		t.Fatalf("expected legal moves for white pawn on e2")
+	}
+	if hasDestination(whiteMoves, 5, 4) == false {
+		t.Fatalf("expected e2 pawn to include e4")
+	}
+
+	blackMoves := LegalMovesForSquare(5, 7) // e7 pawn while white to move
+	if len(blackMoves) != 0 {
+		t.Fatalf("expected no legal moves for non-turn piece")
+	}
+}
+
+func hasDestination(moves []LegalDestination, file, rank int) bool {
+	for _, mv := range moves {
+		if mv.File == file && mv.Rank == rank {
+			return true
+		}
+	}
+	return false
+}

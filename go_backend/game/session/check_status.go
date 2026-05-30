@@ -103,66 +103,7 @@ func countLegalMoves(color pieces.PieceColor) int {
 }
 
 func pieceLegalMoveCount(sourcePiece pieces.ChessPiece) int {
-	total := 0
-	for toFile := 1; toFile <= 8; toFile++ {
-		for toRank := 1; toRank <= 8; toRank++ {
-			if sourcePiece.File == toFile && sourcePiece.Rank == toRank {
-				continue
-			}
-
-			enPassant := false
-			castling := false
-
-			_, err := engine.ValidateMove(sourcePiece.File, sourcePiece.Rank, toFile, toRank, "")
-			if err != nil {
-				kingSide := toFile == 7
-				queenSide := toFile == 3
-				if sourcePiece.Kind == pieces.King && (kingSide || queenSide) && engine.CanCastle(
-					sourcePiece,
-					sourcePiece.File, sourcePiece.Rank,
-					toFile, toRank,
-					CanCastleByState(sourcePiece.Color, kingSide),
-				) {
-					if castlingViolatesCheckRules(sourcePiece.Color, sourcePiece.Rank, toFile) {
-						continue
-					}
-					castling = true
-				} else {
-					_, destinationOccupied := getPieceAt(toFile, toRank)
-					adjacentPawn, adjacentPawnFound := getPieceAt(toFile, sourcePiece.Rank)
-					lastMove := toEngineLastMove(GetLastMove())
-					if sourcePiece.Kind == pieces.Pawn && engine.CanEnPassant(
-						sourcePiece,
-						sourcePiece.File, sourcePiece.Rank,
-						toFile, toRank,
-						destinationOccupied,
-						lastMove,
-						adjacentPawn,
-						adjacentPawnFound,
-					) {
-						enPassant = true
-					} else {
-						continue
-					}
-				}
-			}
-
-			requiresPromotion := sourcePiece.Kind == pieces.Pawn && ((sourcePiece.Color == pieces.White && toRank == 8) || (sourcePiece.Color == pieces.Black && toRank == 1))
-			promotionKind := pieces.Queen
-
-			if engine.WouldLeaveKingInCheck(
-				sourcePiece,
-				sourcePiece.File, sourcePiece.Rank,
-				toFile, toRank,
-				enPassant, castling,
-				requiresPromotion, promotionKind,
-			) {
-				continue
-			}
-			total++
-		}
-	}
-	return total
+	return len(pieceLegalDestinations(sourcePiece))
 }
 
 func opponentOf(color pieces.PieceColor) pieces.PieceColor {
