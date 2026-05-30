@@ -12,6 +12,7 @@ import (
 
 // temporary storage for the movement history
 var moveHistory []string
+var moveHistoryDetailed []MoveHistoryEntry
 var currentTurnOverride *pieces.PieceColor
 var currentTurnPinned bool
 var halfmoveClock int
@@ -27,6 +28,15 @@ type LastMove struct {
 	PawnDoubleStep bool
 }
 
+type MoveHistoryEntry struct {
+	Side              string `json:"side"`
+	PieceKind         string `json:"pieceKind"`
+	To                string `json:"to"`
+	Command           string `json:"command"`
+	IsCapture         bool   `json:"isCapture"`
+	CapturedPieceKind string `json:"capturedPieceKind,omitempty"`
+}
+
 var lastAppliedMove *LastMove
 
 var whiteKingMoved bool
@@ -37,12 +47,24 @@ var blackRookAMoved bool
 var blackRookHMoved bool
 
 // append the movement command to the history string
-func AppendMoveHistory(command string, color pieces.PieceColor) {
+func AppendMoveHistory(command string, color pieces.PieceColor, pieceKind pieces.PieceKind, toFile, toRank int, isCapture bool, capturedKind pieces.PieceKind) {
 	sideLabel := "White"
 	if color == pieces.Black {
 		sideLabel = "Black"
 	}
+	capturedKindText := ""
+	if isCapture {
+		capturedKindText = string(capturedKind)
+	}
 	moveHistory = append(moveHistory, fmt.Sprintf("%s: %s", sideLabel, command))
+	moveHistoryDetailed = append(moveHistoryDetailed, MoveHistoryEntry{
+		Side:              sideLabel,
+		PieceKind:         string(pieceKind),
+		To:                fmt.Sprintf("%c%d", byte('a'+toFile-1), toRank),
+		Command:           command,
+		IsCapture:         isCapture,
+		CapturedPieceKind: capturedKindText,
+	})
 }
 
 // get the movement history
@@ -50,6 +72,15 @@ func GetMoveHistory() []string {
 	out := make([]string, len(moveHistory))
 	copy(out, moveHistory)
 
+	return out
+}
+
+func GetMoveHistoryDetailed() []MoveHistoryEntry {
+	if len(moveHistory) == 0 {
+		return nil
+	}
+	out := make([]MoveHistoryEntry, len(moveHistoryDetailed))
+	copy(out, moveHistoryDetailed)
 	return out
 }
 

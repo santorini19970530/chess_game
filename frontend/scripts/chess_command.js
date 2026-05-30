@@ -14,8 +14,11 @@
   const capturedBlackValue = document.getElementById("game_info_captured_black");
   const winProbWhiteValue = document.getElementById("game_info_winprob_white");
   const winProbBlackValue = document.getElementById("game_info_winprob_black");
+  const winProbWhiteBar = document.getElementById("game_info_winprob_white_bar");
+  const winProbBlackBar = document.getElementById("game_info_winprob_black_bar");
   const resultWhiteValue = document.getElementById("game_info_result_white");
   const resultBlackValue = document.getElementById("game_info_result_black");
+  const gameInfoNotesBox = document.getElementById("game_info_notes");
   const moveHistoryWhiteList = document.getElementById("chess_move_history_white");
   const moveHistoryBlackList = document.getElementById("chess_move_history_black");
   const newGameButton = document.getElementById("chess_new_game");
@@ -36,6 +39,8 @@
   let dragSourceSequence = null;
   let isSubmitting = false;
   let pendingPromotionResolve = null;
+  let analysisPollTimer = null;
+  let cachedAnalysis = null;
 
   if (!input || !button || !status || !moveHistoryWhiteList || !moveHistoryBlackList || !boardElement) return;
 
@@ -46,6 +51,15 @@
     status.textContent = message;
     status.className = `command_status ${type}`;
   };
+
+  const stopAnalysisPolling = () => {
+    if (analysisPollTimer != null) {
+      window.clearInterval(analysisPollTimer);
+      analysisPollTimer = null;
+    }
+  };
+
+  const sideLabel = (side) => (String(side || "").toLowerCase() === "black" ? "Black" : "White");
 
   const renderCurrentTurn = (turnText) => {
     if (!turnText) return;
@@ -255,6 +269,27 @@
     return normalized;
   };
 
+  const clampPercentage = (value) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return 50;
+    return Math.max(0, Math.min(100, n));
+  };
+
+  const formatPercentage = (value) => `${value.toFixed(1)}%`;
+
+  const winProbLabelColor = (chance, isLightBackground) => {
+    if (chance >= 70) return isLightBackground ? "#0f5e2a" : "#8df0a8";
+    if (chance <= 30) return isLightBackground ? "#7a1e1e" : "#ff9f9f";
+    return isLightBackground ? "#101010" : "#f5f5f5";
+  };
+
+  const fromAnalyzerChance = (value) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return null;
+    // Analyzer uses 0..1; tolerate 0..100 values too.
+    return n <= 1 ? n * 100 : n;
+  };
+
   const estimateWinProb = (liveCounts) => {
     const pieceValue = { pawn: 1, knight: 3, bishop: 3, rook: 5, queen: 9, king: 0 };
     const material = { white: 0, black: 0 };
@@ -264,10 +299,10 @@
       }
     }
     const total = material.white + material.black;
-    if (total <= 0) return { white: "50%", black: "50%" };
+    if (total <= 0) return { white: 50, black: 50 };
     const whiteProb = Math.round((material.white / total) * 100);
     const blackProb = 100 - whiteProb;
-    return { white: `${whiteProb}%`, black: `${blackProb}%` };
+    return { white: whiteProb, black: blackProb };
   };
 
   const extractBoardStateFromDOM = () => {
@@ -304,7 +339,9 @@
     return pieces;
   };
 
-  const renderGameInfo = (state, capturedSummary) => {
+  const renderGameInfo = (state, capturedSummary, analysis) => {
+    const effectiveAnalysis = analysis || cachedAnalysis;
+    if (analysis) cachedAnalysis = analysis;
     const liveCounts = countPiecesByColor(state);
     const normalizedCaptured = normalizeCapturedSummary(capturedSummary);
     const whiteCaptured = normalizedCaptured
@@ -314,18 +351,119 @@
       ? normalizedCaptured.black
       : capturedMap("black", liveCounts);
     const winProb = estimateWinProb(liveCounts);
+    const analyzerWhite = fromAnalyzerChance(effectiveAnalysis?.win_chance_white);
+    const analyzerBlack = fromAnalyzerChance(effectiveAnalysis?.win_chance_black);
+    const hasAnalyzerProb = analyzerWhite != null && analyzerBlack != null;
+    const whiteProb = clampPercentage(hasAnalyzerProb ? analyzerWhite : winProb.white);
+    const blackProb = clampPercentage(hasAnalyzerProb ? analyzerBlack : winProb.black);
+    const whiteTiny = whiteProb < 12;
+    const blackTiny = blackProb < 12;
 
     if (capturedWhiteValue) capturedWhiteValue.textContent = capturedMapToText(whiteCaptured);
     if (capturedBlackValue) capturedBlackValue.textContent = capturedMapToText(blackCaptured);
-    if (winProbWhiteValue) winProbWhiteValue.textContent = `◎ ${winProb.white}`;
-    if (winProbBlackValue) winProbBlackValue.textContent = `◎ ${winProb.black}`;
+    if (winProbWhiteValue) {
+      winProbWhiteValue.textContent = formatPercentage(whiteProb);
+      winProbWhiteValue.style.color = winProbLabelColor(whiteProb, true);
+      winProbWhiteValue.classList.toggle("game_info_winprob_label_outside_white", whiteTiny);
+    }
+    if (winProbBlackValue) {
+      winProbBlackValue.textContent = formatPercentage(blackProb);
+      winProbBlackValue.style.color = winProbLabelColor(blackProb, false);
+      winProbBlackValue.classList.toggle("game_info_winprob_label_outside_black", blackTiny);
+    }
+    if (winProbWhiteBar) winProbWhiteBar.style.width = `${whiteProb}%`;
+    if (winProbBlackBar) winProbBlackBar.style.width = `${blackProb}%`;
+    if (winProbWhiteBar) winProbWhiteBar.classList.toggle("game_info_winprob_segment_tiny", whiteTiny);
+    if (winProbBlackBar) winProbBlackBar.classList.toggle("game_info_winprob_segment_tiny", blackTiny);
+
+    if (gameInfoNotesBox && effectiveAnalysis) {
+      const threatSummary = String(effectiveAnalysis?.threat_summary || "").trim();
+      gameInfoNotesBox.value = threatSummary || "No analysis summary yet.";
+    }
+  };
+
+  const startAnalysisPolling = (targetMoveNumber, stateSnapshot, capturedSnapshot) => {
+    stopAnalysisPolling();
+    if (gameInfoNotesBox) gameInfoNotesBox.value = "Analyzing...";
+    const target = Number(targetMoveNumber) || 0;
+
+    const pollOnce = async () => {
+      try {
+        const response = await fetch("/game/analysis/latest", { method: "GET" });
+        if (!response.ok) return;
+        const payload = await response.json();
+        const latestMoveNumber = Number(payload?.latest_move_number || 0);
+        const latestAnalysis = payload?.latest?.analysis;
+        if (!latestAnalysis) return;
+        if (latestMoveNumber < target) return;
+        renderGameInfo(stateSnapshot, capturedSnapshot, latestAnalysis);
+        stopAnalysisPolling();
+      } catch (_) {
+        // ignore polling errors; next poll may recover
+      }
+    };
+
+    void pollOnce();
+    analysisPollTimer = window.setInterval(() => {
+      void pollOnce();
+    }, 700);
+  };
+
+  const movePieceIcon = (side, pieceKind) => {
+    const color = String(side || "").toLowerCase() === "black" ? "black" : "white";
+    const kind = String(pieceKind || "").toLowerCase();
+    const iconMap = {
+      white: { pawn: "♙", rook: "♖", knight: "♘", bishop: "♗", queen: "♕", king: "♔" },
+      black: { pawn: "♟", rook: "♜", knight: "♞", bishop: "♝", queen: "♛", king: "♚" },
+    };
+    return iconMap[color]?.[kind] || (color === "black" ? "♟" : "♙");
+  };
+
+  const opponentSide = (side) =>
+    String(side || "").toLowerCase() === "black" ? "white" : "black";
+
+  const destinationFromCommand = (command) => {
+    const text = String(command || "").trim().toLowerCase();
+    if (!text) return "";
+    const match = text.match(/([a-h][1-8])[qrbn]?$/);
+    return match ? match[1] : text;
+  };
+
+  const appendHistoryMove = (listEl, side, pieceKind, toSquare, fallbackText, isCapture, capturedPieceKind) => {
+    const item = document.createElement("li");
+    const iconSpan = document.createElement("span");
+    iconSpan.className = "chess_move_history_piece_icon";
+    iconSpan.textContent = movePieceIcon(side, pieceKind);
+    const textSpan = document.createElement("span");
+    textSpan.className = "chess_move_history_move_text";
+    const moveText = toSquare || fallbackText || "";
+    if (isCapture) {
+      textSpan.textContent = `${moveText} x `;
+      if (capturedPieceKind) {
+        const capturedIcon = document.createElement("span");
+        capturedIcon.className = "chess_move_history_piece_icon";
+        capturedIcon.textContent = movePieceIcon(opponentSide(side), capturedPieceKind);
+        textSpan.appendChild(capturedIcon);
+      }
+    } else {
+      textSpan.textContent = moveText;
+    }
+    item.appendChild(iconSpan);
+    item.appendChild(document.createTextNode(" "));
+    item.appendChild(textSpan);
+    listEl.appendChild(item);
+  };
+
+  const clearHistoryPlaceholder = (listEl) => {
+    const placeholder = listEl.querySelector(".chess_move_history_placeholder");
+    if (placeholder) placeholder.remove();
   };
 
   // update move history from backend source of truth
-  const renderMoveHistory = (history) => {
+  const renderMoveHistory = (history, historyDetailed) => {
     moveHistoryWhiteList.innerHTML = "";
     moveHistoryBlackList.innerHTML = "";
-    if (!Array.isArray(history) || history.length === 0) {
+    if ((!Array.isArray(history) || history.length === 0) && (!Array.isArray(historyDetailed) || historyDetailed.length === 0)) {
       const whitePlaceholder = document.createElement("li");
       whitePlaceholder.className = "chess_move_history_placeholder";
       whitePlaceholder.textContent = "No moves yet.";
@@ -338,17 +476,32 @@
       return;
     }
 
-    for (const move of history) {
-      const item = document.createElement("li");
-      if (move.startsWith("White:")) {
-        item.textContent = move.replace(/^White:\s*/, "");
-        moveHistoryWhiteList.appendChild(item);
-      } else if (move.startsWith("Black:")) {
-        item.textContent = move.replace(/^Black:\s*/, "");
-        moveHistoryBlackList.appendChild(item);
-      } else {
-        item.textContent = move;
-        moveHistoryWhiteList.appendChild(item);
+    if (Array.isArray(historyDetailed) && historyDetailed.length > 0) {
+      for (const move of historyDetailed) {
+        const side = String(move?.side || "white");
+        const toSquare = String(move?.to || "");
+        const pieceKind = String(move?.pieceKind || "pawn");
+        const fallbackText = destinationFromCommand(move?.command);
+        const isCapture = Boolean(move?.isCapture);
+        const capturedPieceKind = String(move?.capturedPieceKind || "");
+        if (side.toLowerCase() === "black") {
+          appendHistoryMove(moveHistoryBlackList, side, pieceKind, toSquare, fallbackText, isCapture, capturedPieceKind);
+        } else {
+          appendHistoryMove(moveHistoryWhiteList, side, pieceKind, toSquare, fallbackText, isCapture, capturedPieceKind);
+        }
+      }
+    } else if (Array.isArray(history)) {
+      for (const move of history) {
+        if (move.startsWith("White:")) {
+          const commandText = move.replace(/^White:\s*/, "");
+          appendHistoryMove(moveHistoryWhiteList, "white", "pawn", destinationFromCommand(commandText), commandText, false, "");
+        } else if (move.startsWith("Black:")) {
+          const commandText = move.replace(/^Black:\s*/, "");
+          appendHistoryMove(moveHistoryBlackList, "black", "pawn", destinationFromCommand(commandText), commandText, false, "");
+        } else {
+          const commandText = String(move || "");
+          appendHistoryMove(moveHistoryWhiteList, "white", "pawn", destinationFromCommand(commandText), commandText, false, "");
+        }
       }
     }
 
@@ -546,6 +699,7 @@
     }
 
     const command = String(commandText || input.value).trim();
+    const movingSide = currentTurn;
     if (!command) {
       setStatus("Please enter a chess movement command.", "error");
       return false;
@@ -585,13 +739,38 @@
           String(result.to.rank)
         );
       }
-      renderMoveHistory(result.history);
+      const historyArray = Array.isArray(result.history) ? result.history : [];
+      const detailedArray = Array.isArray(result.historyDetailed) ? result.historyDetailed : [];
+      if (historyArray.length === 0 && detailedArray.length === 0) {
+        // Fallback: if backend omits history payload but move succeeds, still show the move.
+        renderMoveHistory([`${sideLabel(movingSide)}: ${String(result.command || command).toLowerCase()}`], []);
+      } else {
+        renderMoveHistory(historyArray, detailedArray);
+      }
+      if (
+        moveHistoryWhiteList.children.length === 1 &&
+        moveHistoryBlackList.children.length === 1 &&
+        moveHistoryWhiteList.querySelector(".chess_move_history_placeholder") &&
+        moveHistoryBlackList.querySelector(".chess_move_history_placeholder")
+      ) {
+        const toSquare = `${String(result?.to?.file || "").toLowerCase()}${String(result?.to?.rank || "")}`;
+        const targetList = String(movingSide).toLowerCase() === "black" ? moveHistoryBlackList : moveHistoryWhiteList;
+        clearHistoryPlaceholder(targetList);
+        appendHistoryMove(targetList, movingSide, "pawn", toSquare, String(result.command || command).toLowerCase(), false, "");
+      }
       renderCurrentTurn(result.currentTurn);
       renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
       renderGameOutcome(result.game);
       renderGameConfig(result.game);
       // Always compute from the rendered board so capture info matches what user sees.
-      renderGameInfo(extractBoardStateFromDOM(), result.captured);
+      const boardStateForInfo = extractBoardStateFromDOM();
+      renderGameInfo(boardStateForInfo, result.captured, result.analysis);
+      if (result.analysis) {
+        stopAnalysisPolling();
+      } else {
+        const targetMoveNumber = Math.max(historyArray.length, detailedArray.length);
+        startAnalysisPolling(targetMoveNumber, boardStateForInfo, result.captured);
+      }
       try {
         moveSound.currentTime = 0;
         await moveSound.play();
@@ -782,12 +961,14 @@
           return;
         }
         const result = await response.json();
-        renderMoveHistory(result.history);
+        renderMoveHistory(result.history, result.historyDetailed);
         renderCurrentTurn(result.currentTurn);
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
         renderGameOutcome(result.game);
         renderGameConfig(result.game);
-        renderGameInfo(extractBoardStateFromDOM(), result.captured);
+        renderGameInfo(extractBoardStateFromDOM(), result.captured, result.analysis);
+        cachedAnalysis = null;
+        stopAnalysisPolling();
         resolvePromotionChoice("");
         clearSelectedSquare();
       } catch (_error) {
@@ -806,12 +987,14 @@
         }
         const result = await response.json();
         renderBoardFromState(result.state);
-        renderMoveHistory(result.history);
+        renderMoveHistory(result.history, result.historyDetailed);
         renderCurrentTurn(result.currentTurn);
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
         renderGameOutcome(result.game);
         renderGameConfig(result.game);
-        renderGameInfo(extractBoardStateFromDOM(), result.captured);
+        renderGameInfo(extractBoardStateFromDOM(), result.captured, result.analysis);
+        cachedAnalysis = null;
+        stopAnalysisPolling();
         input.value = "";
         input.disabled = false;
         button.disabled = false;
@@ -835,7 +1018,7 @@
   initPromotionPicker();
   initMouseMoveControls();
 
-  renderGameInfo(extractBoardStateFromDOM());
+  renderGameInfo(extractBoardStateFromDOM(), null, null);
   renderCheckState("");
   renderGameOutcome({ status: "in_progress", result: "in_progress" });
   renderGameConfig({

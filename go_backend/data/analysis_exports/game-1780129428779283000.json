@@ -1,0 +1,150 @@
+{
+    "game_id": "game-1780129428779283000",
+    "result": "white_win",
+    "game": {
+        "id": "game-1780129428779283000",
+        "mode": "human_vs_human",
+        "type": "chess",
+        "config": {
+            "humanColor": "white",
+            "aiGameCount": 1,
+            "startFen": ""
+        },
+        "result": "white_win",
+        "outcome": {
+            "status": "resigned",
+            "winner": "white",
+            "loser": "black",
+            "legalMoves": 0,
+            "message": "Black flagged. White wins."
+        },
+        "createdAt": "2026-05-30T08:23:48Z",
+        "updatedAt": "2026-05-30T08:24:02Z"
+    },
+    "history": [
+        "White: f2f4"
+    ],
+    "move_analysis": [
+        {
+            "move_number": 1,
+            "command": "f2f4",
+            "analysis": {
+                "request_id": "game-1780129428779283000-move-1",
+                "status": "ok",
+                "source": "heuristic",
+                "fen": "rnbqkbnr/pppppppp/8/8/5P2/8/PPPPP1PP/RNBQKBNR b KQkq f3 0 1",
+                "evaluated_for_color": "black",
+                "health_summary": {
+                    "black_in_check": false,
+                    "material_balance_white_minus_black": 0,
+                    "material_black": 4000,
+                    "material_white": 4000,
+                    "side_to_move": "black",
+                    "white_in_check": false
+                },
+                "is_check": false,
+                "is_checkmate": false,
+                "is_stalemate": false,
+                "eval_cp_white": 0,
+                "win_chance_white": 0.5,
+                "win_chance_black": 0.5,
+                "threat_summary": "Position is roughly balanced.",
+                "best_move_uci": "e7e6",
+                "suggested_moves": [
+                    {
+                        "rank": 1,
+                        "uci": "e7e6",
+                        "san": "e6",
+                        "score": 20
+                    },
+                    {
+                        "rank": 2,
+                        "uci": "e7e5",
+                        "san": "e5",
+                        "score": 20
+                    },
+                    {
+                        "rank": 3,
+                        "uci": "d7d5",
+                        "san": "d5",
+                        "score": 16
+                    },
+                    {
+                        "rank": 4,
+                        "uci": "d7d6",
+                        "san": "d6",
+                        "score": 14
+                    },
+                    {
+                        "rank": 5,
+                        "uci": "g8f6",
+                        "san": "Nf6",
+                        "score": 4
+                    }
+                ],
+                "latency_ms": 6
+            }
+        },
+        {
+            "move_number": 1,
+            "command": "flag",
+            "analysis": {
+                "request_id": "game-1780129428779283000-move-1",
+                "status": "ok",
+                "source": "heuristic",
+                "fen": "rnbqkbnr/pppppppp/8/8/5P2/8/PPPPP1PP/RNBQKBNR b KQkq f3 0 1",
+                "evaluated_for_color": "black",
+                "health_summary": {
+                    "black_in_check": false,
+                    "material_balance_white_minus_black": 0,
+                    "material_black": 4000,
+                    "material_white": 4000,
+                    "side_to_move": "black",
+                    "white_in_check": false
+                },
+                "is_check": false,
+                "is_checkmate": false,
+                "is_stalemate": false,
+                "eval_cp_white": 0,
+                "win_chance_white": 0.5,
+                "win_chance_black": 0.5,
+                "threat_summary": "Position is roughly balanced.",
+                "best_move_uci": "e7e6",
+                "suggested_moves": [
+                    {
+                        "rank": 1,
+                        "uci": "e7e6",
+                        "san": "e6",
+                        "score": 20
+                    },
+                    {
+                        "rank": 2,
+                        "uci": "e7e5",
+                        "san": "e5",
+                        "score": 20
+                    },
+                    {
+                        "rank": 3,
+                        "uci": "d7d5",
+                        "san": "d5",
+                        "score": 16
+                    },
+                    {
+                        "rank": 4,
+                        "uci": "d7d6",
+                        "san": "d6",
+                        "score": 14
+                    },
+                    {
+                        "rank": 5,
+                        "uci": "g8f6",
+                        "san": "Nf6",
+                        "score": 4
+                    }
+                ],
+                "latency_ms": 7
+            }
+        }
+    ],
+    "exported_at": "2026-05-30T08:24:02Z"
+}

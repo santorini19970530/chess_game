@@ -37,7 +37,7 @@ Create game.
 Accept human move.
 Return AI move.
 Show game status.
-Add analysis button.
+Auto analysis after every successful move.
 
 ### Phase 4: Variant expansion
 

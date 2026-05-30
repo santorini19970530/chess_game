@@ -12,6 +12,7 @@ import (
 func main() {
 	// initialize handler and router
 	h := handlers.NewHandler()
+	handlers.StartAnalyzerWorker()
 	mux := http.NewServeMux()
 	registerRoutes(mux, h)
 
