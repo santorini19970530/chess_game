@@ -368,6 +368,10 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 	response.To.File = string(parsed.ToFile)
 	response.To.Rank = parsed.ToRank
 
+	// Testing phase: call Python analyzer after each successful move
+	// and print full response in Go server terminal.
+	analyzeCurrentPosition()
+
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, "Response encode error", http.StatusInternalServerError)

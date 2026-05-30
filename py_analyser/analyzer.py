@@ -16,6 +16,8 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import time
+import uuid
 from dataclasses import dataclass
 from typing import Dict, List
 
@@ -33,6 +35,7 @@ PIECE_VALUES = {
 
 @dataclass(frozen=True)
 class MoveSuggestion:
+    rank: int
     uci: str
     san: str
     score: int
@@ -107,10 +110,16 @@ def suggest_moves(fen: str, color: str, top_k: int = 5) -> List[MoveSuggestion]:
         analysis_board.push(move)
         score = evaluate_position(analysis_board, target_color)
         analysis_board.pop()
-        scored.append(MoveSuggestion(uci=move.uci(), san=san, score=score))
+        scored.append(MoveSuggestion(rank=0, uci=move.uci(), san=san, score=score))
 
     scored.sort(key=lambda item: item.score, reverse=True)
-    return scored[: max(1, top_k)]
+    top = scored[: max(1, top_k)]
+    ranked: List[MoveSuggestion] = []
+    for idx, item in enumerate(top, start=1):
+        ranked.append(
+            MoveSuggestion(rank=idx, uci=item.uci, san=item.san, score=item.score)
+        )
+    return ranked
 
 
 def cp_to_win_chance(cp_score: int) -> float:
@@ -132,7 +141,26 @@ def build_health_summary(board: chess.Board) -> Dict[str, object]:
     }
 
 
-def analyze_position(fen: str, color: str, top_k: int = 5) -> Dict[str, object]:
+def build_threat_summary(board: chess.Board, eval_cp_white: int) -> str:
+    if board.is_checkmate():
+        winner = "black" if board.turn == chess.WHITE else "white"
+        return f"{winner} has a forced checkmate."
+    if board.is_stalemate():
+        return "Position is stalemate."
+    if board.is_check():
+        checked_side = "white" if board.turn == chess.WHITE else "black"
+        return f"{checked_side} king is in check."
+    if eval_cp_white > 150:
+        return "White has the initiative."
+    if eval_cp_white < -150:
+        return "Black has the initiative."
+    return "Position is roughly balanced."
+
+
+def analyze_position(
+    fen: str, color: str, top_k: int = 5, request_id: str | None = None
+) -> Dict[str, object]:
+    started_at = time.perf_counter()
     board = chess.Board(fen)
     requested_color = parse_color(color)
     suggestions = suggest_moves(fen, color, top_k)
@@ -140,14 +168,26 @@ def analyze_position(fen: str, color: str, top_k: int = 5) -> Dict[str, object]:
     eval_cp_white = evaluate_position(board, chess.WHITE)
     win_chance_white = cp_to_win_chance(eval_cp_white)
     win_chance_black = 1.0 - win_chance_white
+    best_move_uci = suggestions[0].uci if suggestions else None
+    latency_ms = int((time.perf_counter() - started_at) * 1000)
 
     return {
+        "request_id": request_id or str(uuid.uuid4()),
+        "status": "ok",
+        "source": "heuristic",
         "fen": fen,
-        "requested_color": "white" if requested_color == chess.WHITE else "black",
+        "evaluated_for_color": "white" if requested_color == chess.WHITE else "black",
         "health_summary": build_health_summary(board),
+        "is_check": board.is_check(),
+        "is_checkmate": board.is_checkmate(),
+        "is_stalemate": board.is_stalemate(),
+        "eval_cp_white": eval_cp_white,
         "win_chance_white": round(win_chance_white, 4),
         "win_chance_black": round(win_chance_black, 4),
+        "threat_summary": build_threat_summary(board, eval_cp_white),
+        "best_move_uci": best_move_uci,
         "suggested_moves": [item.__dict__ for item in suggestions],
+        "latency_ms": latency_ms,
     }
 
 

@@ -37,6 +37,7 @@ def health() -> tuple:
 @app.post("/analyze")
 def analyze() -> tuple:
     payload = request.get_json(silent=True) or {}
+    request_id = payload.get("request_id")
     fen = str(payload.get("fen", "")).strip()
     color = str(payload.get("color", "")).strip().lower()
     top_k = payload.get("top_k", 5)
@@ -52,7 +53,12 @@ def analyze() -> tuple:
         return jsonify({"error": '"top_k" must be an integer.'}), 400
 
     try:
-        result = analyze_position(fen=fen, color=color, top_k=top_k_value)
+        result = analyze_position(
+            fen=fen,
+            color=color,
+            top_k=top_k_value,
+            request_id=str(request_id) if request_id else None,
+        )
     except ValueError as exc:
         # Covers invalid FEN / color parser errors from analyzer.
         return jsonify({"error": str(exc)}), 400
