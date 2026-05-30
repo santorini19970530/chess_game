@@ -358,11 +358,10 @@ func enPassantTargetKey() string {
 
 // temporary storage for the current state of the board
 type PieceState struct {
-	Color   string `json:"color"`
-	Kind    string `json:"kind"`
-	ImgFile string `json:"imgFile"`
-	File    int    `json:"file"`
-	Rank    int    `json:"rank"`
+	Color string `json:"color"`
+	Kind  string `json:"kind"`
+	File  int    `json:"file"`
+	Rank  int    `json:"rank"`
 }
 
 type CapturedSummary struct {
@@ -375,11 +374,10 @@ func GetBoardState() []PieceState {
 	state := make([]PieceState, 0, len(pieces.ChessPieces))
 	for _, p := range pieces.ChessPieces {
 		state = append(state, PieceState{
-			Color:   string(p.Color),
-			Kind:    string(p.Kind),
-			ImgFile: p.ImgFile,
-			File:    p.File,
-			Rank:    p.Rank,
+			Color: string(p.Color),
+			Kind:  string(p.Kind),
+			File:  p.File,
+			Rank:  p.Rank,
 		})
 	}
 

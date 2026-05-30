@@ -404,8 +404,11 @@
 
     const pollOnce = async () => {
       try {
-        const gameIdParam = currentGameId ? `?gameId=${encodeURIComponent(currentGameId)}` : "";
-        const response = await fetch(`/game/analysis/latest${gameIdParam}`, { method: "GET" });
+        if (!currentGameId) return;
+        const response = await fetch(
+          `/api/games/${encodeURIComponent(currentGameId)}/analysis/latest`,
+          { method: "GET" }
+        );
         if (!response.ok) return;
         const payload = await response.json();
         const latestMoveNumber = Number(payload?.latest_move_number || 0);
@@ -694,9 +697,9 @@
     }
     const requestVersion = ++legalMovesRequestVersion;
     try {
-      const gameIdParam = currentGameId ? `&gameId=${encodeURIComponent(currentGameId)}` : "";
+      if (!currentGameId) return;
       const response = await fetch(
-        `/game/legal-moves?file=${source.file}&rank=${source.rank}${gameIdParam}`
+        `/api/games/${encodeURIComponent(currentGameId)}/legal-moves?file=${source.file}&rank=${source.rank}`
       );
       if (!response.ok) {
         if (requestVersion === legalMovesRequestVersion) {
@@ -757,6 +760,14 @@
   const sequenceByFileRank = (fileNum, rankNum) =>
     (8 - rankNum) * 8 + (fileNum - 1);
 
+  const imagePathFromPiece = (piece) => {
+    const kind = String(piece?.kind || "").toLowerCase();
+    const color = String(piece?.color || "").toLowerCase();
+    if (!kind || !color) return "";
+    const tone = color === "black" ? "dark" : "light";
+    return `/pic/chess_pic/${kind}_${tone}.png`;
+  };
+
   // Full board sync from backend state (handles en passant, castling, promotion)
   const renderBoardFromState = (state) => {
     if (!Array.isArray(state)) return false;
@@ -767,16 +778,18 @@
     });
 
     for (const piece of state) {
-      if (!piece || !piece.file || !piece.rank || !piece.imgFile) continue;
+      if (!piece || !piece.file || !piece.rank) continue;
       const sequence = sequenceByFileRank(piece.file, piece.rank);
       const square = document.querySelector(
         `.chess_board_square[data-sequence="${sequence}"]`
       );
       if (!square) continue;
+      const imagePath = imagePathFromPiece(piece);
+      if (!imagePath) continue;
 
       const img = document.createElement("img");
       img.className = "piece_img";
-      img.src = piece.imgFile.startsWith("/") ? piece.imgFile : `/${piece.imgFile}`;
+      img.src = imagePath;
       img.alt = `piece_${piece.file}_${piece.rank}`;
       img.setAttribute("draggable", "true");
       if (piece.color) img.setAttribute("data-color", String(piece.color).toLowerCase());
@@ -1025,15 +1038,18 @@
         const mode = String(gameModeSelect?.value || "human_vs_human");
         const fen = String(fenInput?.value || "").trim();
         const aiCount = fen ? "1" : String(aiGameCountInput?.value || "1");
+        if (!currentGameId) {
+          setStatus("Missing game session. Start a new game first.", "error");
+          return;
+        }
         const body = new URLSearchParams({
-          gameId: currentGameId,
           type: String(gameTypeSelect?.value || "chess"),
           mode,
           humanColor: String(humanSideSelect?.value || "white"),
           aiGameCount: aiCount,
           fen,
         });
-        const response = await fetch("/game/config", {
+        const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/config`, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: body.toString(),
@@ -1059,11 +1075,12 @@
         return;
       }
       try {
-        const body = new URLSearchParams({ gameId: currentGameId });
-        const response = await fetch("/game/flag", {
+        if (!currentGameId) {
+          setStatus("Missing game session. Start a new game first.", "error");
+          return;
+        }
+        const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/flag`, {
           method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: body.toString(),
         });
         if (!response.ok) {
           const errorMessage = (await response.text()).trim();
@@ -1090,11 +1107,12 @@
   if (newGameButton) {
     newGameButton.addEventListener("click", async () => {
       try {
-        const body = new URLSearchParams({ gameId: currentGameId });
-        const response = await fetch("/game/new", {
+        if (!currentGameId) {
+          setStatus("Missing game session. Start a new game first.", "error");
+          return;
+        }
+        const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/new`, {
           method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: body.toString(),
         });
         if (!response.ok) {
           const errorMessage = (await response.text()).trim();

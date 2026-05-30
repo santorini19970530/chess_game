@@ -4,6 +4,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"html/template"
 	"log"
 	"net/http"
@@ -42,4 +43,16 @@ func gameIDLabel(gameID string) string {
 		return "[Game ID: unknown]"
 	}
 	return "[Game ID: " + gameID + "]"
+}
+
+func writeJSONError(w http.ResponseWriter, statusCode int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	_ = json.NewEncoder(w).Encode(struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+	}{
+		Status:  "error",
+		Message: message,
+	})
 }
