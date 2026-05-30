@@ -27,6 +27,13 @@ type analyzerRequest struct {
 	TopK      int    `json:"top_k"`
 }
 
+type analysisJob struct {
+	GameID     string
+	MoveNumber int
+	Command    string
+	Request    analyzerRequest
+}
+
 type analyzerSuggestedMove struct {
 	Rank  int    `json:"rank"`
 	UCI   string `json:"uci"`
@@ -59,10 +66,31 @@ type moveAnalysisRecord struct {
 	Analysis   analyzerResponse `json:"analysis"`
 }
 
+type latestAnalysisState struct {
+	GameID     string           `json:"game_id"`
+	MoveNumber int              `json:"move_number"`
+	Command    string           `json:"command"`
+	Analysis   analyzerResponse `json:"analysis"`
+	UpdatedAt  string           `json:"updated_at"`
+}
+
+type analysisLatestStatus struct {
+	GameID              string               `json:"game_id"`
+	RequestedMoveNumber int                  `json:"requested_move_number"`
+	LatestMoveNumber    int                  `json:"latest_move_number"`
+	Pending             bool                 `json:"pending"`
+	Latest              *latestAnalysisState `json:"latest,omitempty"`
+}
+
 var (
-	moveAnalysisByGame = map[string][]moveAnalysisRecord{}
-	exportedGames      = map[string]bool{}
-	analysisStoreMu    sync.Mutex
+	moveAnalysisByGame    = map[string][]moveAnalysisRecord{}
+	latestAnalysisByGame  = map[string]latestAnalysisState{}
+	latestRequestedByGame = map[string]int{}
+	analysisPendingByGame = map[string]bool{}
+	exportedGames         = map[string]bool{}
+	analysisStoreMu       sync.Mutex
+	analysisQueue         = make(chan analysisJob, 128)
+	analysisWorkerOnce    sync.Once
 )
 
 func analyzerBaseURL() string {
@@ -73,16 +101,7 @@ func analyzerBaseURL() string {
 	return v
 }
 
-func analyzeCurrentPosition() (*analyzerResponse, error) {
-	game := sessionpkg.GetGameSession()
-	history := sessionpkg.GetMoveHistory()
-	reqPayload := analyzerRequest{
-		RequestID: fmt.Sprintf("%s-move-%d", game.ID, len(history)),
-		FEN:       sessionpkg.CurrentFEN(),
-		Color:     string(sessionpkg.CurrentTurnColor()),
-		TopK:      5,
-	}
-
+func analyzeByRequest(reqPayload analyzerRequest) (*analyzerResponse, error) {
 	body, err := json.Marshal(reqPayload)
 	if err != nil {
 		return nil, fmt.Errorf("analyzer request marshal failed: %w", err)
@@ -122,16 +141,113 @@ func analyzeCurrentPosition() (*analyzerResponse, error) {
 	return &parsed, nil
 }
 
+func StartAnalyzerWorker() {
+	analysisWorkerOnce.Do(func() {
+		go analysisWorkerLoop()
+		log.Printf("python analyzer worker started")
+	})
+}
+
+func analysisWorkerLoop() {
+	for job := range analysisQueue {
+		result, err := analyzeByRequest(job.Request)
+		analysisStoreMu.Lock()
+		analysisPendingByGame[job.GameID] = false
+		latestRequestedMove := latestRequestedByGame[job.GameID]
+		analysisStoreMu.Unlock()
+
+		if err != nil {
+			log.Printf("warning: analyzer job failed game_id=%s move=%d: %v", job.GameID, job.MoveNumber, err)
+			continue
+		}
+		if result == nil {
+			continue
+		}
+		if job.MoveNumber < latestRequestedMove {
+			log.Printf("stale analyzer response ignored: game_id=%s move=%d latest_requested=%d", job.GameID, job.MoveNumber, latestRequestedMove)
+			continue
+		}
+		recordMoveAnalysisForGame(job.GameID, job.MoveNumber, job.Command, *result)
+	}
+}
+
+func enqueueCurrentPositionAnalysis(command string) {
+	game := sessionpkg.GetGameSession()
+	history := sessionpkg.GetMoveHistory()
+	moveNumber := len(history)
+	job := analysisJob{
+		GameID:     game.ID,
+		MoveNumber: moveNumber,
+		Command:    command,
+		Request: analyzerRequest{
+			RequestID: fmt.Sprintf("%s-move-%d", game.ID, moveNumber),
+			FEN:       sessionpkg.CurrentFEN(),
+			Color:     string(sessionpkg.CurrentTurnColor()),
+			TopK:      5,
+		},
+	}
+
+	analysisStoreMu.Lock()
+	latestRequestedByGame[game.ID] = moveNumber
+	analysisPendingByGame[game.ID] = true
+	analysisStoreMu.Unlock()
+
+	select {
+	case analysisQueue <- job:
+	default:
+		analysisStoreMu.Lock()
+		analysisPendingByGame[game.ID] = false
+		analysisStoreMu.Unlock()
+		log.Printf("warning: analyzer queue full, dropped job game_id=%s move=%d", game.ID, moveNumber)
+	}
+}
+
 func recordMoveAnalysis(command string, result analyzerResponse) {
 	game := sessionpkg.GetGameSession()
 	history := sessionpkg.GetMoveHistory()
+	moveNumber := len(history)
+	recordMoveAnalysisForGame(game.ID, moveNumber, command, result)
+}
+
+func recordMoveAnalysisForGame(gameID string, moveNumber int, command string, result analyzerResponse) {
 	analysisStoreMu.Lock()
 	defer analysisStoreMu.Unlock()
-	moveAnalysisByGame[game.ID] = append(moveAnalysisByGame[game.ID], moveAnalysisRecord{
-		MoveNumber: len(history),
+	entry := moveAnalysisRecord{
+		MoveNumber: moveNumber,
 		Command:    command,
 		Analysis:   result,
-	})
+	}
+	moveAnalysisByGame[gameID] = append(moveAnalysisByGame[gameID], entry)
+	latestAnalysisByGame[gameID] = latestAnalysisState{
+		GameID:     gameID,
+		MoveNumber: moveNumber,
+		Command:    command,
+		Analysis:   result,
+		UpdatedAt:  time.Now().UTC().Format(time.RFC3339),
+	}
+}
+
+func getLatestAnalysisByGameID(gameID string) (latestAnalysisState, bool) {
+	analysisStoreMu.Lock()
+	defer analysisStoreMu.Unlock()
+	entry, ok := latestAnalysisByGame[gameID]
+	return entry, ok
+}
+
+func getLatestAnalysisStatusByGameID(gameID string) analysisLatestStatus {
+	analysisStoreMu.Lock()
+	defer analysisStoreMu.Unlock()
+	status := analysisLatestStatus{
+		GameID:              gameID,
+		RequestedMoveNumber: latestRequestedByGame[gameID],
+		Pending:             analysisPendingByGame[gameID],
+	}
+	if latest, ok := latestAnalysisByGame[gameID]; ok {
+		latestCopy := latest
+		status.LatestMoveNumber = latest.MoveNumber
+		status.Latest = &latestCopy
+	}
+	return status
 }
 
 func exportGameAnalysisIfNeeded(game sessionpkg.GameSession) {

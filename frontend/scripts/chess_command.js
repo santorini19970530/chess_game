@@ -18,6 +18,7 @@
   const winProbBlackBar = document.getElementById("game_info_winprob_black_bar");
   const resultWhiteValue = document.getElementById("game_info_result_white");
   const resultBlackValue = document.getElementById("game_info_result_black");
+  const gameInfoNotesBox = document.getElementById("game_info_notes");
   const moveHistoryWhiteList = document.getElementById("chess_move_history_white");
   const moveHistoryBlackList = document.getElementById("chess_move_history_black");
   const newGameButton = document.getElementById("chess_new_game");
@@ -38,6 +39,8 @@
   let dragSourceSequence = null;
   let isSubmitting = false;
   let pendingPromotionResolve = null;
+  let analysisPollTimer = null;
+  let cachedAnalysis = null;
 
   if (!input || !button || !status || !moveHistoryWhiteList || !moveHistoryBlackList || !boardElement) return;
 
@@ -47,6 +50,13 @@
   const setStatus = (message, type) => {
     status.textContent = message;
     status.className = `command_status ${type}`;
+  };
+
+  const stopAnalysisPolling = () => {
+    if (analysisPollTimer != null) {
+      window.clearInterval(analysisPollTimer);
+      analysisPollTimer = null;
+    }
   };
 
   const sideLabel = (side) => (String(side || "").toLowerCase() === "black" ? "Black" : "White");
@@ -330,6 +340,8 @@
   };
 
   const renderGameInfo = (state, capturedSummary, analysis) => {
+    const effectiveAnalysis = analysis || cachedAnalysis;
+    if (analysis) cachedAnalysis = analysis;
     const liveCounts = countPiecesByColor(state);
     const normalizedCaptured = normalizeCapturedSummary(capturedSummary);
     const whiteCaptured = normalizedCaptured
@@ -339,8 +351,8 @@
       ? normalizedCaptured.black
       : capturedMap("black", liveCounts);
     const winProb = estimateWinProb(liveCounts);
-    const analyzerWhite = fromAnalyzerChance(analysis?.win_chance_white);
-    const analyzerBlack = fromAnalyzerChance(analysis?.win_chance_black);
+    const analyzerWhite = fromAnalyzerChance(effectiveAnalysis?.win_chance_white);
+    const analyzerBlack = fromAnalyzerChance(effectiveAnalysis?.win_chance_black);
     const hasAnalyzerProb = analyzerWhite != null && analyzerBlack != null;
     const whiteProb = clampPercentage(hasAnalyzerProb ? analyzerWhite : winProb.white);
     const blackProb = clampPercentage(hasAnalyzerProb ? analyzerBlack : winProb.black);
@@ -363,6 +375,38 @@
     if (winProbBlackBar) winProbBlackBar.style.width = `${blackProb}%`;
     if (winProbWhiteBar) winProbWhiteBar.classList.toggle("game_info_winprob_segment_tiny", whiteTiny);
     if (winProbBlackBar) winProbBlackBar.classList.toggle("game_info_winprob_segment_tiny", blackTiny);
+
+    if (gameInfoNotesBox && effectiveAnalysis) {
+      const threatSummary = String(effectiveAnalysis?.threat_summary || "").trim();
+      gameInfoNotesBox.value = threatSummary || "No analysis summary yet.";
+    }
+  };
+
+  const startAnalysisPolling = (targetMoveNumber, stateSnapshot, capturedSnapshot) => {
+    stopAnalysisPolling();
+    if (gameInfoNotesBox) gameInfoNotesBox.value = "Analyzing...";
+    const target = Number(targetMoveNumber) || 0;
+
+    const pollOnce = async () => {
+      try {
+        const response = await fetch("/game/analysis/latest", { method: "GET" });
+        if (!response.ok) return;
+        const payload = await response.json();
+        const latestMoveNumber = Number(payload?.latest_move_number || 0);
+        const latestAnalysis = payload?.latest?.analysis;
+        if (!latestAnalysis) return;
+        if (latestMoveNumber < target) return;
+        renderGameInfo(stateSnapshot, capturedSnapshot, latestAnalysis);
+        stopAnalysisPolling();
+      } catch (_) {
+        // ignore polling errors; next poll may recover
+      }
+    };
+
+    void pollOnce();
+    analysisPollTimer = window.setInterval(() => {
+      void pollOnce();
+    }, 700);
   };
 
   const movePieceIcon = (side, pieceKind) => {
@@ -719,7 +763,14 @@
       renderGameOutcome(result.game);
       renderGameConfig(result.game);
       // Always compute from the rendered board so capture info matches what user sees.
-      renderGameInfo(extractBoardStateFromDOM(), result.captured, result.analysis);
+      const boardStateForInfo = extractBoardStateFromDOM();
+      renderGameInfo(boardStateForInfo, result.captured, result.analysis);
+      if (result.analysis) {
+        stopAnalysisPolling();
+      } else {
+        const targetMoveNumber = Math.max(historyArray.length, detailedArray.length);
+        startAnalysisPolling(targetMoveNumber, boardStateForInfo, result.captured);
+      }
       try {
         moveSound.currentTime = 0;
         await moveSound.play();
@@ -916,6 +967,8 @@
         renderGameOutcome(result.game);
         renderGameConfig(result.game);
         renderGameInfo(extractBoardStateFromDOM(), result.captured, result.analysis);
+        cachedAnalysis = null;
+        stopAnalysisPolling();
         resolvePromotionChoice("");
         clearSelectedSquare();
       } catch (_error) {
@@ -940,6 +993,8 @@
         renderGameOutcome(result.game);
         renderGameConfig(result.game);
         renderGameInfo(extractBoardStateFromDOM(), result.captured, result.analysis);
+        cachedAnalysis = null;
+        stopAnalysisPolling();
         input.value = "";
         input.disabled = false;
         button.disabled = false;

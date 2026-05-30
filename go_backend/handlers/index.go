@@ -293,16 +293,25 @@ func (h *Handler) FlagGame(w http.ResponseWriter, r *http.Request) {
 		HistoryDetailed: sessionpkg.GetMoveHistoryDetailed(),
 		State:           sessionpkg.GetBoardState(),
 	}
-	if analysisResult, err := analyzeCurrentPosition(); err != nil {
-		log.Printf("warning: analyze current position failed after flag: %v", err)
-	} else if analysisResult != nil {
-		response.Analysis = analysisResult
-		recordMoveAnalysis("flag", *analysisResult)
-	}
+	enqueueCurrentPositionAnalysis("flag")
 	exportGameAnalysisIfNeeded(game)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Response encode error", http.StatusInternalServerError)
+	}
+}
+
+func (h *Handler) GetLatestAnalysis(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	game := sessionpkg.GetGameSession()
+	status := getLatestAnalysisStatusByGameID(game.ID)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(status); err != nil {
 		http.Error(w, "Response encode error", http.StatusInternalServerError)
 	}
 }
@@ -399,12 +408,7 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 
 	// Testing phase: call Python analyzer after each successful move
 	// and print full response in Go server terminal.
-	if analysisResult, err := analyzeCurrentPosition(); err != nil {
-		log.Printf("warning: analyze current position failed: %v", err)
-	} else if analysisResult != nil {
-		response.Analysis = analysisResult
-		recordMoveAnalysis(normalizedMove, *analysisResult)
-	}
+	enqueueCurrentPositionAnalysis(normalizedMove)
 	if finalGame.Result != sessionpkg.GameResultInProgress {
 		exportGameAnalysisIfNeeded(finalGame)
 	}
