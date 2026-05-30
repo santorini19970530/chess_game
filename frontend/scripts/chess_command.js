@@ -14,6 +14,8 @@
   const capturedBlackValue = document.getElementById("game_info_captured_black");
   const winProbWhiteValue = document.getElementById("game_info_winprob_white");
   const winProbBlackValue = document.getElementById("game_info_winprob_black");
+  const winProbWhiteBar = document.getElementById("game_info_winprob_white_bar");
+  const winProbBlackBar = document.getElementById("game_info_winprob_black_bar");
   const resultWhiteValue = document.getElementById("game_info_result_white");
   const resultBlackValue = document.getElementById("game_info_result_black");
   const moveHistoryWhiteList = document.getElementById("chess_move_history_white");
@@ -255,6 +257,27 @@
     return normalized;
   };
 
+  const clampPercentage = (value) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return 50;
+    return Math.max(0, Math.min(100, n));
+  };
+
+  const formatPercentage = (value) => `${value.toFixed(1)}%`;
+
+  const winProbLabelColor = (chance, isLightBackground) => {
+    if (chance >= 70) return isLightBackground ? "#0f5e2a" : "#8df0a8";
+    if (chance <= 30) return isLightBackground ? "#7a1e1e" : "#ff9f9f";
+    return isLightBackground ? "#101010" : "#f5f5f5";
+  };
+
+  const fromAnalyzerChance = (value) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return null;
+    // Analyzer uses 0..1; tolerate 0..100 values too.
+    return n <= 1 ? n * 100 : n;
+  };
+
   const estimateWinProb = (liveCounts) => {
     const pieceValue = { pawn: 1, knight: 3, bishop: 3, rook: 5, queen: 9, king: 0 };
     const material = { white: 0, black: 0 };
@@ -264,10 +287,10 @@
       }
     }
     const total = material.white + material.black;
-    if (total <= 0) return { white: "50%", black: "50%" };
+    if (total <= 0) return { white: 50, black: 50 };
     const whiteProb = Math.round((material.white / total) * 100);
     const blackProb = 100 - whiteProb;
-    return { white: `${whiteProb}%`, black: `${blackProb}%` };
+    return { white: whiteProb, black: blackProb };
   };
 
   const extractBoardStateFromDOM = () => {
@@ -304,7 +327,7 @@
     return pieces;
   };
 
-  const renderGameInfo = (state, capturedSummary) => {
+  const renderGameInfo = (state, capturedSummary, analysis) => {
     const liveCounts = countPiecesByColor(state);
     const normalizedCaptured = normalizeCapturedSummary(capturedSummary);
     const whiteCaptured = normalizedCaptured
@@ -314,11 +337,30 @@
       ? normalizedCaptured.black
       : capturedMap("black", liveCounts);
     const winProb = estimateWinProb(liveCounts);
+    const analyzerWhite = fromAnalyzerChance(analysis?.win_chance_white);
+    const analyzerBlack = fromAnalyzerChance(analysis?.win_chance_black);
+    const hasAnalyzerProb = analyzerWhite != null && analyzerBlack != null;
+    const whiteProb = clampPercentage(hasAnalyzerProb ? analyzerWhite : winProb.white);
+    const blackProb = clampPercentage(hasAnalyzerProb ? analyzerBlack : winProb.black);
+    const whiteTiny = whiteProb < 12;
+    const blackTiny = blackProb < 12;
 
     if (capturedWhiteValue) capturedWhiteValue.textContent = capturedMapToText(whiteCaptured);
     if (capturedBlackValue) capturedBlackValue.textContent = capturedMapToText(blackCaptured);
-    if (winProbWhiteValue) winProbWhiteValue.textContent = `◎ ${winProb.white}`;
-    if (winProbBlackValue) winProbBlackValue.textContent = `◎ ${winProb.black}`;
+    if (winProbWhiteValue) {
+      winProbWhiteValue.textContent = formatPercentage(whiteProb);
+      winProbWhiteValue.style.color = winProbLabelColor(whiteProb, true);
+      winProbWhiteValue.classList.toggle("game_info_winprob_label_outside_white", whiteTiny);
+    }
+    if (winProbBlackValue) {
+      winProbBlackValue.textContent = formatPercentage(blackProb);
+      winProbBlackValue.style.color = winProbLabelColor(blackProb, false);
+      winProbBlackValue.classList.toggle("game_info_winprob_label_outside_black", blackTiny);
+    }
+    if (winProbWhiteBar) winProbWhiteBar.style.width = `${whiteProb}%`;
+    if (winProbBlackBar) winProbBlackBar.style.width = `${blackProb}%`;
+    if (winProbWhiteBar) winProbWhiteBar.classList.toggle("game_info_winprob_segment_tiny", whiteTiny);
+    if (winProbBlackBar) winProbBlackBar.classList.toggle("game_info_winprob_segment_tiny", blackTiny);
   };
 
   // update move history from backend source of truth
@@ -591,7 +633,7 @@
       renderGameOutcome(result.game);
       renderGameConfig(result.game);
       // Always compute from the rendered board so capture info matches what user sees.
-      renderGameInfo(extractBoardStateFromDOM(), result.captured);
+      renderGameInfo(extractBoardStateFromDOM(), result.captured, result.analysis);
       try {
         moveSound.currentTime = 0;
         await moveSound.play();
@@ -787,7 +829,7 @@
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
         renderGameOutcome(result.game);
         renderGameConfig(result.game);
-        renderGameInfo(extractBoardStateFromDOM(), result.captured);
+        renderGameInfo(extractBoardStateFromDOM(), result.captured, result.analysis);
         resolvePromotionChoice("");
         clearSelectedSquare();
       } catch (_error) {
@@ -811,7 +853,7 @@
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
         renderGameOutcome(result.game);
         renderGameConfig(result.game);
-        renderGameInfo(extractBoardStateFromDOM(), result.captured);
+        renderGameInfo(extractBoardStateFromDOM(), result.captured, result.analysis);
         input.value = "";
         input.disabled = false;
         button.disabled = false;
@@ -835,7 +877,7 @@
   initPromotionPicker();
   initMouseMoveControls();
 
-  renderGameInfo(extractBoardStateFromDOM());
+  renderGameInfo(extractBoardStateFromDOM(), null, null);
   renderCheckState("");
   renderGameOutcome({ status: "in_progress", result: "in_progress" });
   renderGameConfig({

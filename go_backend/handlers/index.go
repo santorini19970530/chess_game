@@ -81,6 +81,16 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	// right panel
 	mainHTMLCode.WriteString(`<div class="game_panel_right_top">`)
 	mainHTMLCode.WriteString(`<div class="game_info_table" role="table" aria-label="Game information table">`)
+	mainHTMLCode.WriteString(`<div class="game_info_winprob_wrapper" role="presentation">`)
+	mainHTMLCode.WriteString(`<div class="game_info_winprob_track">`)
+	mainHTMLCode.WriteString(`<div id="game_info_winprob_white_bar" class="game_info_winprob_segment game_info_winprob_segment_white" style="width: 50%;">`)
+	mainHTMLCode.WriteString(`<span id="game_info_winprob_white" class="game_info_winprob_label">50%</span>`)
+	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`<div id="game_info_winprob_black_bar" class="game_info_winprob_segment game_info_winprob_segment_black" style="width: 50%;">`)
+	mainHTMLCode.WriteString(`<span id="game_info_winprob_black" class="game_info_winprob_label">50%</span>`)
+	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`</div>`)
 	mainHTMLCode.WriteString(`<div class="game_info_row game_info_header" role="row">`)
 	mainHTMLCode.WriteString(`<div id="game_info_side_white" class="game_info_cell game_info_side ` + whiteTurnClass + `" role="columnheader">White</div>`)
 	mainHTMLCode.WriteString(`<div id="game_info_side_black" class="game_info_cell game_info_side ` + blackTurnClass + `" role="columnheader">Black</div>`)
@@ -92,10 +102,6 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`<div class="game_info_row" role="row">`)
 	mainHTMLCode.WriteString(`<div class="game_info_cell ` + whiteTurnClass + `" role="cell"><span id="game_info_time_white" class="game_info_item_value">⏱ --:--</span></div>`)
 	mainHTMLCode.WriteString(`<div class="game_info_cell ` + blackTurnClass + `" role="cell"><span id="game_info_time_black" class="game_info_item_value">⏱ --:--</span></div>`)
-	mainHTMLCode.WriteString(`</div>`)
-	mainHTMLCode.WriteString(`<div class="game_info_row" role="row">`)
-	mainHTMLCode.WriteString(`<div class="game_info_cell ` + whiteTurnClass + `" role="cell"><span id="game_info_winprob_white" class="game_info_item_value">◎ TBD</span></div>`)
-	mainHTMLCode.WriteString(`<div class="game_info_cell ` + blackTurnClass + `" role="cell"><span id="game_info_winprob_black" class="game_info_item_value">◎ TBD</span></div>`)
 	mainHTMLCode.WriteString(`</div>`)
 	mainHTMLCode.WriteString(`<div class="game_info_row" role="row">`)
 	mainHTMLCode.WriteString(`<div class="game_info_cell ` + whiteTurnClass + `" role="cell"><span id="game_info_result_white" class="game_info_item_value">Result: PLAYING</span></div>`)
@@ -191,6 +197,7 @@ func (h *Handler) NewGame(w http.ResponseWriter, r *http.Request) {
 		History:     sessionpkg.GetMoveHistory(),
 		State:       sessionpkg.GetBoardState(),
 	}
+	exportGameAnalysisIfNeeded(game)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
@@ -253,17 +260,20 @@ func (h *Handler) FlagGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	game := sessionpkg.FlagCurrentTurn()
+	log.Printf("game flagged: game_id=%s loser=%s winner=%s", game.ID, game.Outcome.Loser, game.Outcome.Winner)
 	if err := sessionpkg.ArchiveActiveGameIfNeeded(); err != nil {
 		http.Error(w, "Failed to archive flagged game", http.StatusInternalServerError)
 		log.Printf("archive flagged game failed: %v", err)
 		return
 	}
+	log.Printf("flagged game archived: game_id=%s", game.ID)
 
 	response := struct {
 		CurrentTurn string                     `json:"currentTurn"`
 		CheckedSide string                     `json:"checkedSide"`
 		Game        sessionpkg.GameSession     `json:"game"`
 		Captured    sessionpkg.CapturedSummary `json:"captured"`
+		Analysis    *analyzerResponse          `json:"analysis,omitempty"`
 		History     []string                   `json:"history"`
 		State       []sessionpkg.PieceState    `json:"state"`
 	}{
@@ -274,6 +284,13 @@ func (h *Handler) FlagGame(w http.ResponseWriter, r *http.Request) {
 		History:     sessionpkg.GetMoveHistory(),
 		State:       sessionpkg.GetBoardState(),
 	}
+	if analysisResult, err := analyzeCurrentPosition(); err != nil {
+		log.Printf("warning: analyze current position failed after flag: %v", err)
+	} else if analysisResult != nil {
+		response.Analysis = analysisResult
+		recordMoveAnalysis("flag", *analysisResult)
+	}
+	exportGameAnalysisIfNeeded(game)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
@@ -344,6 +361,7 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 		CheckedSide string                     `json:"checkedSide"`
 		Game        sessionpkg.GameSession     `json:"game"`
 		Captured    sessionpkg.CapturedSummary `json:"captured"`
+		Analysis    *analyzerResponse          `json:"analysis,omitempty"`
 		From        struct {
 			File string `json:"file"`
 			Rank int    `json:"rank"`
@@ -370,7 +388,15 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 
 	// Testing phase: call Python analyzer after each successful move
 	// and print full response in Go server terminal.
-	analyzeCurrentPosition()
+	if analysisResult, err := analyzeCurrentPosition(); err != nil {
+		log.Printf("warning: analyze current position failed: %v", err)
+	} else if analysisResult != nil {
+		response.Analysis = analysisResult
+		recordMoveAnalysis(normalizedMove, *analysisResult)
+	}
+	if finalGame.Result != sessionpkg.GameResultInProgress {
+		exportGameAnalysisIfNeeded(finalGame)
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
