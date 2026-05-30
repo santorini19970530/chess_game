@@ -173,6 +173,7 @@ main {
 .game_panel_right_bottom {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .game_info_table {
@@ -407,7 +408,11 @@ main {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
 }
 
 .chess_move_history_title {
@@ -440,8 +445,7 @@ main {
   list-style: decimal;
   list-style-position: inside;
   margin: 0;
-  min-height: 180px;
-  max-height: none;
+  min-height: 0;
   flex: 1;
   overflow-y: auto;
   line-height: 1.6;
@@ -455,6 +459,12 @@ main {
   padding: 2px 0 2px 4px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 1rem;
+}
+
+.chess_move_history_piece_icon {
+  font-size: 2rem;
+  line-height: 1;
+  vertical-align: -0.08em;
 }
 
 .chess_move_history_placeholder {
@@ -544,14 +554,14 @@ main {
     overflow: hidden;
   }
 
-  .game_panel_left,
-  .game_panel_config,
-  .game_panel_right_top,
-  .game_panel_right_bottom {
   .game_panel_config {
     grid-area: config;
   }
 
+  .game_panel_left,
+  .game_panel_config,
+  .game_panel_right_top,
+  .game_panel_right_bottom {
     min-height: 0;
     overflow: auto;
   }
@@ -569,6 +579,7 @@ main {
 
   .game_panel_right_bottom {
     grid-area: rightBottom;
+    overflow: hidden;
   }
 
   .chess_board_wrapper {

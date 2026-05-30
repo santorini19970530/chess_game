@@ -79,7 +79,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`</div>`)
 
 	// right panel
-	mainHTMLCode.WriteString(`<div class="game_panel_right_top">`)
+	mainHTMLCode.WriteString(`<div class="game_panel_right_top" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">`)
 	mainHTMLCode.WriteString(`<div class="game_info_table" role="table" aria-label="Game information table">`)
 	mainHTMLCode.WriteString(`<div class="game_info_winprob_wrapper" role="presentation">`)
 	mainHTMLCode.WriteString(`<div class="game_info_winprob_track">`)
@@ -107,14 +107,19 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`<div class="game_info_cell ` + whiteTurnClass + `" role="cell"><span id="game_info_result_white" class="game_info_item_value">Result: PLAYING</span></div>`)
 	mainHTMLCode.WriteString(`<div class="game_info_cell ` + blackTurnClass + `" role="cell"><span id="game_info_result_black" class="game_info_item_value">Result: PLAYING</span></div>`)
 	mainHTMLCode.WriteString(`</div>`)
-	mainHTMLCode.WriteString(`<div class="chess_move_history_panels">`)
-	mainHTMLCode.WriteString(`<div class="chess_move_history_panel">`)
-	mainHTMLCode.WriteString(`<ol id="chess_move_history_white" class="chess_move_history_list">`)
+	mainHTMLCode.WriteString(`</div>`)
+	mainHTMLCode.WriteString(`<div class="chess_move_history_section" style="margin-top:16px;display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;">`)
+	mainHTMLCode.WriteString(`<h3 class="chess_move_history_title">Move history</h3>`)
+	mainHTMLCode.WriteString(`<div class="chess_move_history_panels" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;min-height:0;flex:1;overflow:hidden;">`)
+	mainHTMLCode.WriteString(`<div class="chess_move_history_panel" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">`)
+	mainHTMLCode.WriteString(`<h4 class="chess_move_history_side_title">White</h4>`)
+	mainHTMLCode.WriteString(`<ol id="chess_move_history_white" class="chess_move_history_list" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;">`)
 	mainHTMLCode.WriteString(`<li class="chess_move_history_placeholder">No moves yet.</li>`)
 	mainHTMLCode.WriteString(`</ol>`)
 	mainHTMLCode.WriteString(`</div>`)
-	mainHTMLCode.WriteString(`<div class="chess_move_history_panel">`)
-	mainHTMLCode.WriteString(`<ol id="chess_move_history_black" class="chess_move_history_list">`)
+	mainHTMLCode.WriteString(`<div class="chess_move_history_panel" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">`)
+	mainHTMLCode.WriteString(`<h4 class="chess_move_history_side_title">Black</h4>`)
+	mainHTMLCode.WriteString(`<ol id="chess_move_history_black" class="chess_move_history_list" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;">`)
 	mainHTMLCode.WriteString(`<li class="chess_move_history_placeholder">No moves yet.</li>`)
 	mainHTMLCode.WriteString(`</ol>`)
 	mainHTMLCode.WriteString(`</div>`)
@@ -183,19 +188,21 @@ func (h *Handler) NewGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response := struct {
-		CurrentTurn string                     `json:"currentTurn"`
-		CheckedSide string                     `json:"checkedSide"`
-		Game        sessionpkg.GameSession     `json:"game"`
-		Captured    sessionpkg.CapturedSummary `json:"captured"`
-		History     []string                   `json:"history"`
-		State       []sessionpkg.PieceState    `json:"state"`
+		CurrentTurn     string                        `json:"currentTurn"`
+		CheckedSide     string                        `json:"checkedSide"`
+		Game            sessionpkg.GameSession        `json:"game"`
+		Captured        sessionpkg.CapturedSummary    `json:"captured"`
+		History         []string                      `json:"history"`
+		HistoryDetailed []sessionpkg.MoveHistoryEntry `json:"historyDetailed"`
+		State           []sessionpkg.PieceState       `json:"state"`
 	}{
-		CurrentTurn: sessionpkg.CurrentTurnLabel(),
-		CheckedSide: sessionpkg.CheckedSideLabel(),
-		Game:        game,
-		Captured:    sessionpkg.GetCapturedSummary(),
-		History:     sessionpkg.GetMoveHistory(),
-		State:       sessionpkg.GetBoardState(),
+		CurrentTurn:     sessionpkg.CurrentTurnLabel(),
+		CheckedSide:     sessionpkg.CheckedSideLabel(),
+		Game:            game,
+		Captured:        sessionpkg.GetCapturedSummary(),
+		History:         sessionpkg.GetMoveHistory(),
+		HistoryDetailed: sessionpkg.GetMoveHistoryDetailed(),
+		State:           sessionpkg.GetBoardState(),
 	}
 	exportGameAnalysisIfNeeded(game)
 
@@ -269,20 +276,22 @@ func (h *Handler) FlagGame(w http.ResponseWriter, r *http.Request) {
 	log.Printf("flagged game archived: game_id=%s", game.ID)
 
 	response := struct {
-		CurrentTurn string                     `json:"currentTurn"`
-		CheckedSide string                     `json:"checkedSide"`
-		Game        sessionpkg.GameSession     `json:"game"`
-		Captured    sessionpkg.CapturedSummary `json:"captured"`
-		Analysis    *analyzerResponse          `json:"analysis,omitempty"`
-		History     []string                   `json:"history"`
-		State       []sessionpkg.PieceState    `json:"state"`
+		CurrentTurn     string                        `json:"currentTurn"`
+		CheckedSide     string                        `json:"checkedSide"`
+		Game            sessionpkg.GameSession        `json:"game"`
+		Captured        sessionpkg.CapturedSummary    `json:"captured"`
+		Analysis        *analyzerResponse             `json:"analysis,omitempty"`
+		History         []string                      `json:"history"`
+		HistoryDetailed []sessionpkg.MoveHistoryEntry `json:"historyDetailed"`
+		State           []sessionpkg.PieceState       `json:"state"`
 	}{
-		CurrentTurn: sessionpkg.CurrentTurnLabel(),
-		CheckedSide: sessionpkg.CheckedSideLabel(),
-		Game:        game,
-		Captured:    sessionpkg.GetCapturedSummary(),
-		History:     sessionpkg.GetMoveHistory(),
-		State:       sessionpkg.GetBoardState(),
+		CurrentTurn:     sessionpkg.CurrentTurnLabel(),
+		CheckedSide:     sessionpkg.CheckedSideLabel(),
+		Game:            game,
+		Captured:        sessionpkg.GetCapturedSummary(),
+		History:         sessionpkg.GetMoveHistory(),
+		HistoryDetailed: sessionpkg.GetMoveHistoryDetailed(),
+		State:           sessionpkg.GetBoardState(),
 	}
 	if analysisResult, err := analyzeCurrentPosition(); err != nil {
 		log.Printf("warning: analyze current position failed after flag: %v", err)
@@ -370,16 +379,18 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 			File string `json:"file"`
 			Rank int    `json:"rank"`
 		} `json:"to"`
-		History []string                `json:"history"`
-		State   []sessionpkg.PieceState `json:"state"`
+		History         []string                      `json:"history"`
+		HistoryDetailed []sessionpkg.MoveHistoryEntry `json:"historyDetailed"`
+		State           []sessionpkg.PieceState       `json:"state"`
 	}{
-		Command:     normalizedMove,
-		CurrentTurn: sessionpkg.CurrentTurnLabel(),
-		CheckedSide: sessionpkg.CheckedSideLabel(),
-		Game:        finalGame,
-		Captured:    sessionpkg.GetCapturedSummary(),
-		History:     sessionpkg.GetMoveHistory(),
-		State:       sessionpkg.GetBoardState(),
+		Command:         normalizedMove,
+		CurrentTurn:     sessionpkg.CurrentTurnLabel(),
+		CheckedSide:     sessionpkg.CheckedSideLabel(),
+		Game:            finalGame,
+		Captured:        sessionpkg.GetCapturedSummary(),
+		History:         sessionpkg.GetMoveHistory(),
+		HistoryDetailed: sessionpkg.GetMoveHistoryDetailed(),
+		State:           sessionpkg.GetBoardState(),
 	}
 	response.From.File = string(parsed.FromFile)
 	response.From.Rank = parsed.FromRank

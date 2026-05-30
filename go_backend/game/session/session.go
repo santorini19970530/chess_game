@@ -13,6 +13,7 @@ var initialPiecesSnapshot = append([]pieces.ChessPiece(nil), pieces.ChessPieces.
 func ResetGame() {
 	pieces.ChessPieces = append([]pieces.ChessPiece(nil), initialPiecesSnapshot...)
 	moveHistory = nil
+	moveHistoryDetailed = nil
 	lastAppliedMove = nil
 	resetCastlingState()
 	resetTurnOverride()
