@@ -41,6 +41,7 @@
   let selectedSquareSequence = null;
   let dragSourceSequence = null;
   let legalMovesRequestVersion = 0;
+  let selectedLegalMoves = [];
   let isSubmitting = false;
   let pendingPromotionResolve = null;
   let analysisPollTimer = null;
@@ -50,7 +51,6 @@
   if (!input || !button || !status || !moveHistoryWhiteList || !moveHistoryBlackList || !boardElement) return;
 
   const gameIdInput = document.getElementById("active_game_id");
-  if (gameIdInput?.value) currentGameId = String(gameIdInput.value).trim();
 
   input.focus();
 
@@ -58,6 +58,17 @@
   const setStatus = (message, type) => {
     status.textContent = message;
     status.className = `command_status ${type}`;
+  };
+
+  const readErrorMessage = async (response, fallback) => {
+    try {
+      const payload = await response.json();
+      const message = String(payload?.message || "").trim();
+      return message || fallback;
+    } catch (_) {
+      const text = (await response.text()).trim();
+      return text || fallback;
+    }
   };
 
   const syncGameIdFromResult = (result) => {
@@ -73,8 +84,6 @@
       analysisPollTimer = null;
     }
   };
-
-  const sideLabel = (side) => (String(side || "").toLowerCase() === "black" ? "Black" : "White");
 
   const renderCurrentTurn = (turnText) => {
     if (!turnText) return;
@@ -219,10 +228,6 @@
     updateSetupControlState();
   };
 
-  const INITIAL_COUNTS = {
-    white: { pawn: 8, rook: 2, knight: 2, bishop: 2, queen: 1, king: 1 },
-    black: { pawn: 8, rook: 2, knight: 2, bishop: 2, queen: 1, king: 1 },
-  };
   const PIECE_ORDER = ["queen", "rook", "bishop", "knight", "pawn", "king"];
   const PIECE_SYMBOL = {
     queen: "♛",
@@ -231,30 +236,6 @@
     knight: "♞",
     pawn: "♟",
     king: "♚",
-  };
-
-  const countPiecesByColor = (state) => {
-    const counts = {
-      white: { pawn: 0, rook: 0, knight: 0, bishop: 0, queen: 0, king: 0 },
-      black: { pawn: 0, rook: 0, knight: 0, bishop: 0, queen: 0, king: 0 },
-    };
-    if (!Array.isArray(state)) return counts;
-    for (const piece of state) {
-      const side = String(piece?.color || "").toLowerCase();
-      const kind = String(piece?.kind || "").toLowerCase();
-      if (!counts[side] || !counts[side][kind]) continue;
-      counts[side][kind] += 1;
-    }
-    return counts;
-  };
-
-  const capturedMap = (capturerColor, liveCounts) => {
-    const opponent = capturerColor === "white" ? "black" : "white";
-    const out = { pawn: 0, rook: 0, knight: 0, bishop: 0, queen: 0, king: 0 };
-    for (const kind of Object.keys(out)) {
-      out[kind] = Math.max(0, INITIAL_COUNTS[opponent][kind] - liveCounts[opponent][kind]);
-    }
-    return out;
   };
 
   const capturedMapToText = (captured) => {
@@ -268,7 +249,11 @@
   };
 
   const normalizeCapturedSummary = (summary) => {
-    if (!summary || typeof summary !== "object") return null;
+    if (!summary || typeof summary !== "object")
+      return {
+        white: { pawn: 0, rook: 0, knight: 0, bishop: 0, queen: 0, king: 0 },
+        black: { pawn: 0, rook: 0, knight: 0, bishop: 0, queen: 0, king: 0 },
+      };
     const normalized = {
       white: { pawn: 0, rook: 0, knight: 0, bishop: 0, queen: 0, king: 0 },
       black: { pawn: 0, rook: 0, knight: 0, bishop: 0, queen: 0, king: 0 },
@@ -305,72 +290,17 @@
     return n <= 1 ? n * 100 : n;
   };
 
-  const estimateWinProb = (liveCounts) => {
-    const pieceValue = { pawn: 1, knight: 3, bishop: 3, rook: 5, queen: 9, king: 0 };
-    const material = { white: 0, black: 0 };
-    for (const side of ["white", "black"]) {
-      for (const kind of Object.keys(pieceValue)) {
-        material[side] += (liveCounts[side][kind] || 0) * pieceValue[kind];
-      }
-    }
-    const total = material.white + material.black;
-    if (total <= 0) return { white: 50, black: 50 };
-    const whiteProb = Math.round((material.white / total) * 100);
-    const blackProb = 100 - whiteProb;
-    return { white: whiteProb, black: blackProb };
-  };
-
-  const extractBoardStateFromDOM = () => {
-    const pieces = [];
-    const squares = document.querySelectorAll(".chess_board_square[data-sequence]");
-    for (const square of squares) {
-      const pieceEl = square.querySelector(".piece_img");
-      if (!pieceEl) continue;
-
-      const sequence = Number(square.getAttribute("data-sequence"));
-      if (Number.isNaN(sequence)) continue;
-      const file = (sequence % 8) + 1;
-      const rank = 8 - Math.floor(sequence / 8);
-
-      let kind = String(pieceEl.getAttribute("data-kind") || "").toLowerCase();
-      let color = String(pieceEl.getAttribute("data-color") || "").toLowerCase();
-
-      // Fallback for old markup where data attributes may be missing.
-      if (!kind || !color) {
-        const src = pieceEl.getAttribute("src") || "";
-        const match = src.match(/(pawn|rook|knight|bishop|queen|king)_(light|dark)\.png/i);
-        if (!match) continue;
-        kind = match[1].toLowerCase();
-        color = match[2].toLowerCase() === "light" ? "white" : "black";
-      }
-
-      pieces.push({
-        kind,
-        color,
-        file,
-        rank,
-      });
-    }
-    return pieces;
-  };
-
-  const renderGameInfo = (state, capturedSummary, analysis) => {
+  const renderGameInfo = (capturedSummary, analysis) => {
     const effectiveAnalysis = analysis || cachedAnalysis;
     if (analysis) cachedAnalysis = analysis;
-    const liveCounts = countPiecesByColor(state);
     const normalizedCaptured = normalizeCapturedSummary(capturedSummary);
-    const whiteCaptured = normalizedCaptured
-      ? normalizedCaptured.white
-      : capturedMap("white", liveCounts);
-    const blackCaptured = normalizedCaptured
-      ? normalizedCaptured.black
-      : capturedMap("black", liveCounts);
-    const winProb = estimateWinProb(liveCounts);
+    const whiteCaptured = normalizedCaptured.white;
+    const blackCaptured = normalizedCaptured.black;
     const analyzerWhite = fromAnalyzerChance(effectiveAnalysis?.win_chance_white);
     const analyzerBlack = fromAnalyzerChance(effectiveAnalysis?.win_chance_black);
     const hasAnalyzerProb = analyzerWhite != null && analyzerBlack != null;
-    const whiteProb = clampPercentage(hasAnalyzerProb ? analyzerWhite : winProb.white);
-    const blackProb = clampPercentage(hasAnalyzerProb ? analyzerBlack : winProb.black);
+    const whiteProb = clampPercentage(hasAnalyzerProb ? analyzerWhite : 50);
+    const blackProb = clampPercentage(hasAnalyzerProb ? analyzerBlack : 50);
     const whiteTiny = whiteProb < 12;
     const blackTiny = blackProb < 12;
 
@@ -397,7 +327,7 @@
     }
   };
 
-  const startAnalysisPolling = (targetMoveNumber, stateSnapshot, capturedSnapshot) => {
+  const startAnalysisPolling = (targetMoveNumber, capturedSnapshot) => {
     stopAnalysisPolling();
     if (gameInfoNotesBox) gameInfoNotesBox.value = "Analyzing...";
     const target = Number(targetMoveNumber) || 0;
@@ -415,7 +345,7 @@
         const latestAnalysis = payload?.latest?.analysis;
         if (!latestAnalysis) return;
         if (latestMoveNumber < target) return;
-        renderGameInfo(stateSnapshot, capturedSnapshot, latestAnalysis);
+        renderGameInfo(capturedSnapshot, latestAnalysis);
         stopAnalysisPolling();
       } catch (_) {
         // ignore polling errors; next poll may recover
@@ -541,16 +471,6 @@
     moveHistoryBlackList.scrollTop = moveHistoryBlackList.scrollHeight;
   };
 
-  // highlight the box being mentioned by user
-  const squareSelectorByFileRank = (fileChar, rankChar) => {
-    const fileIndex = fileChar.charCodeAt(0) - "a".charCodeAt(0) + 1;
-    const rankNum = Number(rankChar);
-    if (fileIndex < 1 || fileIndex > 8 || rankNum < 1 || rankNum > 8) return "";
-
-    const sequence = (8 - rankNum) * 8 + (fileIndex - 1);
-    return `.chess_board_square[data-sequence="${sequence}"]`;
-  };
-
   const sequenceToSquare = (sequence) => {
     const seq = Number(sequence);
     if (Number.isNaN(seq) || seq < 0 || seq > 63) return "";
@@ -598,18 +518,15 @@
     return pieceColor === currentTurn;
   };
 
-  const requiresPromotion = (fromSequence, toSequence) => {
-    const fromSquare = boardElement.querySelector(
-      `.chess_board_square[data-sequence="${Number(fromSequence)}"]`
+  const requiresPromotion = (toSequence) => {
+    const target = fileRankFromSequence(toSequence);
+    if (!target) return false;
+    return selectedLegalMoves.some(
+      (move) =>
+        Number(move?.file) === target.file &&
+        Number(move?.rank) === target.rank &&
+        Boolean(move?.requiresPromotion)
     );
-    const piece = getPieceOnSquare(fromSquare);
-    if (!piece) return false;
-    const kind = String(piece.getAttribute("data-kind") || "").toLowerCase();
-    if (kind !== "pawn") return false;
-    const color = String(piece.getAttribute("data-color") || "").toLowerCase();
-    const targetRank = rankFromSequence(toSequence);
-    if (Number.isNaN(targetRank)) return false;
-    return (color === "white" && targetRank === 8) || (color === "black" && targetRank === 1);
   };
 
   const closePromotionPicker = () => {
@@ -646,6 +563,7 @@
 
   const clearSelectedSquare = () => {
     selectedSquareSequence = null;
+    selectedLegalMoves = [];
     legalMovesRequestVersion += 1;
     boardElement
       .querySelectorAll(`.piece_img.${SELECTED_PIECE_CLASS}`)
@@ -710,9 +628,9 @@
       const result = await response.json();
       if (requestVersion !== legalMovesRequestVersion) return;
       if (selectedSquareSequence !== Number(sequence)) return;
-      highlightLegalDestinations(
-        Array.isArray(result?.legalMoves) ? result.legalMoves : []
-      );
+      const moves = Array.isArray(result?.legalMoves) ? result.legalMoves : [];
+      selectedLegalMoves = moves;
+      highlightLegalDestinations(moves);
     } catch (_error) {
       if (requestVersion === legalMovesRequestVersion) {
         highlightLegalDestinations([]);
@@ -735,26 +653,6 @@
       selectedPiece.classList.add(SELECTED_PIECE_CLASS);
       void loadLegalDestinationsForSelection(selectedSquareSequence);
     }
-  };
-
-  // move chess piece
-  const applyMoveOnBoard = (fromFile, fromRank, toFile, toRank) => {
-    const fromSquare = document.querySelector(
-      squareSelectorByFileRank(fromFile, fromRank)
-    );
-    const toSquare = document.querySelector(
-      squareSelectorByFileRank(toFile, toRank)
-    );
-    if (!fromSquare || !toSquare) return; // check if there is such box
-
-    // update the position of the picture of the piece
-    const pieceEl = fromSquare.querySelector(".piece_img");
-    if (!pieceEl) return;
-
-    const captured = toSquare.querySelector(".piece_img");
-    if (captured) captured.remove();
-
-    toSquare.appendChild(pieceEl);
   };
 
   const sequenceByFileRank = (fileNum, rankNum) =>
@@ -809,7 +707,6 @@
     }
 
     const command = String(commandText || input.value).trim();
-    const movingSide = currentTurn;
     if (!command) {
       setStatus("Please enter a chess movement command.", "error");
       return false;
@@ -828,8 +725,7 @@
       });
 
       if (!response.ok) {
-        const errorMessage = (await response.text()).trim();
-
+        const errorMessage = await readErrorMessage(response, "Invalid command format");
         setStatus(errorMessage || "Invalid command format", "error");
         input.focus();
 
@@ -847,45 +743,23 @@
       input.value = input.value.trim() === command ? "" : input.value;
       const usedStateRender = renderBoardFromState(result.state);
       if (!usedStateRender) {
-        applyMoveOnBoard(
-          result.from.file,
-          String(result.from.rank),
-          result.to.file,
-          String(result.to.rank)
-        );
+        setStatus("Missing board state in server response.", "error");
+        return false;
       }
       const historyArray = Array.isArray(result.history) ? result.history : [];
       const detailedArray = Array.isArray(result.historyDetailed) ? result.historyDetailed : [];
-      if (historyArray.length === 0 && detailedArray.length === 0) {
-        // Fallback: if backend omits history payload but move succeeds, still show the move.
-        renderMoveHistory([`${sideLabel(movingSide)}: ${String(result.command || command).toLowerCase()}`], []);
-      } else {
-        renderMoveHistory(historyArray, detailedArray);
-      }
-      if (
-        moveHistoryWhiteList.children.length === 1 &&
-        moveHistoryBlackList.children.length === 1 &&
-        moveHistoryWhiteList.querySelector(".chess_move_history_placeholder") &&
-        moveHistoryBlackList.querySelector(".chess_move_history_placeholder")
-      ) {
-        const toSquare = `${String(result?.to?.file || "").toLowerCase()}${String(result?.to?.rank || "")}`;
-        const targetList = String(movingSide).toLowerCase() === "black" ? moveHistoryBlackList : moveHistoryWhiteList;
-        clearHistoryPlaceholder(targetList);
-        appendHistoryMove(targetList, movingSide, "pawn", toSquare, String(result.command || command).toLowerCase(), false, "");
-      }
+      renderMoveHistory(historyArray, detailedArray);
       renderCurrentTurn(result.currentTurn);
       renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
       renderGameOutcome(result.game);
       renderGameConfig(result.game);
-      // Always compute from the rendered board so capture info matches what user sees.
-      const boardStateForInfo = extractBoardStateFromDOM();
-      renderGameInfo(boardStateForInfo, result.captured, result.analysis);
+      renderGameInfo(result.captured, result.analysis);
       clearSelectedSquare();
       if (result.analysis) {
         stopAnalysisPolling();
       } else {
         const targetMoveNumber = Math.max(historyArray.length, detailedArray.length);
-        startAnalysisPolling(targetMoveNumber, boardStateForInfo, result.captured);
+        startAnalysisPolling(targetMoveNumber, result.captured);
       }
       try {
         moveSound.currentTime = 0;
@@ -907,12 +781,59 @@
   const submitBoardMove = async (fromSequence, toSequence) => {
     let command = moveCommandFromSequence(fromSequence, toSequence);
     if (!command) return false;
-    if (requiresPromotion(fromSequence, toSequence)) {
+    if (requiresPromotion(toSequence)) {
       const promotionChoice = await requestPromotionChoice();
       if (!promotionChoice) return false;
       command += promotionChoice;
     }
     return submitCommand(command);
+  };
+
+  const createSessionOnLoad = async () => {
+    const mode = String(gameModeSelect?.value || "human_vs_human");
+    const fen = String(fenInput?.value || "").trim();
+    const aiCount = fen ? "1" : String(aiGameCountInput?.value || "1");
+    const body = new URLSearchParams({
+      type: String(gameTypeSelect?.value || "chess"),
+      mode,
+      humanColor: String(humanSideSelect?.value || "white"),
+      aiGameCount: aiCount,
+      fen,
+    });
+
+    try {
+      setStatus("Creating game session...", "success");
+      const response = await fetch("/api/games", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      });
+      if (!response.ok) {
+        const errorMessage = await readErrorMessage(response, "Failed to create game session.");
+        setStatus(errorMessage, "error");
+        return;
+      }
+      const result = await response.json();
+      syncGameIdFromResult(result);
+      renderBoardFromState(result.state);
+      renderMoveHistory(result.history, result.historyDetailed);
+      renderCurrentTurn(result.currentTurn);
+      renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
+      renderGameOutcome(result.game);
+      renderGameConfig(result.game);
+      renderGameInfo(result.captured, result.analysis);
+      cachedAnalysis = null;
+      stopAnalysisPolling();
+      clearSelectedSquare();
+      input.disabled = false;
+      button.disabled = false;
+      if (flagButton) flagButton.disabled = false;
+      gameOver = false;
+      setStatus("Game session ready.", "success");
+      input.focus();
+    } catch (_) {
+      setStatus("Network error. Please try again.", "error");
+    }
   };
 
   const initMouseMoveControls = () => {
@@ -1055,7 +976,7 @@
           body: body.toString(),
         });
         if (!response.ok) {
-          const errorMessage = (await response.text()).trim();
+          const errorMessage = await readErrorMessage(response, "Failed to apply game setup.");
           setStatus(errorMessage || "Failed to apply game setup.", "error");
           return;
         }
@@ -1083,7 +1004,7 @@
           method: "POST",
         });
         if (!response.ok) {
-          const errorMessage = (await response.text()).trim();
+          const errorMessage = await readErrorMessage(response, "Failed to flag game.");
           setStatus(errorMessage || "Failed to flag game.", "error");
           return;
         }
@@ -1094,7 +1015,7 @@
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
         renderGameOutcome(result.game);
         renderGameConfig(result.game);
-        renderGameInfo(extractBoardStateFromDOM(), result.captured, result.analysis);
+        renderGameInfo(result.captured, result.analysis);
         cachedAnalysis = null;
         stopAnalysisPolling();
         resolvePromotionChoice("");
@@ -1115,7 +1036,7 @@
           method: "POST",
         });
         if (!response.ok) {
-          const errorMessage = (await response.text()).trim();
+          const errorMessage = await readErrorMessage(response, "Failed to start a new game.");
           setStatus(errorMessage || "Failed to start a new game.", "error");
           return;
         }
@@ -1127,7 +1048,7 @@
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
         renderGameOutcome(result.game);
         renderGameConfig(result.game);
-        renderGameInfo(extractBoardStateFromDOM(), result.captured, result.analysis);
+        renderGameInfo(result.captured, result.analysis);
         cachedAnalysis = null;
         stopAnalysisPolling();
         input.value = "";
@@ -1153,7 +1074,7 @@
   initPromotionPicker();
   initMouseMoveControls();
 
-  renderGameInfo(extractBoardStateFromDOM(), null, null);
+  renderGameInfo(null, null);
   renderCheckState("");
   renderGameOutcome({ status: "in_progress", result: "in_progress" });
   renderGameConfig({
@@ -1161,8 +1082,5 @@
     mode: "human_vs_human",
     config: { humanColor: "white", aiGameCount: 1, startFen: "" },
   });
-  const activeSide = document.querySelector(".game_info_side.game_info_col_active");
-  if (activeSide?.textContent) {
-    renderCurrentTurn(activeSide.textContent.trim());
-  }
+  void createSessionOnLoad();
 })();
