@@ -404,8 +404,11 @@
 
     const pollOnce = async () => {
       try {
-        const gameIdParam = currentGameId ? `?gameId=${encodeURIComponent(currentGameId)}` : "";
-        const response = await fetch(`/game/analysis/latest${gameIdParam}`, { method: "GET" });
+        if (!currentGameId) return;
+        const response = await fetch(
+          `/api/games/${encodeURIComponent(currentGameId)}/analysis/latest`,
+          { method: "GET" }
+        );
         if (!response.ok) return;
         const payload = await response.json();
         const latestMoveNumber = Number(payload?.latest_move_number || 0);
@@ -694,9 +697,9 @@
     }
     const requestVersion = ++legalMovesRequestVersion;
     try {
-      const gameIdParam = currentGameId ? `&gameId=${encodeURIComponent(currentGameId)}` : "";
+      if (!currentGameId) return;
       const response = await fetch(
-        `/game/legal-moves?file=${source.file}&rank=${source.rank}${gameIdParam}`
+        `/api/games/${encodeURIComponent(currentGameId)}/legal-moves?file=${source.file}&rank=${source.rank}`
       );
       if (!response.ok) {
         if (requestVersion === legalMovesRequestVersion) {
@@ -1035,15 +1038,18 @@
         const mode = String(gameModeSelect?.value || "human_vs_human");
         const fen = String(fenInput?.value || "").trim();
         const aiCount = fen ? "1" : String(aiGameCountInput?.value || "1");
+        if (!currentGameId) {
+          setStatus("Missing game session. Start a new game first.", "error");
+          return;
+        }
         const body = new URLSearchParams({
-          gameId: currentGameId,
           type: String(gameTypeSelect?.value || "chess"),
           mode,
           humanColor: String(humanSideSelect?.value || "white"),
           aiGameCount: aiCount,
           fen,
         });
-        const response = await fetch("/game/config", {
+        const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/config`, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: body.toString(),
@@ -1069,11 +1075,12 @@
         return;
       }
       try {
-        const body = new URLSearchParams({ gameId: currentGameId });
-        const response = await fetch("/game/flag", {
+        if (!currentGameId) {
+          setStatus("Missing game session. Start a new game first.", "error");
+          return;
+        }
+        const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/flag`, {
           method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: body.toString(),
         });
         if (!response.ok) {
           const errorMessage = (await response.text()).trim();
@@ -1100,11 +1107,12 @@
   if (newGameButton) {
     newGameButton.addEventListener("click", async () => {
       try {
-        const body = new URLSearchParams({ gameId: currentGameId });
-        const response = await fetch("/game/new", {
+        if (!currentGameId) {
+          setStatus("Missing game session. Start a new game first.", "error");
+          return;
+        }
+        const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/new`, {
           method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: body.toString(),
         });
         if (!response.ok) {
           const errorMessage = (await response.text()).trim();
