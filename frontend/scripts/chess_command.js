@@ -844,8 +844,8 @@
       renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
       renderGameOutcome(result.game);
       renderGameConfig(result.game);
-      renderGameInfo(result.captured, result.analysis);
       cachedAnalysis = null;
+      renderGameInfo(result.captured, result.analysis);
       stopAnalysisPolling();
       clearSelectedSquare();
       input.disabled = false;
@@ -1038,8 +1038,8 @@
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
         renderGameOutcome(result.game);
         renderGameConfig(result.game);
-        renderGameInfo(result.captured, result.analysis);
         cachedAnalysis = null;
+        renderGameInfo(result.captured, result.analysis);
         stopAnalysisPolling();
         resolvePromotionChoice("");
         clearSelectedSquare();
@@ -1071,8 +1071,8 @@
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
         renderGameOutcome(result.game);
         renderGameConfig(result.game);
-        renderGameInfo(result.captured, result.analysis);
         cachedAnalysis = null;
+        renderGameInfo(result.captured, result.analysis);
         stopAnalysisPolling();
         input.value = "";
         input.disabled = false;

@@ -4,12 +4,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,7 +21,7 @@ import (
 )
 
 var pyAnalyzerHTTPClient = &http.Client{
-	Timeout: 2500 * time.Millisecond,
+	Timeout: 0,
 }
 
 type analyzerRequest struct {
@@ -79,18 +83,20 @@ type analysisLatestStatus struct {
 	RequestedMoveNumber int                  `json:"requested_move_number"`
 	LatestMoveNumber    int                  `json:"latest_move_number"`
 	Pending             bool                 `json:"pending"`
+	LastError           string               `json:"last_error,omitempty"`
 	Latest              *latestAnalysisState `json:"latest,omitempty"`
 }
 
 var (
-	moveAnalysisByGame    = map[string][]moveAnalysisRecord{}
-	latestAnalysisByGame  = map[string]latestAnalysisState{}
-	latestRequestedByGame = map[string]int{}
-	analysisPendingByGame = map[string]bool{}
-	exportedGames         = map[string]bool{}
-	analysisStoreMu       sync.Mutex
-	analysisQueue         = make(chan analysisJob, 128)
-	analysisWorkerOnce    sync.Once
+	moveAnalysisByGame      = map[string][]moveAnalysisRecord{}
+	latestAnalysisByGame    = map[string]latestAnalysisState{}
+	latestRequestedByGame   = map[string]int{}
+	analysisPendingByGame   = map[string]bool{}
+	analysisLastErrorByGame = map[string]string{}
+	exportedGames           = map[string]bool{}
+	analysisStoreMu         sync.Mutex
+	analysisQueue           = make(chan analysisJob, 128)
+	analysisWorkerOnce      sync.Once
 )
 
 func analyzerBaseURL() string {
@@ -101,13 +107,42 @@ func analyzerBaseURL() string {
 	return v
 }
 
+func analyzerRequestTimeout() time.Duration {
+	raw := strings.TrimSpace(os.Getenv("PY_ANALYSER_TIMEOUT_MS"))
+	if raw == "" {
+		return 2500 * time.Millisecond
+	}
+	timeoutMS, err := strconv.Atoi(raw)
+	if err != nil || timeoutMS < 100 {
+		return 2500 * time.Millisecond
+	}
+	return time.Duration(timeoutMS) * time.Millisecond
+}
+
+func analyzerUserSafeError(err error) string {
+	if err == nil {
+		return ""
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return "Analysis timed out. Showing previous result."
+	}
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		if errors.Is(urlErr.Err, context.DeadlineExceeded) {
+			return "Analysis timed out. Showing previous result."
+		}
+		return "Analysis service unavailable. Showing previous result."
+	}
+	return "Analysis temporarily unavailable. Showing previous result."
+}
+
 func analyzeByRequest(reqPayload analyzerRequest) (*analyzerResponse, error) {
 	body, err := json.Marshal(reqPayload)
 	if err != nil {
 		return nil, fmt.Errorf("analyzer request marshal failed: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2500*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), analyzerRequestTimeout())
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, analyzerBaseURL()+"/analyze", bytes.NewReader(body))
@@ -153,10 +188,14 @@ func analysisWorkerLoop() {
 		result, err := analyzeByRequest(job.Request)
 		analysisStoreMu.Lock()
 		analysisPendingByGame[job.GameID] = false
+		analysisLastErrorByGame[job.GameID] = ""
 		latestRequestedMove := latestRequestedByGame[job.GameID]
 		analysisStoreMu.Unlock()
 
 		if err != nil {
+			analysisStoreMu.Lock()
+			analysisLastErrorByGame[job.GameID] = analyzerUserSafeError(err)
+			analysisStoreMu.Unlock()
 			log.Printf("warning: analyzer job failed game_id=%s move=%d: %v", job.GameID, job.MoveNumber, err)
 			continue
 		}
@@ -203,6 +242,7 @@ func enqueueCurrentPositionAnalysis(gameID, command string) {
 	analysisStoreMu.Lock()
 	latestRequestedByGame[gameID] = moveNumber
 	analysisPendingByGame[gameID] = true
+	analysisLastErrorByGame[gameID] = ""
 	analysisStoreMu.Unlock()
 
 	select {
@@ -210,6 +250,7 @@ func enqueueCurrentPositionAnalysis(gameID, command string) {
 	default:
 		analysisStoreMu.Lock()
 		analysisPendingByGame[gameID] = false
+		analysisLastErrorByGame[gameID] = "Analysis queue is busy. Showing previous result."
 		analysisStoreMu.Unlock()
 		log.Printf("warning: analyzer queue full, dropped job %s move=%d", gameIDLabel(gameID), moveNumber)
 	}
@@ -254,6 +295,7 @@ func getLatestAnalysisStatusByGameID(gameID string) analysisLatestStatus {
 		GameID:              gameID,
 		RequestedMoveNumber: latestRequestedByGame[gameID],
 		Pending:             analysisPendingByGame[gameID],
+		LastError:           analysisLastErrorByGame[gameID],
 	}
 	if latest, ok := latestAnalysisByGame[gameID]; ok {
 		latestCopy := latest
