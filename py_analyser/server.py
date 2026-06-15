@@ -11,13 +11,90 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, timezone
+from typing import Any
 
 from flask import Flask, jsonify, request
 
-from analyzer import analyze_position
+from analyzer import (
+    analyze_position,
+    build_history_payload,
+    build_policy_payload,
+    build_value_payload,
+)
 
 
 app = Flask(__name__)
+
+
+SUPPORTED_GAME_TYPES = {"chess"}
+
+
+def _error_response(
+    request_id: str | None,
+    message: str,
+    error_kind: str = "validation",
+    status_code: int = 400,
+) -> tuple:
+    return (
+        jsonify(
+            {
+                "request_id": request_id,
+                "status": "error",
+                "error_kind": error_kind,
+                "message": message,
+            }
+        ),
+        status_code,
+    )
+
+
+def _parse_common_payload(payload: dict[str, Any]) -> tuple[dict[str, Any] | None, tuple | None]:
+    request_id = str(payload.get("request_id", "")).strip() or None
+    fen = str(payload.get("fen", "")).strip()
+    color = str(payload.get("color", "")).strip().lower()
+    game_type = str(payload.get("game_type", "")).strip().lower()
+    variant = str(payload.get("variant", "")).strip().lower() or game_type
+    move_number_raw = payload.get("move_number", 0)
+    move_history_raw = payload.get("move_history", [])
+
+    if not fen:
+        return None, _error_response(request_id, 'Missing required field: "fen"')
+    if color not in {"white", "black", "w", "b"}:
+        return None, _error_response(request_id, 'Invalid "color". Use "white" or "black".')
+    if not game_type:
+        return None, _error_response(request_id, 'Missing required field: "game_type"')
+    if game_type not in SUPPORTED_GAME_TYPES:
+        return None, _error_response(
+            request_id, f'Unsupported "game_type": {game_type}', "validation", 400
+        )
+    if variant and variant != game_type:
+        return None, _error_response(
+            request_id,
+            f'Unsupported "variant": {variant} for game_type "{game_type}"',
+            "validation",
+            400,
+        )
+    try:
+        move_number = int(move_number_raw)
+    except (TypeError, ValueError):
+        return None, _error_response(request_id, '"move_number" must be an integer.')
+
+    if not isinstance(move_history_raw, list):
+        return None, _error_response(request_id, '"move_history" must be an array of strings.')
+    move_history = [str(item) for item in move_history_raw]
+
+    return (
+        {
+            "request_id": request_id,
+            "fen": fen,
+            "color": color,
+            "game_type": game_type,
+            "variant": variant or game_type,
+            "move_number": move_number,
+            "move_history": move_history,
+        },
+        None,
+    )
 
 
 @app.get("/health")
@@ -65,6 +142,78 @@ def analyze() -> tuple:
     except Exception:
         return jsonify({"error": "Internal analyzer error"}), 500
 
+    return jsonify(result), 200
+
+
+@app.post("/history")
+def history() -> tuple:
+    payload = request.get_json(silent=True) or {}
+    common, err = _parse_common_payload(payload)
+    if err is not None:
+        return err
+
+    assert common is not None
+    try:
+        result = build_history_payload(
+            fen=common["fen"],
+            color=common["color"],
+            move_history=common["move_history"],
+            request_id=common["request_id"],
+        )
+    except ValueError as exc:
+        return _error_response(common["request_id"], str(exc), "validation", 400)
+    except Exception:
+        return _error_response(common["request_id"], "Internal analyzer error", "internal", 500)
+    return jsonify(result), 200
+
+
+@app.post("/policy")
+def policy() -> tuple:
+    payload = request.get_json(silent=True) or {}
+    common, err = _parse_common_payload(payload)
+    if err is not None:
+        return err
+
+    assert common is not None
+    top_k = payload.get("top_k", 5)
+    try:
+        top_k_value = int(top_k)
+    except (TypeError, ValueError):
+        return _error_response(common["request_id"], '"top_k" must be an integer.')
+    top_k_value = min(20, max(1, top_k_value))
+
+    try:
+        result = build_policy_payload(
+            fen=common["fen"],
+            color=common["color"],
+            top_k=top_k_value,
+            request_id=common["request_id"],
+        )
+    except ValueError as exc:
+        return _error_response(common["request_id"], str(exc), "validation", 400)
+    except Exception:
+        return _error_response(common["request_id"], "Internal analyzer error", "internal", 500)
+    return jsonify(result), 200
+
+
+@app.post("/value")
+def value() -> tuple:
+    payload = request.get_json(silent=True) or {}
+    common, err = _parse_common_payload(payload)
+    if err is not None:
+        return err
+
+    assert common is not None
+    try:
+        result = build_value_payload(
+            fen=common["fen"],
+            color=common["color"],
+            request_id=common["request_id"],
+        )
+    except ValueError as exc:
+        return _error_response(common["request_id"], str(exc), "validation", 400)
+    except Exception:
+        return _error_response(common["request_id"], "Internal analyzer error", "internal", 500)
     return jsonify(result), 200
 
 

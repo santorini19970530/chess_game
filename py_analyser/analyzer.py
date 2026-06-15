@@ -191,6 +191,127 @@ def analyze_position(
     }
 
 
+def _phase_from_board(board: chess.Board) -> str:
+    non_pawn_material = 0
+    for piece_type in (chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.QUEEN):
+        non_pawn_material += len(board.pieces(piece_type, chess.WHITE))
+        non_pawn_material += len(board.pieces(piece_type, chess.BLACK))
+
+    if board.fullmove_number <= 10:
+        return "opening"
+    if non_pawn_material <= 6:
+        return "endgame"
+    return "middlegame"
+
+
+def build_history_payload(
+    fen: str,
+    color: str,
+    move_history: List[str] | None = None,
+    request_id: str | None = None,
+) -> Dict[str, object]:
+    started_at = time.perf_counter()
+    board = chess.Board(fen)
+    requested_color = parse_color(color)
+    move_history = move_history or []
+
+    perspective_eval = evaluate_position(board, requested_color)
+    features = {
+        "is_check": board.is_check(),
+        "is_checkmate": board.is_checkmate(),
+        "is_stalemate": board.is_stalemate(),
+        "material_delta_cp": perspective_eval,
+        "move_count": len(move_history),
+    }
+    tags: List[str] = []
+    if board.is_check():
+        tags.append("check_pressure")
+    if abs(perspective_eval) < 80:
+        tags.append("balanced")
+    elif perspective_eval > 0:
+        tags.append("advantage")
+    else:
+        tags.append("disadvantage")
+    if _phase_from_board(board) == "opening":
+        tags.append("book_like")
+
+    latency_ms = int((time.perf_counter() - started_at) * 1000)
+    return {
+        "request_id": request_id or str(uuid.uuid4()),
+        "status": "ok",
+        "source": "rule_based_v1",
+        "phase": _phase_from_board(board),
+        "features": features,
+        "tags": tags,
+        "latency_ms": latency_ms,
+    }
+
+
+def build_policy_payload(
+    fen: str,
+    color: str,
+    top_k: int = 5,
+    request_id: str | None = None,
+) -> Dict[str, object]:
+    started_at = time.perf_counter()
+    suggestions = suggest_moves(fen, color, top_k)
+    if not suggestions:
+        candidates = []
+    else:
+        max_score = max(item.score for item in suggestions)
+        exp_scores = [math.exp((item.score - max_score) / 100.0) for item in suggestions]
+        total = sum(exp_scores) or 1.0
+        candidates = []
+        for item, exp_val in zip(suggestions, exp_scores):
+            candidates.append(
+                {
+                    "rank": item.rank,
+                    "uci": item.uci,
+                    "san": item.san,
+                    "score_cp": item.score,
+                    "prob": round(exp_val / total, 6),
+                }
+            )
+
+    best_move_uci = candidates[0]["uci"] if candidates else None
+    latency_ms = int((time.perf_counter() - started_at) * 1000)
+    return {
+        "request_id": request_id or str(uuid.uuid4()),
+        "status": "ok",
+        "source": "heuristic",
+        "best_move_uci": best_move_uci,
+        "candidates": candidates,
+        "latency_ms": latency_ms,
+    }
+
+
+def build_value_payload(
+    fen: str,
+    color: str,
+    request_id: str | None = None,
+) -> Dict[str, object]:
+    started_at = time.perf_counter()
+    board = chess.Board(fen)
+    _ = parse_color(color)  # validated for consistency with shared API contract
+    score_cp = evaluate_position(board, chess.WHITE)
+    value = math.tanh(score_cp / 400.0)
+    win_chance_white = cp_to_win_chance(score_cp)
+    win_chance_black = 1.0 - win_chance_white
+    latency_ms = int((time.perf_counter() - started_at) * 1000)
+
+    return {
+        "request_id": request_id or str(uuid.uuid4()),
+        "status": "ok",
+        "source": "heuristic",
+        "score_cp": int(score_cp),
+        "mate_in": 0,
+        "value": round(float(value), 6),
+        "win_chance_white": round(float(win_chance_white), 6),
+        "win_chance_black": round(float(win_chance_black), 6),
+        "latency_ms": latency_ms,
+    }
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Suggest chess moves from FEN and player color.")
     parser.add_argument("--fen", required=True, help="FEN position string")
