@@ -82,6 +82,7 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 
 	// page routes
 	mux.HandleFunc("/", h.Index) // index
+	mux.HandleFunc("/ws/game", h.GameSocket)
 	// Legacy compatibility endpoints (deprecated): kept temporarily while clients migrate.
 	mux.HandleFunc("/command", h.SubmitChessCommand)
 	mux.HandleFunc("/game/new", h.NewGame)
