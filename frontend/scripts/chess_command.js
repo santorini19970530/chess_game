@@ -586,23 +586,46 @@
         square.classList.remove(LEGAL_CAPTURE_DESTINATION_CLASS);
       });
     if (!Array.isArray(moves)) return;
+    const selectedSource = fileRankFromSequence(selectedSquareSequence);
+    const selectedSquare = selectedSource
+      ? boardElement.querySelector(
+          `.chess_board_square[data-sequence="${sequenceByFileRank(selectedSource.file, selectedSource.rank)}"]`
+        )
+      : null;
+    const selectedPiece = getPieceOnSquare(selectedSquare);
+    const selectedPieceKind = String(selectedPiece?.getAttribute("data-kind") || "").toLowerCase();
     for (const move of moves) {
       const fileNum = Number(move?.file);
       const rankNum = Number(move?.rank);
       if (Number.isNaN(fileNum) || Number.isNaN(rankNum)) continue;
       const sequence = sequenceByFileRank(fileNum, rankNum);
-      const square = boardElement.querySelector(
+      const destinationSquare = boardElement.querySelector(
         `.chess_board_square[data-sequence="${sequence}"]`
       );
-      if (!square) continue;
+      if (!destinationSquare) continue;
       const isCapture = Boolean(move?.isCapture);
       if (isCapture) {
-        square.classList.add(LEGAL_CAPTURE_DESTINATION_CLASS);
+        let markerSquare = destinationSquare;
+        // En passant: destination is empty, captured pawn is on source rank.
+        const destinationPiece = getPieceOnSquare(destinationSquare);
+        if (
+          !destinationPiece &&
+          selectedSource &&
+          selectedPieceKind === "pawn" &&
+          selectedSource.file !== fileNum
+        ) {
+          const capturedSequence = sequenceByFileRank(fileNum, selectedSource.rank);
+          const capturedSquare = boardElement.querySelector(
+            `.chess_board_square[data-sequence="${capturedSequence}"]`
+          );
+          if (capturedSquare) markerSquare = capturedSquare;
+        }
+        markerSquare.classList.add(LEGAL_CAPTURE_DESTINATION_CLASS);
       } else {
-        square.classList.add(LEGAL_DESTINATION_CLASS);
+        destinationSquare.classList.add(LEGAL_DESTINATION_CLASS);
       }
       if (Boolean(move?.requiresPromotion)) {
-        square.classList.add(LEGAL_PROMOTION_DESTINATION_CLASS);
+        destinationSquare.classList.add(LEGAL_PROMOTION_DESTINATION_CLASS);
       }
     }
   };
