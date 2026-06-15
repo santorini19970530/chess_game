@@ -132,12 +132,47 @@
     gameSocket = null;
   };
 
+  const refreshGameSnapshotFromAPI = async (gameId) => {
+    const targetGameId = String(gameId || currentGameId || "").trim();
+    if (!targetGameId) return;
+    try {
+      const response = await fetch(`/api/games/${encodeURIComponent(targetGameId)}`, {
+        method: "GET",
+      });
+      if (!response.ok) return;
+      const result = await response.json();
+      syncGameIdFromResult(result);
+      renderBoardFromState(result.state);
+      renderMoveHistory(result.history, result.historyDetailed);
+      renderCurrentTurn(result.currentTurn);
+      renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
+      renderGameOutcome(result.game);
+      renderGameConfig(result.game);
+      renderGameInfo(result.captured, result.analysis);
+      clearSelectedSquare();
+      const historyArray = Array.isArray(result.history) ? result.history : [];
+      const detailedArray = Array.isArray(result.historyDetailed) ? result.historyDetailed : [];
+      if (result.analysis) {
+        stopAnalysisPolling();
+      } else {
+        const targetMoveNumber = Math.max(historyArray.length, detailedArray.length);
+        if (targetMoveNumber > 0) startAnalysisPolling(targetMoveNumber, result.captured);
+      }
+    } catch (_) {
+      // ignore transient refresh errors; REST fallback remains available
+    }
+  };
+
   const handleSocketMessage = (payload) => {
     const event = String(payload?.event || "");
     const gameId = String(payload?.game_id || "");
     if (!event || !gameId || gameId !== currentGameId) return;
     const data = payload?.data || {};
 
+    if (event === "move_applied") {
+      void refreshGameSnapshotFromAPI(gameId);
+      return;
+    }
     if (event === "turn_changed") {
       renderCurrentTurn(data?.current_turn);
       renderCheckState(data?.checked_side);
