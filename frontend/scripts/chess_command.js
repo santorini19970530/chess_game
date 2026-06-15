@@ -45,8 +45,17 @@
   let isSubmitting = false;
   let pendingPromotionResolve = null;
   let analysisPollTimer = null;
+  let analysisPollFallbackTimer = null;
+  let pendingAnalysisTargetMove = 0;
+  let pendingAnalysisCapturedSnapshot = null;
   let cachedAnalysis = null;
+  let cachedCapturedSummary = null;
   let currentGameId = "";
+  let gameSocket = null;
+  let gameSocketGameId = "";
+  let gameSocketReconnectAttempts = 0;
+  let gameSocketReconnectTimer = null;
+  let gameSocketAllowReconnect = true;
 
   if (!input || !button || !status || !moveHistoryWhiteList || !moveHistoryBlackList || !boardElement) return;
 
@@ -74,14 +83,186 @@
   const syncGameIdFromResult = (result) => {
     const nextId = String(result?.game?.id || "").trim();
     if (!nextId) return;
+    const changed = nextId !== currentGameId;
     currentGameId = nextId;
     if (gameIdInput) gameIdInput.value = nextId;
+    if (changed) {
+      connectGameSocket(nextId);
+    }
   };
 
   const stopAnalysisPolling = () => {
     if (analysisPollTimer != null) {
       window.clearInterval(analysisPollTimer);
       analysisPollTimer = null;
+    }
+    if (analysisPollFallbackTimer != null) {
+      window.clearTimeout(analysisPollFallbackTimer);
+      analysisPollFallbackTimer = null;
+    }
+    pendingAnalysisTargetMove = 0;
+    pendingAnalysisCapturedSnapshot = null;
+  };
+
+  const isSocketConnected = () =>
+    Boolean(gameSocket && gameSocket.readyState === WebSocket.OPEN);
+
+  const clearSocketReconnectTimer = () => {
+    if (gameSocketReconnectTimer != null) {
+      window.clearTimeout(gameSocketReconnectTimer);
+      gameSocketReconnectTimer = null;
+    }
+  };
+
+  const socketURLForGame = (gameId) => {
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    return `${protocol}://${window.location.host}/ws/game?gameId=${encodeURIComponent(gameId)}`;
+  };
+
+  const closeGameSocket = (allowReconnect) => {
+    gameSocketAllowReconnect = Boolean(allowReconnect);
+    clearSocketReconnectTimer();
+    if (gameSocket) {
+      try {
+        gameSocket.close();
+      } catch (_) {
+        // ignore close errors
+      }
+    }
+    gameSocket = null;
+  };
+
+  const refreshGameSnapshotFromAPI = async (gameId) => {
+    const targetGameId = String(gameId || currentGameId || "").trim();
+    if (!targetGameId) return;
+    try {
+      const response = await fetch(`/api/games/${encodeURIComponent(targetGameId)}`, {
+        method: "GET",
+      });
+      if (!response.ok) return;
+      const result = await response.json();
+      syncGameIdFromResult(result);
+      renderBoardFromState(result.state);
+      renderMoveHistory(result.history, result.historyDetailed);
+      renderCurrentTurn(result.currentTurn);
+      renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
+      renderGameOutcome(result.game);
+      renderGameConfig(result.game);
+      renderGameInfo(result.captured, result.analysis);
+      clearSelectedSquare();
+      const historyArray = Array.isArray(result.history) ? result.history : [];
+      const detailedArray = Array.isArray(result.historyDetailed) ? result.historyDetailed : [];
+      if (result.analysis) {
+        stopAnalysisPolling();
+      } else {
+        const targetMoveNumber = Math.max(historyArray.length, detailedArray.length);
+        if (targetMoveNumber > 0) startAnalysisPolling(targetMoveNumber, result.captured);
+      }
+    } catch (_) {
+      // ignore transient refresh errors; REST fallback remains available
+    }
+  };
+
+  const handleSocketMessage = (payload) => {
+    const event = String(payload?.event || "");
+    const gameId = String(payload?.game_id || "");
+    if (!event || !gameId || gameId !== currentGameId) return;
+    const data = payload?.data || {};
+
+    if (event === "move_applied") {
+      void refreshGameSnapshotFromAPI(gameId);
+      return;
+    }
+    if (event === "turn_changed") {
+      renderCurrentTurn(data?.current_turn);
+      renderCheckState(data?.checked_side);
+      return;
+    }
+    if (event === "game_outcome") {
+      renderGameOutcome({
+        result: data?.result,
+        outcome: data?.outcome || {},
+      });
+      return;
+    }
+    if (event === "analysis_status_update") {
+      const statusText = String(data?.status || "").toLowerCase();
+      if (statusText === "pending") {
+        if (gameInfoNotesBox) gameInfoNotesBox.value = "Analyzing...";
+        return;
+      }
+      if (statusText === "ready" && data?.analysis) {
+        renderGameInfo(pendingAnalysisCapturedSnapshot || cachedCapturedSummary, data.analysis);
+        stopAnalysisPolling();
+        return;
+      }
+      if (statusText === "error") {
+        const safeMessage = String(data?.last_error || "").trim();
+        if (safeMessage && gameInfoNotesBox) gameInfoNotesBox.value = safeMessage;
+      }
+    }
+  };
+
+  const connectGameSocket = (gameId) => {
+    const targetGameId = String(gameId || "").trim();
+    if (!targetGameId || typeof WebSocket === "undefined") return;
+    if (
+      gameSocket &&
+      gameSocketGameId === targetGameId &&
+      (gameSocket.readyState === WebSocket.OPEN || gameSocket.readyState === WebSocket.CONNECTING)
+    ) {
+      return;
+    }
+
+    closeGameSocket(false);
+    gameSocketAllowReconnect = true;
+    gameSocketGameId = targetGameId;
+
+    try {
+      const ws = new WebSocket(socketURLForGame(targetGameId));
+      gameSocket = ws;
+
+      ws.addEventListener("open", () => {
+        gameSocketReconnectAttempts = 0;
+        clearSocketReconnectTimer();
+      });
+
+      ws.addEventListener("message", (evt) => {
+        try {
+          const payload = JSON.parse(String(evt.data || "{}"));
+          handleSocketMessage(payload);
+        } catch (_) {
+          // ignore malformed socket payloads
+        }
+      });
+
+      ws.addEventListener("close", () => {
+        const sameSocket = ws === gameSocket;
+        if (sameSocket) gameSocket = null;
+        if (!gameSocketAllowReconnect || gameSocketGameId !== targetGameId) return;
+
+        // REST polling remains fallback when socket is unavailable.
+        if (pendingAnalysisTargetMove > 0) {
+          startAnalysisPolling(pendingAnalysisTargetMove, pendingAnalysisCapturedSnapshot || cachedCapturedSummary);
+        }
+
+        clearSocketReconnectTimer();
+        gameSocketReconnectAttempts += 1;
+        const delay = Math.min(4000, 500 * Math.pow(2, gameSocketReconnectAttempts - 1));
+        gameSocketReconnectTimer = window.setTimeout(() => {
+          connectGameSocket(targetGameId);
+        }, delay);
+      });
+
+      ws.addEventListener("error", () => {
+        try {
+          ws.close();
+        } catch (_) {
+          // ignore
+        }
+      });
+    } catch (_) {
+      // If socket init fails, existing REST flow remains source of truth.
     }
   };
 
@@ -291,9 +472,11 @@
   };
 
   const renderGameInfo = (capturedSummary, analysis) => {
+    if (capturedSummary) cachedCapturedSummary = capturedSummary;
+    const effectiveCapturedSummary = capturedSummary || cachedCapturedSummary;
     const effectiveAnalysis = analysis || cachedAnalysis;
     if (analysis) cachedAnalysis = analysis;
-    const normalizedCaptured = normalizeCapturedSummary(capturedSummary);
+    const normalizedCaptured = normalizeCapturedSummary(effectiveCapturedSummary);
     const whiteCaptured = normalizedCaptured.white;
     const blackCaptured = normalizedCaptured.black;
     const analyzerWhite = fromAnalyzerChance(effectiveAnalysis?.win_chance_white);
@@ -331,6 +514,17 @@
     stopAnalysisPolling();
     if (gameInfoNotesBox) gameInfoNotesBox.value = "Analyzing...";
     const target = Number(targetMoveNumber) || 0;
+    pendingAnalysisTargetMove = target;
+    pendingAnalysisCapturedSnapshot = capturedSnapshot || cachedCapturedSummary;
+
+    if (isSocketConnected()) {
+      analysisPollFallbackTimer = window.setTimeout(() => {
+        if (!isSocketConnected() && pendingAnalysisTargetMove > 0) {
+          startAnalysisPolling(pendingAnalysisTargetMove, pendingAnalysisCapturedSnapshot);
+        }
+      }, 1500);
+      return;
+    }
 
     const pollOnce = async () => {
       try {
@@ -345,7 +539,7 @@
         const latestAnalysis = payload?.latest?.analysis;
         if (!latestAnalysis) return;
         if (latestMoveNumber < target) return;
-        renderGameInfo(capturedSnapshot, latestAnalysis);
+        renderGameInfo(pendingAnalysisCapturedSnapshot || capturedSnapshot, latestAnalysis);
         stopAnalysisPolling();
       } catch (_) {
         // ignore polling errors; next poll may recover
@@ -1096,6 +1290,7 @@
   });
   initPromotionPicker();
   initMouseMoveControls();
+  window.addEventListener("beforeunload", () => closeGameSocket(false));
 
   renderGameInfo(null, null);
   renderCheckState("");

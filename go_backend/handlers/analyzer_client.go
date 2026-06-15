@@ -306,6 +306,16 @@ func analysisWorkerLoop() {
 			analysisStoreMu.Lock()
 			analysisLastErrorByGame[job.GameID] = userSafe
 			analysisStoreMu.Unlock()
+			gameSocketHub.Broadcast(job.GameID, socketEventAnalysisStatus, map[string]interface{}{
+				"status":                "error",
+				"pending":               false,
+				"requested_move_number": latestRequestedMove,
+				"latest_move_number":    job.MoveNumber,
+				"last_error":            userSafe,
+				"error_kind":            errorKind,
+				"http_status":           httpStatus,
+				"request_id":            job.Request.RequestID,
+			})
 			emitAnalysisLog(analysisLogEvent{
 				Event:               "analysis_failed",
 				GameID:              job.GameID,
@@ -348,6 +358,15 @@ func analysisWorkerLoop() {
 			continue
 		}
 		recordMoveAnalysisForGame(job.GameID, job.MoveNumber, job.Command, *result)
+		gameSocketHub.Broadcast(job.GameID, socketEventAnalysisStatus, map[string]interface{}{
+			"status":                "ready",
+			"pending":               false,
+			"requested_move_number": latestRequestedMove,
+			"latest_move_number":    job.MoveNumber,
+			"last_error":            "",
+			"request_id":            job.Request.RequestID,
+			"analysis":              result,
+		})
 		emitAnalysisLog(analysisLogEvent{
 			Event:               "analysis_completed",
 			GameID:              job.GameID,
@@ -406,6 +425,12 @@ func enqueueCurrentPositionAnalysis(gameID, command string) {
 
 	select {
 	case analysisQueue <- job:
+		gameSocketHub.Broadcast(gameID, socketEventAnalysisStatus, map[string]interface{}{
+			"status":                "pending",
+			"pending":               true,
+			"requested_move_number": moveNumber,
+			"request_id":            job.Request.RequestID,
+		})
 		emitAnalysisLog(analysisLogEvent{
 			Event:               "analysis_enqueued",
 			GameID:              gameID,
@@ -424,6 +449,15 @@ func enqueueCurrentPositionAnalysis(gameID, command string) {
 		analysisPendingByGame[gameID] = false
 		analysisLastErrorByGame[gameID] = "Analysis queue is busy. Showing previous result."
 		analysisStoreMu.Unlock()
+		gameSocketHub.Broadcast(gameID, socketEventAnalysisStatus, map[string]interface{}{
+			"status":                "error",
+			"pending":               false,
+			"requested_move_number": moveNumber,
+			"latest_move_number":    moveNumber,
+			"last_error":            "Analysis queue is busy. Showing previous result.",
+			"error_kind":            analysisErrorKindUnavailable,
+			"request_id":            job.Request.RequestID,
+		})
 		emitAnalysisLog(analysisLogEvent{
 			Event:               "analysis_dropped_queue_full",
 			GameID:              gameID,

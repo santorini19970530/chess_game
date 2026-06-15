@@ -226,6 +226,31 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 	response.To.File = string(parsed.ToFile)
 	response.To.Rank = parsed.ToRank
 
+	gameSocketHub.Broadcast(gameID, socketEventMoveApplied, map[string]interface{}{
+		"command":     normalizedMove,
+		"from_file":   response.From.File,
+		"from_rank":   response.From.Rank,
+		"to_file":     response.To.File,
+		"to_rank":     response.To.Rank,
+		"history_len": len(snapshot.History),
+	})
+	gameSocketHub.Broadcast(gameID, socketEventTurnChanged, map[string]interface{}{
+		"current_turn": response.CurrentTurn,
+		"checked_side": response.CheckedSide,
+	})
+	if finalGame.Result != sessionpkg.GameResultInProgress {
+		gameSocketHub.Broadcast(gameID, socketEventGameOutcome, map[string]interface{}{
+			"result": finalGame.Result,
+			"outcome": map[string]interface{}{
+				"status":       finalGame.Outcome.Status,
+				"winner":       finalGame.Outcome.Winner,
+				"loser":        finalGame.Outcome.Loser,
+				"checked_side": finalGame.Outcome.CheckedSide,
+				"message":      finalGame.Outcome.Message,
+			},
+		})
+	}
+
 	enqueueCurrentPositionAnalysis(gameID, normalizedMove)
 	if finalGame.Result != sessionpkg.GameResultInProgress {
 		exportGameAnalysisIfNeeded(finalGame)
@@ -307,6 +332,20 @@ func (h *Handler) postAPIGameFlag(w http.ResponseWriter, r *http.Request, gameID
 		HistoryDetailed: snapshot.HistoryDetailed,
 		State:           snapshot.State,
 	}
+	gameSocketHub.Broadcast(gameID, socketEventTurnChanged, map[string]interface{}{
+		"current_turn": response.CurrentTurn,
+		"checked_side": response.CheckedSide,
+	})
+	gameSocketHub.Broadcast(gameID, socketEventGameOutcome, map[string]interface{}{
+		"result": game.Result,
+		"outcome": map[string]interface{}{
+			"status":       game.Outcome.Status,
+			"winner":       game.Outcome.Winner,
+			"loser":        game.Outcome.Loser,
+			"checked_side": game.Outcome.CheckedSide,
+			"message":      game.Outcome.Message,
+		},
+	})
 	enqueueCurrentPositionAnalysis(gameID, "flag")
 	exportGameAnalysisIfNeeded(game)
 	w.Header().Set("Content-Type", "application/json")
@@ -347,6 +386,20 @@ func (h *Handler) postAPIGameNew(w http.ResponseWriter, r *http.Request, gameID 
 		return
 	}
 	exportGameAnalysisIfNeeded(game)
+	gameSocketHub.Broadcast(game.ID, socketEventTurnChanged, map[string]interface{}{
+		"current_turn": snapshot.CurrentTurn,
+		"checked_side": snapshot.CheckedSide,
+	})
+	gameSocketHub.Broadcast(game.ID, socketEventGameOutcome, map[string]interface{}{
+		"result": game.Result,
+		"outcome": map[string]interface{}{
+			"status":       game.Outcome.Status,
+			"winner":       game.Outcome.Winner,
+			"loser":        game.Outcome.Loser,
+			"checked_side": game.Outcome.CheckedSide,
+			"message":      game.Outcome.Message,
+		},
+	})
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(gameStateResponse{
 		CurrentTurn:     snapshot.CurrentTurn,
