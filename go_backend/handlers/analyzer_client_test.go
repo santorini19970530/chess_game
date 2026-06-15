@@ -1,7 +1,10 @@
 package handlers
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -77,5 +80,69 @@ func TestLatestAnalysisStatus_ContainsLastErrorWhenSet(t *testing.T) {
 	}
 	if status.LastError == "" {
 		t.Fatalf("expected last_error to be populated")
+	}
+}
+
+func TestEmitAnalysisLog_JSONShape(t *testing.T) {
+	var buffer bytes.Buffer
+	originalWriter := log.Writer()
+	originalFlags := log.Flags()
+	originalPrefix := log.Prefix()
+	log.SetOutput(&buffer)
+	log.SetFlags(0)
+	log.SetPrefix("")
+	t.Cleanup(func() {
+		log.SetOutput(originalWriter)
+		log.SetFlags(originalFlags)
+		log.SetPrefix(originalPrefix)
+	})
+
+	emitAnalysisLog(analysisLogEvent{
+		Event:               "analysis_completed",
+		GameID:              "game-test",
+		MoveNumber:          3,
+		RequestID:           "game-test-move-3",
+		QueueLen:            1,
+		Pending:             false,
+		Success:             true,
+		LatencyMS:           24,
+		ErrorKind:           analysisErrorKindNone,
+		ErrorMessageSafe:    "",
+		LatestRequestedMove: 3,
+		AnalyzerSource:      "heuristic",
+		AnalyzerLatencyMS:   4,
+		BestMoveUCI:         "e2e4",
+	})
+
+	raw := strings.TrimSpace(buffer.String())
+	if raw == "" {
+		t.Fatalf("expected log output, got empty")
+	}
+
+	var payload map[string]interface{}
+	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
+		t.Fatalf("expected valid JSON log line, got err=%v raw=%q", err, raw)
+	}
+
+	requiredFields := []string{
+		"event",
+		"game_id",
+		"move_number",
+		"request_id",
+		"queue_len",
+		"pending",
+		"success",
+		"latency_ms",
+		"error_kind",
+		"error_message_safe",
+		"timestamp_utc",
+	}
+	for _, field := range requiredFields {
+		if _, ok := payload[field]; !ok {
+			t.Fatalf("expected required field %q in log payload", field)
+		}
+	}
+	if payload["event"] != "analysis_completed" {
+		t.Fatalf("expected event analysis_completed, got %v", payload["event"])
 	}
 }

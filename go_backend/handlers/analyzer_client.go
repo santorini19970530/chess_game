@@ -32,10 +32,11 @@ type analyzerRequest struct {
 }
 
 type analysisJob struct {
-	GameID     string
-	MoveNumber int
-	Command    string
-	Request    analyzerRequest
+	GameID          string
+	MoveNumber      int
+	Command         string
+	Request         analyzerRequest
+	EnqueueQueueLen int
 }
 
 type analyzerSuggestedMove struct {
@@ -87,6 +88,46 @@ type analysisLatestStatus struct {
 	Latest              *latestAnalysisState `json:"latest,omitempty"`
 }
 
+type analyzerCallError struct {
+	Kind       string
+	HTTPStatus int
+	Err        error
+}
+
+func (e *analyzerCallError) Error() string {
+	if e == nil || e.Err == nil {
+		return "analyzer call error"
+	}
+	return e.Err.Error()
+}
+
+func (e *analyzerCallError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.Err
+}
+
+type analysisLogEvent struct {
+	Event               string `json:"event"`
+	GameID              string `json:"game_id"`
+	MoveNumber          int    `json:"move_number"`
+	RequestID           string `json:"request_id"`
+	QueueLen            int    `json:"queue_len"`
+	Pending             bool   `json:"pending"`
+	Success             bool   `json:"success"`
+	LatencyMS           int64  `json:"latency_ms"`
+	ErrorKind           string `json:"error_kind"`
+	ErrorMessageSafe    string `json:"error_message_safe"`
+	TimestampUTC        string `json:"timestamp_utc"`
+	IsStale             bool   `json:"is_stale"`
+	LatestRequestedMove int    `json:"latest_requested_move"`
+	HTTPStatus          int    `json:"http_status,omitempty"`
+	AnalyzerSource      string `json:"analyzer_source,omitempty"`
+	AnalyzerLatencyMS   int    `json:"analyzer_latency_ms,omitempty"`
+	BestMoveUCI         string `json:"best_move_uci,omitempty"`
+}
+
 var (
 	moveAnalysisByGame      = map[string][]moveAnalysisRecord{}
 	latestAnalysisByGame    = map[string]latestAnalysisState{}
@@ -97,6 +138,15 @@ var (
 	analysisStoreMu         sync.Mutex
 	analysisQueue           = make(chan analysisJob, 128)
 	analysisWorkerOnce      sync.Once
+)
+
+const (
+	analysisErrorKindNone        = "none"
+	analysisErrorKindTimeout     = "timeout"
+	analysisErrorKindUnavailable = "unavailable"
+	analysisErrorKindBadStatus   = "bad_status"
+	analysisErrorKindBadJSON     = "bad_json"
+	analysisErrorKindOther       = "other"
 )
 
 func analyzerBaseURL() string {
@@ -120,20 +170,65 @@ func analyzerRequestTimeout() time.Duration {
 }
 
 func analyzerUserSafeError(err error) string {
-	if err == nil {
+	kind, _ := analyzerErrorDetails(err)
+	return analyzerUserSafeErrorByKind(kind)
+}
+
+func analyzerUserSafeErrorByKind(kind string) string {
+	switch kind {
+	case analysisErrorKindTimeout:
+		return "Analysis timed out. Showing previous result."
+	case analysisErrorKindUnavailable:
+		return "Analysis service unavailable. Showing previous result."
+	case analysisErrorKindBadStatus:
+		return "Analysis service returned an invalid response."
+	case analysisErrorKindBadJSON:
+		return "Analysis response could not be processed."
+	case analysisErrorKindNone:
 		return ""
+	default:
+		return "Analysis temporarily unavailable. Showing previous result."
+	}
+}
+
+func analyzerErrorDetails(err error) (string, int) {
+	if err == nil {
+		return analysisErrorKindNone, 0
+	}
+	var callErr *analyzerCallError
+	if errors.As(err, &callErr) {
+		kind := strings.TrimSpace(callErr.Kind)
+		if kind == "" {
+			kind = analysisErrorKindOther
+		}
+		return kind, callErr.HTTPStatus
 	}
 	if errors.Is(err, context.DeadlineExceeded) {
-		return "Analysis timed out. Showing previous result."
+		return analysisErrorKindTimeout, 0
 	}
 	var urlErr *url.Error
 	if errors.As(err, &urlErr) {
 		if errors.Is(urlErr.Err, context.DeadlineExceeded) {
-			return "Analysis timed out. Showing previous result."
+			return analysisErrorKindTimeout, 0
 		}
-		return "Analysis service unavailable. Showing previous result."
+		return analysisErrorKindUnavailable, 0
 	}
-	return "Analysis temporarily unavailable. Showing previous result."
+	return analysisErrorKindOther, 0
+}
+
+func emitAnalysisLog(entry analysisLogEvent) {
+	if strings.TrimSpace(entry.ErrorKind) == "" {
+		entry.ErrorKind = analysisErrorKindNone
+	}
+	if strings.TrimSpace(entry.TimestampUTC) == "" {
+		entry.TimestampUTC = time.Now().UTC().Format(time.RFC3339Nano)
+	}
+	raw, err := json.Marshal(entry)
+	if err != nil {
+		log.Printf("warning: analysis log marshal failed: %v", err)
+		return
+	}
+	log.Print(string(raw))
 }
 
 func analyzeByRequest(reqPayload analyzerRequest) (*analyzerResponse, error) {
@@ -153,7 +248,11 @@ func analyzeByRequest(reqPayload analyzerRequest) (*analyzerResponse, error) {
 
 	resp, err := pyAnalyzerHTTPClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("analyzer request failed: %w", err)
+		kind, _ := analyzerErrorDetails(err)
+		return nil, &analyzerCallError{
+			Kind: kind,
+			Err:  fmt.Errorf("analyzer request failed: %w", err),
+		}
 	}
 	defer resp.Body.Close()
 
@@ -163,12 +262,19 @@ func analyzeByRequest(reqPayload analyzerRequest) (*analyzerResponse, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("analyzer returned status=%d body=%s", resp.StatusCode, string(respBody))
+		return nil, &analyzerCallError{
+			Kind:       analysisErrorKindBadStatus,
+			HTTPStatus: resp.StatusCode,
+			Err:        fmt.Errorf("analyzer returned status=%d body=%s", resp.StatusCode, string(respBody)),
+		}
 	}
 
 	var parsed analyzerResponse
 	if err := json.Unmarshal(respBody, &parsed); err != nil {
-		return nil, fmt.Errorf("analyzer response parse failed: %w", err)
+		return nil, &analyzerCallError{
+			Kind: analysisErrorKindBadJSON,
+			Err:  fmt.Errorf("analyzer response parse failed: %w", err),
+		}
 	}
 
 	// Printed for testing as requested.
@@ -185,7 +291,9 @@ func StartAnalyzerWorker() {
 
 func analysisWorkerLoop() {
 	for job := range analysisQueue {
+		startedAt := time.Now()
 		result, err := analyzeByRequest(job.Request)
+		latencyMS := time.Since(startedAt).Milliseconds()
 		analysisStoreMu.Lock()
 		analysisPendingByGame[job.GameID] = false
 		analysisLastErrorByGame[job.GameID] = ""
@@ -193,9 +301,25 @@ func analysisWorkerLoop() {
 		analysisStoreMu.Unlock()
 
 		if err != nil {
+			errorKind, httpStatus := analyzerErrorDetails(err)
+			userSafe := analyzerUserSafeErrorByKind(errorKind)
 			analysisStoreMu.Lock()
-			analysisLastErrorByGame[job.GameID] = analyzerUserSafeError(err)
+			analysisLastErrorByGame[job.GameID] = userSafe
 			analysisStoreMu.Unlock()
+			emitAnalysisLog(analysisLogEvent{
+				Event:               "analysis_failed",
+				GameID:              job.GameID,
+				MoveNumber:          job.MoveNumber,
+				RequestID:           job.Request.RequestID,
+				QueueLen:            job.EnqueueQueueLen,
+				Pending:             false,
+				Success:             false,
+				LatencyMS:           latencyMS,
+				ErrorKind:           errorKind,
+				ErrorMessageSafe:    userSafe,
+				LatestRequestedMove: latestRequestedMove,
+				HTTPStatus:          httpStatus,
+			})
 			log.Printf("warning: analyzer job failed game_id=%s move=%d: %v", job.GameID, job.MoveNumber, err)
 			continue
 		}
@@ -203,10 +327,43 @@ func analysisWorkerLoop() {
 			continue
 		}
 		if job.MoveNumber < latestRequestedMove {
+			emitAnalysisLog(analysisLogEvent{
+				Event:               "analysis_stale_ignored",
+				GameID:              job.GameID,
+				MoveNumber:          job.MoveNumber,
+				RequestID:           job.Request.RequestID,
+				QueueLen:            job.EnqueueQueueLen,
+				Pending:             false,
+				Success:             false,
+				LatencyMS:           latencyMS,
+				ErrorKind:           analysisErrorKindNone,
+				ErrorMessageSafe:    "",
+				IsStale:             true,
+				LatestRequestedMove: latestRequestedMove,
+				AnalyzerSource:      result.Source,
+				AnalyzerLatencyMS:   result.LatencyMS,
+				BestMoveUCI:         result.BestMoveUCI,
+			})
 			log.Printf("stale analyzer response ignored: game_id=%s move=%d latest_requested=%d", job.GameID, job.MoveNumber, latestRequestedMove)
 			continue
 		}
 		recordMoveAnalysisForGame(job.GameID, job.MoveNumber, job.Command, *result)
+		emitAnalysisLog(analysisLogEvent{
+			Event:               "analysis_completed",
+			GameID:              job.GameID,
+			MoveNumber:          job.MoveNumber,
+			RequestID:           job.Request.RequestID,
+			QueueLen:            job.EnqueueQueueLen,
+			Pending:             false,
+			Success:             true,
+			LatencyMS:           latencyMS,
+			ErrorKind:           analysisErrorKindNone,
+			ErrorMessageSafe:    "",
+			LatestRequestedMove: latestRequestedMove,
+			AnalyzerSource:      result.Source,
+			AnalyzerLatencyMS:   result.LatencyMS,
+			BestMoveUCI:         result.BestMoveUCI,
+		})
 	}
 }
 
@@ -243,15 +400,43 @@ func enqueueCurrentPositionAnalysis(gameID, command string) {
 	latestRequestedByGame[gameID] = moveNumber
 	analysisPendingByGame[gameID] = true
 	analysisLastErrorByGame[gameID] = ""
+	queueLen := len(analysisQueue)
 	analysisStoreMu.Unlock()
+	job.EnqueueQueueLen = queueLen
 
 	select {
 	case analysisQueue <- job:
+		emitAnalysisLog(analysisLogEvent{
+			Event:               "analysis_enqueued",
+			GameID:              gameID,
+			MoveNumber:          moveNumber,
+			RequestID:           job.Request.RequestID,
+			QueueLen:            job.EnqueueQueueLen,
+			Pending:             true,
+			Success:             true,
+			LatencyMS:           0,
+			ErrorKind:           analysisErrorKindNone,
+			ErrorMessageSafe:    "",
+			LatestRequestedMove: moveNumber,
+		})
 	default:
 		analysisStoreMu.Lock()
 		analysisPendingByGame[gameID] = false
 		analysisLastErrorByGame[gameID] = "Analysis queue is busy. Showing previous result."
 		analysisStoreMu.Unlock()
+		emitAnalysisLog(analysisLogEvent{
+			Event:               "analysis_dropped_queue_full",
+			GameID:              gameID,
+			MoveNumber:          moveNumber,
+			RequestID:           job.Request.RequestID,
+			QueueLen:            job.EnqueueQueueLen,
+			Pending:             false,
+			Success:             false,
+			LatencyMS:           0,
+			ErrorKind:           analysisErrorKindUnavailable,
+			ErrorMessageSafe:    "Analysis queue is busy. Showing previous result.",
+			LatestRequestedMove: moveNumber,
+		})
 		log.Printf("warning: analyzer queue full, dropped job %s move=%d", gameIDLabel(gameID), moveNumber)
 	}
 }
