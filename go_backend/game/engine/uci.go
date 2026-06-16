@@ -14,10 +14,11 @@ import (
 
 // UCIResult represents a parsed info line from the engine.
 type UCIResult struct {
-	Move  string
-	Score int // centipawn score, positive good for side to move
-	PV    []string
-	Depth int
+	Move   string
+	Score  int // centipawn score, positive good for side to move
+	PV     []string
+	Depth  int
+	MultiPV int // multipv index (1-based)
 }
 
 // FairyStockfish wraps a Fairy-Stockfish UCI process.
@@ -164,10 +165,10 @@ func (fs *FairyStockfish) TopK(fen string, k int, limit Limit) ([]UCIResult, err
 		k = 1
 	}
 
-	// Enable MultiPV for this search
-	if err := fs.send(fmt.Sprintf("setoption name MultiPV value %d", k)); err != nil {
-		return nil, err
-	}
+	// Enable MultiPV for this search (we restore it afterwards)
+	prevMultiPV := 3 // reasonable default
+	_ = fs.send(fmt.Sprintf("setoption name MultiPV value %d", k))
+
 	if err := fs.send(fmt.Sprintf("position fen %s", fen)); err != nil {
 		return nil, err
 	}
@@ -177,6 +178,10 @@ func (fs *FairyStockfish) TopK(fen string, k int, limit Limit) ([]UCIResult, err
 	}
 
 	results, err := fs.collectTopKResults(k, 10*time.Second)
+
+	// Restore a sensible default MultiPV after the search
+	_ = fs.send(fmt.Sprintf("setoption name MultiPV value %d", prevMultiPV))
+
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +278,6 @@ func (fs *FairyStockfish) collectTopKResults(k int, timeout time.Duration) ([]UC
 	for {
 		select {
 		case <-ctx.Done():
-			// return what we have so far
 			for i := 1; i <= k; i++ {
 				if r, ok := seen[i]; ok {
 					results = append(results, r)
@@ -287,7 +291,6 @@ func (fs *FairyStockfish) collectTopKResults(k int, timeout time.Duration) ([]UC
 			}
 			line = strings.TrimSpace(line)
 			if strings.HasPrefix(line, "bestmove") {
-				// finalize
 				for i := 1; i <= k; i++ {
 					if r, ok := seen[i]; ok {
 						results = append(results, r)
@@ -304,8 +307,11 @@ func (fs *FairyStockfish) collectTopKResults(k int, timeout time.Duration) ([]UC
 					if res.Depth == 0 {
 						res.Depth = 1
 					}
-					// assume multipv index or just append first k unique
-					idx := len(seen) + 1
+					// Prefer the real multipv index if present
+					idx := res.MultiPV
+					if idx < 1 || idx > k {
+						idx = len(seen) + 1
+					}
 					if idx <= k {
 						seen[idx] = *res
 					}
@@ -315,10 +321,11 @@ func (fs *FairyStockfish) collectTopKResults(k int, timeout time.Duration) ([]UC
 	}
 }
 
-// parseInfoLine extracts score cp, pv, depth from an info line.
+// parseInfoLine extracts score cp, pv, depth, and multipv index from an info line.
 func parseInfoLine(line string) *UCIResult {
 	res := &UCIResult{}
 	fields := strings.Fields(line)
+
 	for i := 0; i < len(fields); i++ {
 		switch fields[i] {
 		case "depth":
@@ -329,6 +336,10 @@ func parseInfoLine(line string) *UCIResult {
 			if i+2 < len(fields) && fields[i+1] == "cp" {
 				fmt.Sscanf(fields[i+2], "%d", &res.Score)
 			}
+		case "multipv":
+			if i+1 < len(fields) {
+				fmt.Sscanf(fields[i+1], "%d", &res.MultiPV)
+			}
 		case "pv":
 			res.PV = fields[i+1:]
 			if len(res.PV) > 0 {
@@ -336,6 +347,7 @@ func parseInfoLine(line string) *UCIResult {
 			}
 		}
 	}
+
 	if res.Move == "" && res.PV == nil {
 		return nil
 	}

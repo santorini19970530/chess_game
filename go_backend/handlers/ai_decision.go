@@ -219,8 +219,24 @@ func selectMoveWithFairyStockfish(fen, profile string) (string, error) {
 		return "", err
 	}
 
-	// Use a generous default limit; strength is already applied via UCI options.
-	limit := engine.Limit{Depth: 20, MoveTime: 1500 * time.Millisecond}
+	// Strength is primarily controlled by SetStrengthProfile (Skill Level + MultiPV).
+	// We still apply a profile-specific time/depth cap for responsiveness.
+	limit := engine.Limit{Depth: 20, MoveTime: 1200 * time.Millisecond}
+
+	switch strings.ToLower(profile) {
+	case "beginner":
+		limit.Depth = 3
+		limit.MoveTime = 250 * time.Millisecond
+	case "intermediate":
+		limit.Depth = 8
+		limit.MoveTime = 600 * time.Millisecond
+	case "advanced":
+		limit.Depth = 14
+		limit.MoveTime = 1000 * time.Millisecond
+	case "master":
+		limit.Depth = 20
+		limit.MoveTime = 1800 * time.Millisecond
+	}
 
 	move, err := fs.BestMove(fen, limit)
 	if err != nil {
