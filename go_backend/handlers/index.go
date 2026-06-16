@@ -228,6 +228,7 @@ func (h *Handler) NewGame(w http.ResponseWriter, r *http.Request) {
 		currentGame.Config.HumanColor,
 		currentGame.Config.AIGameCount,
 		currentGame.Config.StartFEN,
+		currentGame.Config.AIProfile,
 	)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -300,8 +301,12 @@ func (h *Handler) UpdateGameConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	profile := strings.TrimSpace(r.FormValue("aiProfile"))
+	if profile == "" {
+		profile = strings.TrimSpace(r.FormValue("profile"))
+	}
 
-	game, err := sessionpkg.UpdateGameConfigByID(gameID, mode, gameType, humanColor, aiGameCount, fen)
+	game, err := sessionpkg.UpdateGameConfigByID(gameID, mode, gameType, humanColor, aiGameCount, fen, profile)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -555,7 +560,7 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func readGameConfigFromRequest(r *http.Request) (sessionpkg.GameMode, sessionpkg.GameType, string, int, string, error) {
+func readGameConfigFromRequest(r *http.Request) (sessionpkg.GameMode, sessionpkg.GameType, string, int, string, string, error) {
 	mode := sessionpkg.GameMode(strings.TrimSpace(r.FormValue("mode")))
 	if mode == "" {
 		mode = sessionpkg.GameModeHumanVsHuman
@@ -573,9 +578,13 @@ func readGameConfigFromRequest(r *http.Request) (sessionpkg.GameMode, sessionpkg
 	if raw := strings.TrimSpace(r.FormValue("aiGameCount")); raw != "" {
 		parsed, err := strconv.Atoi(raw)
 		if err != nil {
-			return "", "", "", 0, "", fmt.Errorf("invalid ai game count")
+			return "", "", "", 0, "", "", fmt.Errorf("invalid ai game count")
 		}
 		aiGameCount = parsed
 	}
-	return mode, gameType, humanColor, aiGameCount, fen, nil
+	profile := strings.TrimSpace(r.FormValue("aiProfile"))
+	if profile == "" {
+		profile = strings.TrimSpace(r.FormValue("profile")) // fallback name
+	}
+	return mode, gameType, humanColor, aiGameCount, fen, profile, nil
 }

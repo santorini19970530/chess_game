@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -55,6 +56,7 @@ type GameConfig struct {
 	HumanColor  string `json:"humanColor"`
 	AIGameCount int    `json:"aiGameCount"`
 	StartFEN    string `json:"startFen"`
+	AIProfile   string `json:"aiProfile"`
 }
 
 type ArchivedSession struct {
@@ -125,6 +127,17 @@ func newUniqueGameID() string {
 	return fmt.Sprintf("game-%d-%s", time.Now().UnixNano(), hex.EncodeToString(b))
 }
 
+// normalizeAIProfile returns a known profile or defaults to "intermediate".
+// Allowed values: beginner, intermediate, advanced, master.
+func normalizeAIProfile(p string) string {
+	switch strings.ToLower(strings.TrimSpace(p)) {
+	case "beginner", "intermediate", "advanced", "master":
+		return strings.ToLower(strings.TrimSpace(p))
+	default:
+		return "intermediate"
+	}
+}
+
 func newGameSession(mode GameMode, gameType GameType) GameSession {
 	now := time.Now().UTC().Format(time.RFC3339)
 	return GameSession{
@@ -135,6 +148,7 @@ func newGameSession(mode GameMode, gameType GameType) GameSession {
 			HumanColor:  "white",
 			AIGameCount: 1,
 			StartFEN:    "",
+			AIProfile:   "intermediate",
 		},
 		Result:    GameResultInProgress,
 		Outcome:   GameOutcome{Status: "in_progress"},

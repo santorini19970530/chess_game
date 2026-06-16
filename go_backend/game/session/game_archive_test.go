@@ -118,7 +118,7 @@ func TestNewUniqueGameID_RapidCreationYieldsDistinctIDs(t *testing.T) {
 	ids := make(map[string]bool)
 	const n = 100
 	for i := 0; i < n; i++ {
-		g, err := CreateGame(GameModeHumanVsHuman, GameTypeChess, "white", 1, "")
+		g, err := CreateGame(GameModeHumanVsHuman, GameTypeChess, "white", 1, "", "")
 		if err != nil {
 			t.Fatalf("create game %d failed: %v", i, err)
 		}

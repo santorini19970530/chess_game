@@ -22,12 +22,12 @@ func (h *Handler) APIGames(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "Invalid game payload")
 		return
 	}
-	mode, gameType, humanColor, aiGameCount, fen, err := readGameConfigFromRequest(r)
+	mode, gameType, humanColor, aiGameCount, fen, profile, err := readGameConfigFromRequest(r)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	game, err := sessionpkg.CreateGame(mode, gameType, humanColor, aiGameCount, fen)
+	game, err := sessionpkg.CreateGame(mode, gameType, humanColor, aiGameCount, fen, profile)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -313,12 +313,12 @@ func (h *Handler) postAPIGameConfig(w http.ResponseWriter, r *http.Request, game
 		writeJSONError(w, http.StatusBadRequest, "Invalid configuration payload")
 		return
 	}
-	mode, gameType, humanColor, aiGameCount, fen, err := readGameConfigFromRequest(r)
+	mode, gameType, humanColor, aiGameCount, fen, profile, err := readGameConfigFromRequest(r)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	game, err := sessionpkg.UpdateGameConfigByID(gameID, mode, gameType, humanColor, aiGameCount, fen)
+	game, err := sessionpkg.UpdateGameConfigByID(gameID, mode, gameType, humanColor, aiGameCount, fen, profile)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -426,6 +426,7 @@ func (h *Handler) postAPIGameNew(w http.ResponseWriter, r *http.Request, gameID 
 		currentGame.Config.HumanColor,
 		currentGame.Config.AIGameCount,
 		currentGame.Config.StartFEN,
+		currentGame.Config.AIProfile,
 	)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
