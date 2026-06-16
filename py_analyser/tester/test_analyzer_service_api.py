@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Issue0010 verification tests for the Python analyzer service."""
+"""API verification tests for the Python analyzer service."""
 
 from __future__ import annotations
 
@@ -9,13 +9,14 @@ import unittest
 
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-if CURRENT_DIR not in sys.path:
-    sys.path.insert(0, CURRENT_DIR)
+PARENT_DIR = os.path.dirname(CURRENT_DIR)
+if PARENT_DIR not in sys.path:
+    sys.path.insert(0, PARENT_DIR)
 
 import server  # noqa: E402
 
 
-class TestIssue0010Service(unittest.TestCase):
+class TestAnalyzerServiceAPI(unittest.TestCase):
     def setUp(self) -> None:
         server.app.config["TESTING"] = True
         self.client = server.app.test_client()
@@ -34,7 +35,7 @@ class TestIssue0010Service(unittest.TestCase):
         response = self.client.post(
             "/analyze",
             json={
-                "request_id": "issue0010-test",
+                "request_id": "analyzer-service-test",
                 "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
                 "color": "white",
                 "top_k": 3,
@@ -60,7 +61,7 @@ class TestIssue0010Service(unittest.TestCase):
         }
         self.assertTrue(required_top_level_fields.issubset(set(payload.keys())))
         self.assertEqual(payload["status"], "ok")
-        self.assertEqual(payload["request_id"], "issue0010-test")
+        self.assertEqual(payload["request_id"], "analyzer-service-test")
         self.assertEqual(payload["evaluated_for_color"], "white")
         self.assertIsInstance(payload["health_summary"], dict)
         self.assertIsInstance(payload["suggested_moves"], list)
