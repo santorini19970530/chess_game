@@ -4,7 +4,10 @@
 package main
 
 import (
+	"bufio"
+	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 )
@@ -28,6 +31,17 @@ func (sr *statusRecorder) Write(data []byte) (int, error) {
 	}
 
 	return sr.ResponseWriter.Write(data)
+}
+
+// Hijack implements http.Hijacker so WebSocket upgrades work through the recorder.
+func (sr *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hijacker, ok := sr.ResponseWriter.(interface {
+		Hijack() (net.Conn, *bufio.ReadWriter, error)
+	})
+	if !ok {
+		return nil, nil, fmt.Errorf("underlying ResponseWriter does not support hijacking")
+	}
+	return hijacker.Hijack()
 }
 
 // statusReport maps an HTTP status code to a short label
