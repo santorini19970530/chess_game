@@ -13,11 +13,11 @@ import (
 
 func TestAPIGameMove_DoesNotMutateOtherGame(t *testing.T) {
 	h := NewHandler()
-	gameA, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "")
+	gameA, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")
 	if err != nil {
 		t.Fatalf("expected game A create success, got %v", err)
 	}
-	gameB, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "")
+	gameB, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")
 	if err != nil {
 		t.Fatalf("expected game B create success, got %v", err)
 	}
@@ -53,11 +53,11 @@ func TestAPIGameMove_DoesNotMutateOtherGame(t *testing.T) {
 
 func TestAPIGameConfigRoute_UpdatesOnlyTargetGame(t *testing.T) {
 	h := NewHandler()
-	gameA, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "")
+	gameA, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")
 	if err != nil {
 		t.Fatalf("expected game A create success, got %v", err)
 	}
-	gameB, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "")
+	gameB, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")
 	if err != nil {
 		t.Fatalf("expected game B create success, got %v", err)
 	}
@@ -92,7 +92,7 @@ func TestAPIGameConfigRoute_UpdatesOnlyTargetGame(t *testing.T) {
 
 func TestAPIGameNewRoute_CreatesFreshGameSnapshot(t *testing.T) {
 	h := NewHandler()
-	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "")
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")
 	if err != nil {
 		t.Fatalf("expected game create success, got %v", err)
 	}
@@ -126,7 +126,7 @@ func TestAPIGameNewRoute_CreatesFreshGameSnapshot(t *testing.T) {
 
 func TestAPIGameFlagRoute_SetsTerminalResult(t *testing.T) {
 	h := NewHandler()
-	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "")
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")
 	if err != nil {
 		t.Fatalf("expected game create success, got %v", err)
 	}
@@ -164,7 +164,7 @@ func TestAPIGameFlagRoute_SetsTerminalResult(t *testing.T) {
 
 func TestAPIGameLegalMovesRoute_ReturnsMovesForCurrentTurnPiece(t *testing.T) {
 	h := NewHandler()
-	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "")
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")
 	if err != nil {
 		t.Fatalf("expected game create success, got %v", err)
 	}
@@ -199,7 +199,7 @@ func TestAPIGameLegalMovesRoute_ReturnsMovesForCurrentTurnPiece(t *testing.T) {
 
 func TestAPIGameLatestAnalysisRoute_ReturnsStatusShape(t *testing.T) {
 	h := NewHandler()
-	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "")
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")
 	if err != nil {
 		t.Fatalf("expected game create success, got %v", err)
 	}
