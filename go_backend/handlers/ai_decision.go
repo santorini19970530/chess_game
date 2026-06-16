@@ -3,11 +3,61 @@ package handlers
 import (
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
+	"time"
 
+	"go_backend/game/engine"
 	sessionpkg "go_backend/game/session"
 )
+
+var (
+	fsEngine     *engine.FairyStockfish
+	fsEngineOnce sync.Once
+	fsEngineErr  error
+)
+
+// useFairyStockfish reports whether the Go UCI path should be used (env flag).
+func useFairyStockfish() bool {
+	return strings.EqualFold(os.Getenv("USE_FAIRY_STOCKFISH"), "true") ||
+		strings.EqualFold(os.Getenv("USE_FAIRY_STOCKFISH"), "1")
+}
+
+// fairyStockfishBinary resolves the path to the stockfish binary.
+// Default: relative to this module's parent (py_analyser/...).
+func fairyStockfishBinary() string {
+	if p := os.Getenv("FAIRY_STOCKFISH_PATH"); p != "" {
+		return p
+	}
+	// Fallback default used in the project layout
+	return filepath.Join("..", "py_analyser", "Fairy-Stockfish-fairy_sf_14", "src", "stockfish")
+}
+
+// getFairyStockfish returns a started engine instance (lazy singleton).
+func getFairyStockfish() (*engine.FairyStockfish, error) {
+	fsEngineOnce.Do(func() {
+		bin := fairyStockfishBinary()
+		fsEngine, fsEngineErr = engine.NewFairyStockfish(bin)
+		if fsEngineErr != nil {
+			return
+		}
+		fsEngineErr = fsEngine.Start()
+		if fsEngineErr != nil {
+			fsEngine = nil
+		}
+	})
+	if fsEngineErr != nil {
+		return nil, fsEngineErr
+	}
+	// If previously failed or closed, try restart once
+	if fsEngine == nil {
+		return nil, fmt.Errorf("fairy stockfish not available")
+	}
+	return fsEngine, nil
+}
 
 // SelectAIMove picks one legal UCI move for the given game using AI endpoints.
 // Policy is the primary signal; history/value are auxiliary and non-blocking.
@@ -47,6 +97,18 @@ func SelectAIMove(gameID string) (string, error) {
 	if profile == "" {
 		profile = "intermediate"
 	}
+
+	// Optional Go-side Fairy-Stockfish path (env-gated, backward compatible)
+	if useFairyStockfish() {
+		if move, err := selectMoveWithFairyStockfish(fen, profile); err == nil && move != "" {
+			if _, ok := legalSet[normalizeUCI(move)]; ok {
+				return move, nil
+			}
+		} else if err != nil {
+			log.Printf("warning: fairy-stockfish unavailable for %s: %v (falling back to python)", gameIDLabel(gameID), err)
+		}
+	}
+
 	commonReq := AICommonRequest{
 		RequestID:   fmt.Sprintf("%s-ai-%d", gameID, len(history)+1),
 		GameID:      gameID,
@@ -144,4 +206,45 @@ func toUCIMove(fromFile, fromRank, toFile, toRank int, requiresPromotion bool) s
 
 func normalizeUCI(raw string) string {
 	return strings.ToLower(strings.TrimSpace(raw))
+}
+
+// selectMoveWithFairyStockfish uses the local UCI engine for one legal best move.
+// Strength is controlled via SetStrengthProfile (Skill Level + MultiPV).
+func selectMoveWithFairyStockfish(fen, profile string) (string, error) {
+	fs, err := getFairyStockfish()
+	if err != nil {
+		return "", err
+	}
+	if err := fs.SetStrengthProfile(profile); err != nil {
+		return "", err
+	}
+
+	// Strength is primarily controlled by SetStrengthProfile (Skill Level + MultiPV).
+	// We still apply a profile-specific time/depth cap for responsiveness.
+	limit := engine.Limit{Depth: 20, MoveTime: 1200 * time.Millisecond}
+
+	switch strings.ToLower(profile) {
+	case "beginner":
+		limit.Depth = 3
+		limit.MoveTime = 250 * time.Millisecond
+	case "intermediate":
+		limit.Depth = 8
+		limit.MoveTime = 600 * time.Millisecond
+	case "advanced":
+		limit.Depth = 14
+		limit.MoveTime = 1000 * time.Millisecond
+	case "master":
+		limit.Depth = 20
+		limit.MoveTime = 1800 * time.Millisecond
+	}
+
+	move, err := fs.BestMove(fen, limit)
+	if err != nil {
+		// One retry after restart
+		if rerr := fs.Restart(); rerr == nil {
+			_ = fs.SetStrengthProfile(profile)
+			move, err = fs.BestMove(fen, limit)
+		}
+	}
+	return move, err
 }

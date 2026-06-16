@@ -32,6 +32,8 @@
   const boardElement = document.querySelector(".chess_board");
   const promotionPicker = document.getElementById("promotion_picker");
   const moveSound = new Audio("/sounds/chess_movement.wav");
+  const captureSound = new Audio("/sounds/capture.wav");
+  const checkmateSound = new Audio("/sounds/checkmate.wav");
   const CHECK_CLASS = "game_info_col_in_check";
   const SELECTED_PIECE_CLASS = "piece_img_selected";
   const LEGAL_DESTINATION_CLASS = "chess_board_square_legal_destination";
@@ -54,6 +56,21 @@
   let cachedCapturedSummary = null;
   let currentGameId = "";
   let gameSocket = null;
+
+  const playMoveSound = (isCapture, isCheckmate) => {
+    try {
+      if (isCheckmate) {
+        checkmateSound.currentTime = 0;
+        checkmateSound.play().catch(() => {});
+      } else if (isCapture) {
+        captureSound.currentTime = 0;
+        captureSound.play().catch(() => {});
+      } else {
+        moveSound.currentTime = 0;
+        moveSound.play().catch(() => {});
+      }
+    } catch (_) {}
+  };
   let gameSocketGameId = "";
   let gameSocketReconnectAttempts = 0;
   let gameSocketReconnectTimer = null;
@@ -173,6 +190,8 @@
 
     if (event === "move_applied") {
       void refreshGameSnapshotFromAPI(gameId);
+      // Play appropriate sound for AI (or any) move
+      playMoveSound(false, false);
       return;
     }
     if (event === "turn_changed") {
@@ -997,12 +1016,7 @@
         const targetMoveNumber = Math.max(historyArray.length, detailedArray.length);
         startAnalysisPolling(targetMoveNumber, result.captured);
       }
-      try {
-        moveSound.currentTime = 0;
-        await moveSound.play();
-      } catch (_) {
-        // ignore play errors
-      }
+      playMoveSound(false, false); // human move - can be enhanced later with capture/checkmate detection
       input.focus();
       return true;
     } catch (_error) {
