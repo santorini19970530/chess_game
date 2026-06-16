@@ -12,16 +12,18 @@ type GameSnapshot struct {
 	State           []PieceState
 }
 
-func CreateGame(mode GameMode, gameType GameType, humanColor string, aiGameCount int, startFEN string) (GameSession, error) {
+func CreateGame(mode GameMode, gameType GameType, humanColor string, aiGameCount int, startFEN string, aiProfile string) (GameSession, error) {
 	normalizedCount, err := validateGameConfig(mode, gameType, humanColor, aiGameCount, startFEN)
 	if err != nil {
 		return GameSession{}, err
 	}
+	profile := normalizeAIProfile(aiProfile)
 	session := newGameSession(mode, gameType)
 	session.Config = GameConfig{
 		HumanColor:  humanColor,
 		AIGameCount: normalizedCount,
 		StartFEN:    startFEN,
+		AIProfile:   profile,
 	}
 	session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 
@@ -55,11 +57,12 @@ func GetGameSessionByID(gameID string) (GameSession, error) {
 	return game.Session, nil
 }
 
-func UpdateGameConfigByID(gameID string, mode GameMode, gameType GameType, humanColor string, aiGameCount int, startFEN string) (GameSession, error) {
+func UpdateGameConfigByID(gameID string, mode GameMode, gameType GameType, humanColor string, aiGameCount int, startFEN string, aiProfile string) (GameSession, error) {
 	normalizedCount, err := validateGameConfig(mode, gameType, humanColor, aiGameCount, startFEN)
 	if err != nil {
 		return GameSession{}, err
 	}
+	profile := normalizeAIProfile(aiProfile)
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
 		return GameSession{}, err
@@ -71,6 +74,7 @@ func UpdateGameConfigByID(gameID string, mode GameMode, gameType GameType, human
 		HumanColor:  humanColor,
 		AIGameCount: normalizedCount,
 		StartFEN:    startFEN,
+		AIProfile:   profile,
 	}
 	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 	return game.Session, nil

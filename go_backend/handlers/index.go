@@ -82,6 +82,8 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`<select id="human_side"><option value="white">White</option><option value="black">Black</option></select>`)
 	mainHTMLCode.WriteString(`<label for="ai_game_count">AI game count</label>`)
 	mainHTMLCode.WriteString(`<input id="ai_game_count" type="number" min="1" value="1" />`)
+	mainHTMLCode.WriteString(`<label for="ai_strength">AI strength</label>`)
+	mainHTMLCode.WriteString(`<select id="ai_strength"><option value="beginner">Beginner</option><option value="intermediate" selected>Intermediate</option><option value="advanced">Advanced</option><option value="master">Master</option></select>`)
 	mainHTMLCode.WriteString(`<label for="fen_input">Starting FEN (optional)</label>`)
 	mainHTMLCode.WriteString(`<textarea id="fen_input" rows="3" placeholder="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>`)
 	mainHTMLCode.WriteString(`<button id="game_config_apply" type="button">Apply Setup</button>`)
@@ -226,6 +228,7 @@ func (h *Handler) NewGame(w http.ResponseWriter, r *http.Request) {
 		currentGame.Config.HumanColor,
 		currentGame.Config.AIGameCount,
 		currentGame.Config.StartFEN,
+		currentGame.Config.AIProfile,
 	)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -298,8 +301,12 @@ func (h *Handler) UpdateGameConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	profile := strings.TrimSpace(r.FormValue("aiProfile"))
+	if profile == "" {
+		profile = strings.TrimSpace(r.FormValue("profile"))
+	}
 
-	game, err := sessionpkg.UpdateGameConfigByID(gameID, mode, gameType, humanColor, aiGameCount, fen)
+	game, err := sessionpkg.UpdateGameConfigByID(gameID, mode, gameType, humanColor, aiGameCount, fen, profile)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -473,23 +480,34 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 
 	aiMoveApplied := ""
 
-	// Human vs AI orchestration (legacy path): after human move, call decision layer if mode is human_vs_ai
+	// Human vs AI: start AI thinking in background (legacy command path)
 	if finalGame.Mode == sessionpkg.GameModeHumanVsAI && finalGame.Result == sessionpkg.GameResultInProgress {
-		if aiMove, aiErr := SelectAIMove(gameID); aiErr == nil && aiMove != "" {
-			if _, applyErr := sessionpkg.ApplyMoveByCommandByID(gameID, aiMove); applyErr != nil {
-				log.Printf("warning: AI move failed to apply in human_vs_ai mode %s: %v", gameIDLabel(gameID), applyErr)
-			} else {
-				aiMoveApplied = aiMove
-				log.Printf("human_vs_ai: AI move applied %s command=%s", gameIDLabel(gameID), aiMove)
+		go func() {
+			if aiMove, aiErr := SelectAIMove(gameID); aiErr == nil && aiMove != "" {
+				if _, applyErr := sessionpkg.ApplyMoveByCommandByID(gameID, aiMove); applyErr != nil {
+					log.Printf("warning: background AI move failed %s: %v", gameIDLabel(gameID), applyErr)
+					return
+				}
+				log.Printf("human_vs_ai: background AI move applied %s command=%s", gameIDLabel(gameID), aiMove)
+
+				// Broadcast via WebSocket so frontend updates
+				gameSocketHub.Broadcast(gameID, socketEventMoveApplied, map[string]interface{}{
+					"command": aiMove,
+				})
+
+				// Enqueue analysis
+				enqueueCurrentPositionAnalysis(gameID, aiMove)
+
+				if _, refreshErr := sessionpkg.RefreshGameSessionOutcomeByID(gameID); refreshErr != nil {
+					log.Printf("warning: refresh after background AI failed %s: %v", gameIDLabel(gameID), refreshErr)
+				}
+				if g, _ := sessionpkg.GetGameSessionByID(gameID); g.Result != sessionpkg.GameResultInProgress {
+					_ = sessionpkg.ArchiveGameIfNeededByID(gameID)
+				}
+			} else if aiErr != nil {
+				log.Printf("warning: background SelectAIMove failed %s: %v", gameIDLabel(gameID), aiErr)
 			}
-			finalGame, err = sessionpkg.RefreshGameSessionOutcomeByID(gameID)
-			if err != nil {
-				http.Error(w, "Game session not found after AI move", http.StatusNotFound)
-				return
-			}
-		} else if aiErr != nil {
-			log.Printf("warning: SelectAIMove failed for %s: %v", gameIDLabel(gameID), aiErr)
-		}
+		}()
 	}
 
 	if finalGame.Result != sessionpkg.GameResultInProgress {
@@ -553,7 +571,7 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func readGameConfigFromRequest(r *http.Request) (sessionpkg.GameMode, sessionpkg.GameType, string, int, string, error) {
+func readGameConfigFromRequest(r *http.Request) (sessionpkg.GameMode, sessionpkg.GameType, string, int, string, string, error) {
 	mode := sessionpkg.GameMode(strings.TrimSpace(r.FormValue("mode")))
 	if mode == "" {
 		mode = sessionpkg.GameModeHumanVsHuman
@@ -571,9 +589,13 @@ func readGameConfigFromRequest(r *http.Request) (sessionpkg.GameMode, sessionpkg
 	if raw := strings.TrimSpace(r.FormValue("aiGameCount")); raw != "" {
 		parsed, err := strconv.Atoi(raw)
 		if err != nil {
-			return "", "", "", 0, "", fmt.Errorf("invalid ai game count")
+			return "", "", "", 0, "", "", fmt.Errorf("invalid ai game count")
 		}
 		aiGameCount = parsed
 	}
-	return mode, gameType, humanColor, aiGameCount, fen, nil
+	profile := strings.TrimSpace(r.FormValue("aiProfile"))
+	if profile == "" {
+		profile = strings.TrimSpace(r.FormValue("profile")) // fallback name
+	}
+	return mode, gameType, humanColor, aiGameCount, fen, profile, nil
 }

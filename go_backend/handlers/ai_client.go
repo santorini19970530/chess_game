@@ -37,6 +37,7 @@ type AICommonRequest struct {
 	Color       string   `json:"color"`
 	MoveNumber  int      `json:"move_number,omitempty"`
 	MoveHistory []string `json:"move_history,omitempty"`
+	Profile     string   `json:"profile,omitempty"` // AI strength level: beginner|intermediate|advanced|master
 }
 
 // AIPolicyRequest extends AICommonRequest for policy-specific options.

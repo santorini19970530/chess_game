@@ -11,11 +11,11 @@ func TestCreateGame_ReturnsUniqueIDsAndIsolatedState(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
 
-	gameA, err := CreateGame(GameModeHumanVsHuman, GameTypeChess, "white", 1, "")
+	gameA, err := CreateGame(GameModeHumanVsHuman, GameTypeChess, "white", 1, "", "")
 	if err != nil {
 		t.Fatalf("expected first game create success, got %v", err)
 	}
-	gameB, err := CreateGame(GameModeHumanVsHuman, GameTypeChess, "white", 1, "")
+	gameB, err := CreateGame(GameModeHumanVsHuman, GameTypeChess, "white", 1, "", "")
 	if err != nil {
 		t.Fatalf("expected second game create success, got %v", err)
 	}

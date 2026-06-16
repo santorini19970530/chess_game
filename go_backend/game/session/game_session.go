@@ -4,10 +4,13 @@
 package session
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -53,6 +56,7 @@ type GameConfig struct {
 	HumanColor  string `json:"humanColor"`
 	AIGameCount int    `json:"aiGameCount"`
 	StartFEN    string `json:"startFen"`
+	AIProfile   string `json:"aiProfile"`
 }
 
 type ArchivedSession struct {
@@ -85,23 +89,66 @@ var (
 	runtimeStateMu sync.Mutex
 	sessionStore  = NewSessionStore()
 	activeGameID  string
-	archivePath   = filepath.Join("data", "game_history.json")
+	archivePath   string // resolved at init time to an absolute path under the executable dir (or fallback)
 )
 
 func init() {
 	initializeSessionStore()
+	archivePath = resolveArchivePath()
+}
+
+func resolveArchivePath() string {
+	// Prefer directory next to the running binary so "go run ." and built binary behave the same.
+	if execPath, err := os.Executable(); err == nil {
+		if execPath != "" && execPath != "." {
+			base := filepath.Dir(execPath)
+			return filepath.Join(base, "data", "game_history.json")
+		}
+	}
+	// Fallback: user cache dir (cross-platform, no cwd pollution).
+	if cacheDir, err := os.UserCacheDir(); err == nil {
+		return filepath.Join(cacheDir, "chess_game", "data", "game_history.json")
+	}
+	// Last resort: cwd/data (still better than letting handlers/ subdir appear).
+	if cwd, err := os.Getwd(); err == nil {
+		return filepath.Join(cwd, "data", "game_history.json")
+	}
+	return filepath.Join("data", "game_history.json")
+}
+
+// newUniqueGameID produces a unique ID with nanosecond timestamp + 4 random hex bytes.
+// Prevents collisions even if multiple games are created in the same nanosecond.
+func newUniqueGameID() string {
+	b := make([]byte, 4)
+	if _, err := rand.Read(b); err != nil {
+		// extremely rare; fall back to just nano
+		return fmt.Sprintf("game-%d", time.Now().UnixNano())
+	}
+	return fmt.Sprintf("game-%d-%s", time.Now().UnixNano(), hex.EncodeToString(b))
+}
+
+// normalizeAIProfile returns a known profile or defaults to "intermediate".
+// Allowed values: beginner, intermediate, advanced, master.
+func normalizeAIProfile(p string) string {
+	switch strings.ToLower(strings.TrimSpace(p)) {
+	case "beginner", "intermediate", "advanced", "master":
+		return strings.ToLower(strings.TrimSpace(p))
+	default:
+		return "intermediate"
+	}
 }
 
 func newGameSession(mode GameMode, gameType GameType) GameSession {
 	now := time.Now().UTC().Format(time.RFC3339)
 	return GameSession{
-		ID:   fmt.Sprintf("game-%d", time.Now().UnixNano()),
+		ID:   newUniqueGameID(),
 		Mode: mode,
 		Type: gameType,
 		Config: GameConfig{
 			HumanColor:  "white",
 			AIGameCount: 1,
 			StartFEN:    "",
+			AIProfile:   "intermediate",
 		},
 		Result:    GameResultInProgress,
 		Outcome:   GameOutcome{Status: "in_progress"},
