@@ -38,6 +38,7 @@
   const LEGAL_DESTINATION_CLASS = "chess_board_square_legal_destination";
   const LEGAL_PROMOTION_DESTINATION_CLASS = "chess_board_square_legal_promotion";
   const LEGAL_CAPTURE_DESTINATION_CLASS = "chess_board_square_legal_capture";
+  const SUGGESTED_MOVE_CLASS = "chess_board_square_suggested";
   let gameOver = false;
   let currentTurn = "white";
   let humanColor = "white";           // human's chosen color in Human vs AI mode
@@ -168,6 +169,7 @@
       renderGameConfig(result.game);
       renderGameInfo(result.captured, result.analysis);
       clearSelectedSquare();
+      void refreshSuggestedMoves();
       const historyArray = Array.isArray(result.history) ? result.history : [];
       const detailedArray = Array.isArray(result.historyDetailed) ? result.historyDetailed : [];
       if (result.analysis) {
@@ -190,6 +192,8 @@
     if (event === "move_applied") {
       // Update board immediately — the CSS transition on .piece_img (400ms) gives the slide animation
       void refreshGameSnapshotFromAPI(gameId);
+      // Also refresh FS suggestions directly (in case snapshot path is delayed)
+      void refreshSuggestedMoves();
       // Play sound at the same time the piece starts moving
       playMoveSound(false);
       return;
@@ -197,6 +201,7 @@
     if (event === "turn_changed") {
       renderCurrentTurn(data?.current_turn);
       renderCheckState(data?.checked_side);
+      void refreshSuggestedMoves();
       return;
     }
     if (event === "game_outcome") {
@@ -297,6 +302,7 @@
     blackColumnCells.forEach((cell) => {
       cell.classList.toggle("game_info_col_active", !isWhiteTurn);
     });
+    void refreshSuggestedMoves();
   };
 
   const renderCheckState = (checkedSide) => {
@@ -365,6 +371,7 @@
       button.disabled = true;
       if (flagButton) flagButton.disabled = true;
       gameOver = true;
+      highlightSuggestedMoves([]);
       return;
     }
 
@@ -374,6 +381,7 @@
       button.disabled = true;
       if (flagButton) flagButton.disabled = true;
       gameOver = true;
+      highlightSuggestedMoves([]);
       return;
     }
     if (statusValue.startsWith("draw_")) {
@@ -391,6 +399,7 @@
       button.disabled = true;
       if (flagButton) flagButton.disabled = true;
       gameOver = true;
+      highlightSuggestedMoves([]);
       return;
     }
 
@@ -801,21 +810,24 @@
       .querySelectorAll(`.piece_img.${SELECTED_PIECE_CLASS}`)
       .forEach((piece) => piece.classList.remove(SELECTED_PIECE_CLASS));
     boardElement
-      .querySelectorAll(`.${LEGAL_DESTINATION_CLASS}, .${LEGAL_PROMOTION_DESTINATION_CLASS}, .${LEGAL_CAPTURE_DESTINATION_CLASS}`)
+      .querySelectorAll(`.${LEGAL_DESTINATION_CLASS}, .${LEGAL_PROMOTION_DESTINATION_CLASS}, .${LEGAL_CAPTURE_DESTINATION_CLASS}, .${SUGGESTED_MOVE_CLASS}`)
       .forEach((square) => {
         square.classList.remove(LEGAL_DESTINATION_CLASS);
         square.classList.remove(LEGAL_PROMOTION_DESTINATION_CLASS);
         square.classList.remove(LEGAL_CAPTURE_DESTINATION_CLASS);
+        square.classList.remove(SUGGESTED_MOVE_CLASS);
       });
+    selectedSuggestedMoves = [];
   };
 
   const highlightLegalDestinations = (moves) => {
     boardElement
-      .querySelectorAll(`.${LEGAL_DESTINATION_CLASS}, .${LEGAL_PROMOTION_DESTINATION_CLASS}, .${LEGAL_CAPTURE_DESTINATION_CLASS}`)
+      .querySelectorAll(`.${LEGAL_DESTINATION_CLASS}, .${LEGAL_PROMOTION_DESTINATION_CLASS}, .${LEGAL_CAPTURE_DESTINATION_CLASS}, .${SUGGESTED_MOVE_CLASS}`)
       .forEach((square) => {
         square.classList.remove(LEGAL_DESTINATION_CLASS);
         square.classList.remove(LEGAL_PROMOTION_DESTINATION_CLASS);
         square.classList.remove(LEGAL_CAPTURE_DESTINATION_CLASS);
+        square.classList.remove(SUGGESTED_MOVE_CLASS);
       });
     if (!Array.isArray(moves)) return;
     const selectedSource = fileRankFromSequence(selectedSquareSequence);
@@ -893,6 +905,123 @@
     }
   };
 
+  let selectedSuggestedMoves = [];
+
+  const refreshSuggestedMoves = async (retry = true) => {
+    if (!currentGameId || gameOver) {
+      highlightSuggestedMoves([]);
+      return;
+    }
+    try {
+      const profile = String(aiStrengthSelect?.value || "intermediate");
+      const url = `/api/games/${encodeURIComponent(currentGameId)}/top-moves?profile=${encodeURIComponent(profile)}&k=3`;
+      const resp = await fetch(url);
+      if (!resp.ok) {
+        // Transient 503 (engine starting) or 404/500 — retry once after a short delay
+        if (retry) {
+          window.setTimeout(() => {
+            void refreshSuggestedMoves(false);
+          }, 1200);
+        } else {
+          highlightSuggestedMoves([]);
+        }
+        return;
+      }
+      const data = await resp.json();
+      const suggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
+      highlightSuggestedMoves(suggestions);
+    } catch (_) {
+      if (retry) {
+        window.setTimeout(() => {
+          void refreshSuggestedMoves(false);
+        }, 1200);
+      } else {
+        highlightSuggestedMoves([]);
+      }
+    }
+  };
+
+  const highlightSuggestedMoves = (suggestions) => {
+    // Clear previous suggestion highlights
+    boardElement
+      .querySelectorAll(`.${SUGGESTED_MOVE_CLASS}`)
+      .forEach((square) => square.classList.remove(SUGGESTED_MOVE_CLASS));
+
+    selectedSuggestedMoves = [];
+    const top = Array.isArray(suggestions) ? suggestions.slice(0, 3) : [];
+
+    if (!top.length) {
+      if (gameInfoNotesBox) {
+        // Only clear if we previously wrote FS suggestions here
+        if (gameInfoNotesBox.dataset.fsSuggestions === "1") {
+          gameInfoNotesBox.value = "";
+          delete gameInfoNotesBox.dataset.fsSuggestions;
+        }
+      }
+      return;
+    }
+
+    // Subtle cyan ring on destination squares (secondary visual cue)
+    for (const sug of top) {
+      const toSq = String(sug?.to || sug?.move?.slice(2, 4) || "").toLowerCase();
+      if (!toSq || toSq.length !== 2) continue;
+      const file = toSq.charCodeAt(0) - 96;
+      const rank = Number(toSq[1]);
+      if (Number.isNaN(file) || Number.isNaN(rank)) continue;
+      const sequence = sequenceByFileRank(file, rank);
+      const square = boardElement.querySelector(
+        `.chess_board_square[data-sequence="${sequence}"]`
+      );
+      if (square) {
+        square.classList.add(SUGGESTED_MOVE_CLASS);
+        selectedSuggestedMoves.push({ sequence, move: sug.move || `${sug.from}${sug.to}` });
+      }
+    }
+
+    // Write suggestions into the existing notes textarea (reusing the reserved box)
+    if (gameInfoNotesBox) {
+      // Note: full SAN notation requires a backend enhancement (current data is UCI).
+      // UCI is kept for now because it is unambiguous and matches engine output.
+      let text = "FS suggestions:\n";
+      top.forEach((sug, idx) => {
+        const mv = sug.move || "????";
+        const sc = typeof sug.score_cp === "number" ? ` (${sug.score_cp > 0 ? "+" : ""}${sug.score_cp})` : "";
+        text += `${idx + 1}. ${mv}${sc}\n`;
+      });
+      gameInfoNotesBox.value = text.trim();
+      gameInfoNotesBox.dataset.fsSuggestions = "1";
+    }
+  };
+
+  const loadSuggestedMovesForSelection = async (sequence) => {
+    if (!currentGameId) {
+      highlightSuggestedMoves([]);
+      return;
+    }
+    const source = fileRankFromSequence(sequence);
+    if (!source) {
+      highlightSuggestedMoves([]);
+      return;
+    }
+    try {
+      const profile = String(aiStrengthSelect?.value || "intermediate");
+      const url = `/api/games/${encodeURIComponent(currentGameId)}/top-moves?profile=${encodeURIComponent(profile)}&k=3`;
+      const resp = await fetch(url);
+      if (!resp.ok) {
+        highlightSuggestedMoves([]);
+        return;
+      }
+      const data = await resp.json();
+      const suggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
+      highlightSuggestedMoves(suggestions);
+      if (suggestions.length) {
+        console.log("[hints] showing", suggestions.length, "FS suggestions");
+      }
+    } catch (_) {
+      highlightSuggestedMoves([]);
+    }
+  };
+
   const setSelectedSquare = (sequence) => {
     clearSelectedSquare();
     selectedSquareSequence = Number(sequence);
@@ -907,6 +1036,7 @@
     if (selectedPiece) {
       selectedPiece.classList.add(SELECTED_PIECE_CLASS);
       void loadLegalDestinationsForSelection(selectedSquareSequence);
+      void loadSuggestedMovesForSelection(selectedSquareSequence);
     }
   };
 
@@ -1016,6 +1146,7 @@
         const targetMoveNumber = Math.max(historyArray.length, detailedArray.length);
         startAnalysisPolling(targetMoveNumber, result.captured);
       }
+      void refreshSuggestedMoves();
       input.focus();
       return true;
     } catch (_error) {
@@ -1075,6 +1206,7 @@
       renderGameInfo(result.captured, result.analysis);
       stopAnalysisPolling();
       clearSelectedSquare();
+      void refreshSuggestedMoves();
       input.disabled = false;
       button.disabled = false;
       if (flagButton) flagButton.disabled = false;

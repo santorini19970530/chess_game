@@ -163,7 +163,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`</div>`)
 	mainHTMLCode.WriteString(`</div>`)
 	mainHTMLCode.WriteString(`</div>`)
-	mainHTMLCode.WriteString(`<textarea id="game_info_notes" class="game_info_notes_box" placeholder="Reserved for future use" rows="3" readonly></textarea>`)
+	mainHTMLCode.WriteString(`<textarea id="game_info_notes" class="game_info_notes_box" placeholder="Reserved for future use" rows="7" readonly></textarea>`)
 	mainHTMLCode.WriteString(`</div>`)
 	mainHTMLCode.WriteString(`<script src="/scripts/chess_command.js"></script>`)
 

@@ -58,7 +58,11 @@ echo "starting go backend on http://localhost:8080 ..."
 (
   cd "$GO_DIR"
   go build .
-  PY_ANALYSER_URL="${PY_ANALYSER_URL:-http://127.0.0.1:8001}" go run .
+  # Enable Fairy-Stockfish UCI path for FS top-3 hints (issue0024) and related features.
+  # Set to false/omit this line to fall back to the Python heuristic analyzer only.
+  USE_FAIRY_STOCKFISH=true \
+  PY_ANALYSER_URL="${PY_ANALYSER_URL:-http://127.0.0.1:8001}" \
+  go run .
 ) &
 GO_PID=$!
 
