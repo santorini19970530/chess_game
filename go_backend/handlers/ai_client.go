@@ -57,6 +57,7 @@ const (
 	aiClientErrorKindUnavailable = "unavailable"
 	aiClientErrorKindBadStatus   = "bad_status"
 	aiClientErrorKindBadJSON     = "bad_json"
+	aiClientErrorKindBadPayload  = "bad_payload"
 	aiClientErrorKindRequest     = "request_error"
 	aiClientErrorKindResponse    = "response_error"
 	aiClientErrorKindOther       = "other"
@@ -127,6 +128,9 @@ func (c *AIClient) History(req AICommonRequest) (*AIHistoryResponse, error) {
 	if err := c.doJSONPost("/history", req, &out); err != nil {
 		return nil, err
 	}
+	if err := validateHistoryResponse(out); err != nil {
+		return nil, err
+	}
 	return &out, nil
 }
 
@@ -135,12 +139,18 @@ func (c *AIClient) Policy(req AIPolicyRequest) (*AIPolicyResponse, error) {
 	if err := c.doJSONPost("/policy", req, &out); err != nil {
 		return nil, err
 	}
+	if err := validatePolicyResponse(out); err != nil {
+		return nil, err
+	}
 	return &out, nil
 }
 
 func (c *AIClient) Value(req AICommonRequest) (*AIValueResponse, error) {
 	var out AIValueResponse
 	if err := c.doJSONPost("/value", req, &out); err != nil {
+		return nil, err
+	}
+	if err := validateValueResponse(out); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -239,4 +249,76 @@ func mapAIClientTransportErrorKind(err error) string {
 		return aiClientErrorKindUnavailable
 	}
 	return aiClientErrorKindOther
+}
+
+func invalidPayloadError(msg string) error {
+	return &AIClientError{
+		Kind: aiClientErrorKindBadPayload,
+		Err:  fmt.Errorf("ai client invalid payload: %s", msg),
+	}
+}
+
+func validateHistoryResponse(resp AIHistoryResponse) error {
+	if strings.TrimSpace(resp.RequestID) == "" {
+		return invalidPayloadError("missing request_id")
+	}
+	if resp.Status != "ok" {
+		return invalidPayloadError("status must be ok")
+	}
+	if strings.TrimSpace(resp.Phase) == "" {
+		return invalidPayloadError("missing phase")
+	}
+	if resp.Features == nil {
+		return invalidPayloadError("missing features")
+	}
+	if resp.LatencyMS < 0 {
+		return invalidPayloadError("latency_ms must be non-negative")
+	}
+	return nil
+}
+
+func validatePolicyResponse(resp AIPolicyResponse) error {
+	if strings.TrimSpace(resp.RequestID) == "" {
+		return invalidPayloadError("missing request_id")
+	}
+	if resp.Status != "ok" {
+		return invalidPayloadError("status must be ok")
+	}
+	if resp.LatencyMS < 0 {
+		return invalidPayloadError("latency_ms must be non-negative")
+	}
+	for _, c := range resp.Candidates {
+		if c.Rank < 1 {
+			return invalidPayloadError("candidate rank must be >= 1")
+		}
+		if strings.TrimSpace(c.UCI) == "" {
+			return invalidPayloadError("candidate uci is required")
+		}
+		if c.Prob < 0 || c.Prob > 1 {
+			return invalidPayloadError("candidate prob must be in [0,1]")
+		}
+	}
+	return nil
+}
+
+func validateValueResponse(resp AIValueResponse) error {
+	if strings.TrimSpace(resp.RequestID) == "" {
+		return invalidPayloadError("missing request_id")
+	}
+	if resp.Status != "ok" {
+		return invalidPayloadError("status must be ok")
+	}
+	if resp.Value < -1 || resp.Value > 1 {
+		return invalidPayloadError("value must be in [-1,1]")
+	}
+	if resp.WinChanceWhite < 0 || resp.WinChanceWhite > 1 {
+		return invalidPayloadError("win_chance_white must be in [0,1]")
+	}
+	if resp.WinChanceBlack < 0 || resp.WinChanceBlack > 1 {
+		return invalidPayloadError("win_chance_black must be in [0,1]")
+	}
+	if resp.LatencyMS < 0 {
+		return invalidPayloadError("latency_ms must be non-negative")
+	}
+	return nil
 }
