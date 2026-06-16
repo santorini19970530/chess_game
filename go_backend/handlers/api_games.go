@@ -183,12 +183,15 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 		return
 	}
 
+	aiMoveApplied := ""
+
 	// Human vs AI orchestration: after human move, call decision layer if mode is human_vs_ai
 	if finalGame.Mode == sessionpkg.GameModeHumanVsAI && finalGame.Result == sessionpkg.GameResultInProgress {
 		if aiMove, aiErr := SelectAIMove(gameID); aiErr == nil && aiMove != "" {
 			if _, applyErr := sessionpkg.ApplyMoveByCommandByID(gameID, aiMove); applyErr != nil {
 				log.Printf("warning: AI move failed to apply in human_vs_ai mode %s: %v", gameIDLabel(gameID), applyErr)
 			} else {
+				aiMoveApplied = aiMove
 				log.Printf("human_vs_ai: AI move applied %s command=%s", gameIDLabel(gameID), aiMove)
 			}
 			// Refresh final state after AI move
@@ -231,6 +234,7 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 		History         []string                      `json:"history"`
 		HistoryDetailed []sessionpkg.MoveHistoryEntry `json:"historyDetailed"`
 		State           []sessionpkg.PieceState       `json:"state"`
+		AIMove          string                        `json:"aiMove,omitempty"`
 	}{
 		Command:         normalizedMove,
 		CurrentTurn:     snapshot.CurrentTurn,
@@ -240,6 +244,7 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 		History:         snapshot.History,
 		HistoryDetailed: snapshot.HistoryDetailed,
 		State:           snapshot.State,
+		AIMove:          aiMoveApplied,
 	}
 	response.From.File = string(parsed.FromFile)
 	response.From.Rank = parsed.FromRank

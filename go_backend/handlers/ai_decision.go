@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	sessionpkg "go_backend/game/session"
 )
@@ -17,9 +18,11 @@ func SelectAIMove(gameID string) (string, error) {
 		return "", err
 	}
 
+	currentSide := strings.ToLower(snapshot.CurrentTurn)
+
 	// Collect any legal destination for the current side
 	for _, p := range snapshot.State {
-		if p.Color != snapshot.CurrentTurn {
+		if strings.ToLower(p.Color) != currentSide {
 			continue
 		}
 		dests, derr := sessionpkg.LegalMovesForSquareByID(gameID, p.File, p.Rank)

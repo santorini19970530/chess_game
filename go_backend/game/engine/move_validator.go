@@ -43,6 +43,9 @@ func ValidateMove(fromFile, fromRank, toFile, toRank int, pieceCode string) (pie
 		if targetPiece.Color == sourcePiece.Color {
 			return "", fmt.Errorf("Cannot capture own piece")
 		}
+		if targetPiece.Kind == pieces.King {
+			return "", fmt.Errorf("Cannot capture the king")
+		}
 	}
 
 	// Validate by PieceMovementStrategy registry dispatch.

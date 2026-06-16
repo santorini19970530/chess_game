@@ -46,9 +46,16 @@ func statusReport(code int) string {
 	}
 }
 
-// withRequestLogging logs method, path, and status for each request in the server
+// withRequestLogging logs method, path, and status for each request in the server.
+// WebSocket upgrade requests are skipped to preserve the http.Hijacker interface.
 func withRequestLogging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Skip logging for WebSocket routes so the upgrade can succeed
+		if strings.HasPrefix(r.URL.Path, "/ws/") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		recorder := &statusRecorder{ResponseWriter: w}
 		next.ServeHTTP(recorder, r)
 

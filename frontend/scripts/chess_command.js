@@ -709,6 +709,16 @@
     const piece = getPieceOnSquare(square);
     if (!piece) return false;
     const pieceColor = String(piece.getAttribute("data-color") || "").toLowerCase();
+
+    // In Human vs AI mode, only allow the human to move their chosen color
+    const mode = String(gameModeSelect?.value || "");
+    if (mode === "human_vs_ai") {
+      const humanColor = String(humanSideSelect?.value || "white").toLowerCase();
+      if (pieceColor !== humanColor) {
+        return false;
+      }
+    }
+
     return pieceColor === currentTurn;
   };
 

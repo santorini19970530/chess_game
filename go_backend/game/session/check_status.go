@@ -28,6 +28,39 @@ func CheckedSideLabel() string {
 }
 
 func EvaluateGameOutcome() GameOutcome {
+	// Safety check: if either side has no king left, the game is over
+	whiteKings := 0
+	blackKings := 0
+	for _, p := range pieces.ChessPieces {
+		if p.Kind == pieces.King {
+			if p.Color == pieces.White {
+				whiteKings++
+			} else {
+				blackKings++
+			}
+		}
+	}
+	if whiteKings == 0 {
+		return GameOutcome{
+			Status:      "checkmate",
+			Winner:      "black",
+			Loser:       "white",
+			CheckedSide: "white",
+			LegalMoves:  0,
+			Message:     "Checkmate! Black wins (king captured).",
+		}
+	}
+	if blackKings == 0 {
+		return GameOutcome{
+			Status:      "checkmate",
+			Winner:      "white",
+			Loser:       "black",
+			CheckedSide: "black",
+			LegalMoves:  0,
+			Message:     "Checkmate! White wins (king captured).",
+		}
+	}
+
 	sideToMove := CurrentTurnColor()
 	inCheck := engine.IsInCheck(sideToMove)
 	legalMoves := countLegalMoves(sideToMove)
