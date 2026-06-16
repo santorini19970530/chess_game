@@ -33,6 +33,19 @@ func (h *Handler) APIGames(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("api create game %s mode=%s type=%s", gameIDLabel(game.ID), game.Mode, game.Type)
+
+	// If human is Black in Human vs AI mode, let the AI (White) play the first move immediately
+	if mode == sessionpkg.GameModeHumanVsAI && strings.ToLower(humanColor) == "black" && game.Result == sessionpkg.GameResultInProgress {
+		if aiMove, aiErr := SelectAIMove(game.ID); aiErr == nil && aiMove != "" {
+			if _, applyErr := sessionpkg.ApplyMoveByCommandByID(game.ID, aiMove); applyErr != nil {
+				log.Printf("warning: initial AI move failed for %s: %v", gameIDLabel(game.ID), applyErr)
+			} else {
+				log.Printf("human_vs_ai: initial AI move applied %s command=%s", gameIDLabel(game.ID), aiMove)
+			}
+			game, _ = sessionpkg.RefreshGameSessionOutcomeByID(game.ID)
+		}
+	}
+
 	snapshot, err := sessionpkg.BuildSnapshotByID(game.ID)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "Failed to load game state")
@@ -187,7 +200,12 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 
 	// Human vs AI orchestration: after human move, call decision layer if mode is human_vs_ai
 	if finalGame.Mode == sessionpkg.GameModeHumanVsAI && finalGame.Result == sessionpkg.GameResultInProgress {
-		if aiMove, aiErr := SelectAIMove(gameID); aiErr == nil && aiMove != "" {
+		aiMove, aiErr := SelectAIMove(gameID)
+		if aiErr != nil || aiMove == "" {
+			if aiErr != nil {
+				log.Printf("warning: SelectAIMove failed for %s (continuing with human move only): %v", gameIDLabel(gameID), aiErr)
+			}
+		} else {
 			if _, applyErr := sessionpkg.ApplyMoveByCommandByID(gameID, aiMove); applyErr != nil {
 				log.Printf("warning: AI move failed to apply in human_vs_ai mode %s: %v", gameIDLabel(gameID), applyErr)
 			} else {
@@ -200,8 +218,6 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 				writeJSONError(w, http.StatusNotFound, "Game session not found after AI move")
 				return
 			}
-		} else if aiErr != nil {
-			log.Printf("warning: SelectAIMove failed for %s: %v", gameIDLabel(gameID), aiErr)
 		}
 	}
 
@@ -394,6 +410,16 @@ func (h *Handler) postAPIGameNew(w http.ResponseWriter, r *http.Request, gameID 
 		writeJSONError(w, http.StatusInternalServerError, "Failed to archive current game")
 		return
 	}
+	// Parse form to allow "New Game" to respect current dropdown selections
+	if err := r.ParseForm(); err == nil {
+		if m := r.FormValue("mode"); m != "" {
+			currentGame.Mode = sessionpkg.GameMode(m)
+		}
+		if h := r.FormValue("humanColor"); h != "" {
+			currentGame.Config.HumanColor = h
+		}
+	}
+
 	game, err := sessionpkg.CreateGame(
 		currentGame.Mode,
 		currentGame.Type,
@@ -404,6 +430,20 @@ func (h *Handler) postAPIGameNew(w http.ResponseWriter, r *http.Request, gameID 
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
+	}
+
+	// Auto-play first AI move if human is Black
+	if game.Mode == sessionpkg.GameModeHumanVsAI && strings.ToLower(game.Config.HumanColor) == "black" && game.Result == sessionpkg.GameResultInProgress {
+		if aiMove, aiErr := SelectAIMove(game.ID); aiErr == nil && aiMove != "" {
+			if _, applyErr := sessionpkg.ApplyMoveByCommandByID(game.ID, aiMove); applyErr != nil {
+				log.Printf("warning: initial AI move failed for %s: %v", gameIDLabel(game.ID), applyErr)
+			} else {
+				log.Printf("human_vs_ai: initial AI move applied %s command=%s", gameIDLabel(game.ID), aiMove)
+			}
+			game, _ = sessionpkg.RefreshGameSessionOutcomeByID(game.ID)
+		} else {
+			log.Printf("warning: SelectAIMove failed: %v", aiErr)
+		}
 	}
 	snapshot, err := sessionpkg.BuildSnapshotByID(game.ID)
 	if err != nil {

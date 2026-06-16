@@ -208,6 +208,18 @@ func (h *Handler) NewGame(w http.ResponseWriter, r *http.Request) {
 		log.Printf("archive game failed: %v", err)
 		return
 	}
+
+	// Parse form to allow "New Game" to respect current dropdown selections
+	// without requiring the user to click "Apply Setup" first.
+	if err := r.ParseForm(); err == nil {
+		if m := r.FormValue("mode"); m != "" {
+			currentGame.Mode = sessionpkg.GameMode(m)
+		}
+		if h := r.FormValue("humanColor"); h != "" {
+			currentGame.Config.HumanColor = h
+		}
+	}
+
 	game, err := sessionpkg.CreateGame(
 		currentGame.Mode,
 		currentGame.Type,
@@ -219,6 +231,21 @@ func (h *Handler) NewGame(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	// Auto-play first AI move if human is Black (use the new game's config)
+	if game.Mode == sessionpkg.GameModeHumanVsAI && strings.ToLower(game.Config.HumanColor) == "black" && game.Result == sessionpkg.GameResultInProgress {
+		if aiMove, aiErr := SelectAIMove(game.ID); aiErr == nil && aiMove != "" {
+			if _, applyErr := sessionpkg.ApplyMoveByCommandByID(game.ID, aiMove); applyErr != nil {
+				log.Printf("warning: initial AI move failed for %s: %v", gameIDLabel(game.ID), applyErr)
+			} else {
+				log.Printf("human_vs_ai: initial AI move applied %s command=%s", gameIDLabel(game.ID), aiMove)
+			}
+			game, _ = sessionpkg.RefreshGameSessionOutcomeByID(game.ID)
+		} else {
+			log.Printf("warning: SelectAIMove failed: %v", aiErr)
+		}
+	}
+
 	log.Printf("new game created from UI %s previous=%s", gameIDLabel(game.ID), gameIDLabel(gameID))
 	snapshot, err := sessionpkg.BuildSnapshotByID(game.ID)
 	if err != nil {
