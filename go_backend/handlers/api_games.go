@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -204,6 +205,31 @@ func (h *Handler) getAPIGameTopMoves(w http.ResponseWriter, r *http.Request, gam
 		return
 	}
 
+	// Build set of legal UCI moves for the current position
+	legalSet := make(map[string]struct{})
+	snap, _ := sessionpkg.BuildSnapshotByID(gameID)
+	for _, p := range snap.State {
+		dests, _ := sessionpkg.LegalMovesForSquareByID(gameID, p.File, p.Rank)
+		for _, d := range dests {
+			uci := fmt.Sprintf("%c%d%c%d", 'a'+byte(p.File-1), p.Rank, 'a'+byte(d.File-1), d.Rank)
+			if d.RequiresPromotion {
+				uci += "q"
+			}
+			legalSet[strings.ToLower(uci)] = struct{}{}
+		}
+	}
+
+	// Filter to only legal moves
+	legalResults := make([]engine.UCIResult, 0, len(results))
+	for _, r := range results {
+		if _, ok := legalSet[strings.ToLower(r.Move)]; ok {
+			legalResults = append(legalResults, r)
+		}
+	}
+	if len(legalResults) == 0 {
+		legalResults = results // fallback if filtering removed everything
+	}
+
 	type moveSuggestion struct {
 		Move    string `json:"move"`
 		Score   int    `json:"score_cp"`
@@ -211,8 +237,8 @@ func (h *Handler) getAPIGameTopMoves(w http.ResponseWriter, r *http.Request, gam
 		MultiPV int    `json:"multipv"`
 	}
 
-	suggestions := make([]moveSuggestion, 0, len(results))
-	for _, r := range results {
+	suggestions := make([]moveSuggestion, 0, len(legalResults))
+	for _, r := range legalResults {
 		suggestions = append(suggestions, moveSuggestion{
 			Move:    r.Move,
 			Score:   r.Score,
