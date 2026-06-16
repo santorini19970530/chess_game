@@ -33,7 +33,6 @@
   const promotionPicker = document.getElementById("promotion_picker");
   const moveSound = new Audio("/sounds/chess_movement.wav");
   const captureSound = new Audio("/sounds/capture.wav");
-  const checkmateSound = new Audio("/sounds/checkmate.wav");
   const CHECK_CLASS = "game_info_col_in_check";
   const SELECTED_PIECE_CLASS = "piece_img_selected";
   const LEGAL_DESTINATION_CLASS = "chess_board_square_legal_destination";
@@ -57,12 +56,9 @@
   let currentGameId = "";
   let gameSocket = null;
 
-  const playMoveSound = (isCapture, isCheckmate) => {
+  const playMoveSound = (isCapture) => {
     try {
-      if (isCheckmate) {
-        checkmateSound.currentTime = 0;
-        checkmateSound.play().catch(() => {});
-      } else if (isCapture) {
+      if (isCapture) {
         captureSound.currentTime = 0;
         captureSound.play().catch(() => {});
       } else {
@@ -71,6 +67,9 @@
       }
     } catch (_) {}
   };
+
+  // Future: pass isCapture / isCheckmate from snapshot or move result
+  // Example: playMoveSound(result.wasCapture, result.wasCheckmate);
   let gameSocketGameId = "";
   let gameSocketReconnectAttempts = 0;
   let gameSocketReconnectTimer = null;
@@ -189,9 +188,10 @@
     const data = payload?.data || {};
 
     if (event === "move_applied") {
+      // Update board immediately — the CSS transition on .piece_img (400ms) gives the slide animation
       void refreshGameSnapshotFromAPI(gameId);
-      // Play appropriate sound for AI (or any) move
-      playMoveSound(false, false);
+      // Play sound at the same time the piece starts moving
+      playMoveSound(false);
       return;
     }
     if (event === "turn_changed") {
@@ -1016,7 +1016,6 @@
         const targetMoveNumber = Math.max(historyArray.length, detailedArray.length);
         startAnalysisPolling(targetMoveNumber, result.captured);
       }
-      playMoveSound(false, false); // human move - can be enhanced later with capture/checkmate detection
       input.focus();
       return true;
     } catch (_error) {
@@ -1205,6 +1204,34 @@
   if (gameModeSelect) gameModeSelect.addEventListener("change", updateSetupControlState);
   if (fenInput) fenInput.addEventListener("input", updateSetupControlState);
   if (aiStrengthSelect) aiStrengthSelect.addEventListener("change", updateSetupControlState);
+
+  // --- Top-3 move hints (Shift + hover) ---
+  let hintsVisible = false;
+  const showTopMoves = async () => {
+    if (!currentGameId) return;
+    try {
+      const res = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/top-moves?k=3`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.suggestions && data.suggestions.length > 0) {
+        // Simple visual: log + optional future arrow rendering
+        console.log("[Top moves]", data.suggestions);
+        // You can extend this to draw arrows on the board
+      }
+    } catch (_) {}
+  };
+
+  // Show hints when Shift is held
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Shift" && !hintsVisible) {
+      hintsVisible = true;
+      showTopMoves();
+    }
+  });
+  document.addEventListener("keyup", (e) => {
+    if (e.key === "Shift") hintsVisible = false;
+  });
+
   if (configApplyButton) {
     configApplyButton.addEventListener("click", async () => {
       try {

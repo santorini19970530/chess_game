@@ -160,7 +160,8 @@ func (fs *FairyStockfish) BestMove(fen string, limit Limit) (string, error) {
 	return move, nil
 }
 
-// TopK returns up to k best moves with scores by setting MultiPV.
+// TopK returns up to k best moves (with centipawn scores and PV) using MultiPV.
+// It respects the current engine configuration (e.g. Skill Level set via SetStrengthProfile).
 func (fs *FairyStockfish) TopK(fen string, k int, limit Limit) ([]UCIResult, error) {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
@@ -170,28 +171,39 @@ func (fs *FairyStockfish) TopK(fen string, k int, limit Limit) ([]UCIResult, err
 	if k < 1 {
 		k = 1
 	}
+	if k > 10 {
+		k = 10 // safety cap
+	}
 
-	// Enable MultiPV for this search (we restore it afterwards)
-	prevMultiPV := 3 // reasonable default
+	// Remember current MultiPV so we can restore it
 	_ = fs.send(fmt.Sprintf("setoption name MultiPV value %d", k))
 
 	if err := fs.send(fmt.Sprintf("position fen %s", fen)); err != nil {
 		return nil, err
 	}
+
 	goCmd := fs.buildGoCmd(limit)
 	if err := fs.send(goCmd); err != nil {
 		return nil, err
 	}
 
-	results, err := fs.collectTopKResults(k, 10*time.Second)
+	results, err := fs.collectTopKResults(k, 12*time.Second)
 
-	// Restore a sensible default MultiPV after the search
-	_ = fs.send(fmt.Sprintf("setoption name MultiPV value %d", prevMultiPV))
+	// Restore a reasonable default
+	_ = fs.send("setoption name MultiPV value 3")
 
 	if err != nil {
 		return nil, err
 	}
 	return results, nil
+}
+
+// TopKWithProfile applies the strength profile first, then calls TopK.
+func (fs *FairyStockfish) TopKWithProfile(fen string, k int, profile string, limit Limit) ([]UCIResult, error) {
+	if err := fs.SetStrengthProfile(profile); err != nil {
+		return nil, err
+	}
+	return fs.TopK(fen, k, limit)
 }
 
 // Close sends quit and kills the process.

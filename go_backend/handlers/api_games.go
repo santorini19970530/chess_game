@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
 	commandpkg "go_backend/game/command"
+	"go_backend/game/engine"
 	pieces "go_backend/game/piece"
 	sessionpkg "go_backend/game/session"
 )
@@ -98,6 +100,10 @@ func (h *Handler) APIGameRoutes(w http.ResponseWriter, r *http.Request) {
 		h.getAPIGameLegalMoves(w, r, gameID)
 		return
 	}
+	if len(parts) == 2 && parts[1] == "top-moves" {
+		h.getAPIGameTopMoves(w, r, gameID)
+		return
+	}
 	if len(parts) == 3 && parts[1] == "analysis" && parts[2] == "latest" {
 		h.getAPIGameLatestAnalysis(w, r, gameID)
 		return
@@ -138,6 +144,116 @@ func (h *Handler) getAPIGameByID(w http.ResponseWriter, r *http.Request, gameID 
 	}); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "Response encode error")
 	}
+}
+
+// getAPIGameTopMoves returns the top-k moves with scores using Fairy-Stockfish.
+func (h *Handler) getAPIGameTopMoves(w http.ResponseWriter, r *http.Request, gameID string) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		writeJSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	kStr := r.URL.Query().Get("k")
+	profile := r.URL.Query().Get("profile")
+
+	k := 3
+	if kStr != "" {
+		if parsed, err := strconv.Atoi(kStr); err == nil && parsed > 0 {
+			k = parsed
+		}
+	}
+	if k > 10 {
+		k = 10
+	}
+
+	game, err := sessionpkg.GetGameSessionByID(gameID)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "Game session not found")
+		return
+	}
+
+	fen, err := sessionpkg.CurrentFENByID(gameID)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Failed to get FEN")
+		return
+	}
+
+	if profile == "" {
+		profile = game.Config.AIProfile
+	}
+	if profile == "" {
+		profile = "intermediate"
+	}
+
+	// Only available when Go UCI path is enabled
+	if !useFairyStockfish() {
+		writeJSONError(w, http.StatusServiceUnavailable, "Fairy-Stockfish path is disabled (set USE_FAIRY_STOCKFISH=true)")
+		return
+	}
+
+	fs, err := getFairyStockfish()
+	if err != nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "Fairy-Stockfish engine unavailable")
+		return
+	}
+
+	limit := engine.Limit{Depth: 12}
+	results, err := fs.TopKWithProfile(fen, k, profile, limit)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Failed to get top moves")
+		return
+	}
+
+	// Build set of legal UCI moves for the current position
+	legalSet := make(map[string]struct{})
+	snap, _ := sessionpkg.BuildSnapshotByID(gameID)
+	for _, p := range snap.State {
+		dests, _ := sessionpkg.LegalMovesForSquareByID(gameID, p.File, p.Rank)
+		for _, d := range dests {
+			uci := fmt.Sprintf("%c%d%c%d", 'a'+byte(p.File-1), p.Rank, 'a'+byte(d.File-1), d.Rank)
+			if d.RequiresPromotion {
+				uci += "q"
+			}
+			legalSet[strings.ToLower(uci)] = struct{}{}
+		}
+	}
+
+	// Filter to only legal moves
+	legalResults := make([]engine.UCIResult, 0, len(results))
+	for _, r := range results {
+		if _, ok := legalSet[strings.ToLower(r.Move)]; ok {
+			legalResults = append(legalResults, r)
+		}
+	}
+	if len(legalResults) == 0 {
+		legalResults = results // fallback if filtering removed everything
+	}
+
+	type moveSuggestion struct {
+		Move    string `json:"move"`
+		Score   int    `json:"score_cp"`
+		Depth   int    `json:"depth"`
+		MultiPV int    `json:"multipv"`
+	}
+
+	suggestions := make([]moveSuggestion, 0, len(legalResults))
+	for _, r := range legalResults {
+		suggestions = append(suggestions, moveSuggestion{
+			Move:    r.Move,
+			Score:   r.Score,
+			Depth:   r.Depth,
+			MultiPV: r.MultiPV,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"game_id":   gameID,
+		"profile":   profile,
+		"k":         k,
+		"suggestions": suggestions,
+	})
 }
 
 func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID string) {

@@ -96,3 +96,61 @@ func TestFairyStockfish_Restart(t *testing.T) {
 		t.Fatalf("IsReady after restart failed: %v", err)
 	}
 }
+
+func TestFairyStockfish_TopKReturnsLegalMoves(t *testing.T) {
+	bin := os.Getenv("FAIRY_STOCKFISH_PATH")
+	if bin == "" {
+		t.Skip("FAIRY_STOCKFISH_PATH not set; skipping UCI integration test")
+	}
+
+	fs, err := NewFairyStockfish(bin)
+	if err != nil {
+		t.Fatalf("NewFairyStockfish failed: %v", err)
+	}
+	if err := fs.Start(); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer fs.Close()
+
+	results, err := fs.TopK("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 3, Limit{Depth: 8})
+	if err != nil {
+		t.Fatalf("TopK failed: %v", err)
+	}
+	if len(results) == 0 || len(results) > 3 {
+		t.Fatalf("expected 1-3 results, got %d", len(results))
+	}
+	for _, r := range results {
+		if r.Move == "" {
+			t.Fatalf("TopK returned empty move")
+		}
+	}
+}
+
+func TestFairyStockfish_TopKRespectsProfile(t *testing.T) {
+	bin := os.Getenv("FAIRY_STOCKFISH_PATH")
+	if bin == "" {
+		t.Skip("FAIRY_STOCKFISH_PATH not set; skipping UCI integration test")
+	}
+
+	fs, err := NewFairyStockfish(bin)
+	if err != nil {
+		t.Fatalf("NewFairyStockfish failed: %v", err)
+	}
+	if err := fs.Start(); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer fs.Close()
+
+	for _, p := range []string{"beginner", "master"} {
+		if err := fs.SetStrengthProfile(p); err != nil {
+			t.Fatalf("SetStrengthProfile(%s) failed: %v", p, err)
+		}
+		results, err := fs.TopK("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", 3, Limit{Depth: 8})
+		if err != nil {
+			t.Fatalf("TopK with profile %s failed: %v", p, err)
+		}
+		if len(results) == 0 {
+			t.Fatalf("TopK with profile %s returned no results", p)
+		}
+	}
+}
