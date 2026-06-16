@@ -103,26 +103,30 @@ func (fs *FairyStockfish) SetOption(name, value string) error {
 	return fs.send(cmd)
 }
 
-// SetStrengthProfile maps profile to UCI options (Skill Level + limits).
+// SetStrengthProfile maps profile to UCI options (Skill Level + MultiPV).
 func (fs *FairyStockfish) SetStrengthProfile(profile string) error {
-	profile = strings.ToLower(profile)
-	var skill int
-	switch profile {
+	p := strings.ToLower(strings.TrimSpace(profile))
+	var skill, multipv int
+
+	switch p {
 	case "beginner":
-		skill = 0
+		skill, multipv = 0, 1
 	case "intermediate":
-		skill = 5
+		skill, multipv = 5, 3
 	case "advanced":
-		skill = 15
+		skill, multipv = 15, 3
 	case "master":
-		skill = 20
+		skill, multipv = 20, 5
 	default:
-		skill = 5
+		skill, multipv = 5, 3
 	}
+
 	if err := fs.SetOption("Skill Level", fmt.Sprintf("%d", skill)); err != nil {
 		return err
 	}
-	// Additional options could be set here (e.g. Hash, Threads)
+	if err := fs.SetOption("MultiPV", fmt.Sprintf("%d", multipv)); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -149,14 +153,34 @@ func (fs *FairyStockfish) BestMove(fen string, limit Limit) (string, error) {
 	return move, nil
 }
 
-// TopK is a placeholder that currently returns only the best move (full multi-pv requires more parsing).
+// TopK returns up to k best moves with scores by setting MultiPV.
 func (fs *FairyStockfish) TopK(fen string, k int, limit Limit) ([]UCIResult, error) {
-	// For step 1 we keep simple; later can implement MultiPV
-	best, err := fs.BestMove(fen, limit)
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+	if !fs.running {
+		return nil, errors.New("engine not running")
+	}
+	if k < 1 {
+		k = 1
+	}
+
+	// Enable MultiPV for this search
+	if err := fs.send(fmt.Sprintf("setoption name MultiPV value %d", k)); err != nil {
+		return nil, err
+	}
+	if err := fs.send(fmt.Sprintf("position fen %s", fen)); err != nil {
+		return nil, err
+	}
+	goCmd := fs.buildGoCmd(limit)
+	if err := fs.send(goCmd); err != nil {
+		return nil, err
+	}
+
+	results, err := fs.collectTopKResults(k, 10*time.Second)
 	if err != nil {
 		return nil, err
 	}
-	return []UCIResult{{Move: best}}, nil
+	return results, nil
 }
 
 // Close sends quit and kills the process.
@@ -175,6 +199,13 @@ func (fs *FairyStockfish) Close() error {
 		fs.cmd.Process.Kill()
 	}
 	return nil
+}
+
+// Restart attempts to stop and restart the engine (for crash recovery).
+func (fs *FairyStockfish) Restart() error {
+	_ = fs.Close()
+	time.Sleep(100 * time.Millisecond)
+	return fs.Start()
 }
 
 // --- internal helpers ---
@@ -227,9 +258,88 @@ func (fs *FairyStockfish) waitForBestMove(timeout time.Duration) (string, error)
 				}
 				return "", errors.New("malformed bestmove")
 			}
-			// TODO: parse info lines for score / pv into internal state if needed
 		}
 	}
+}
+
+// collectTopKResults reads info lines until bestmove, parsing multipv results.
+func (fs *FairyStockfish) collectTopKResults(k int, timeout time.Duration) ([]UCIResult, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	results := make([]UCIResult, 0, k)
+	seen := make(map[int]UCIResult) // multipv index -> result
+
+	for {
+		select {
+		case <-ctx.Done():
+			// return what we have so far
+			for i := 1; i <= k; i++ {
+				if r, ok := seen[i]; ok {
+					results = append(results, r)
+				}
+			}
+			return results, nil
+		default:
+			line, err := fs.stdout.ReadString('\n')
+			if err != nil {
+				return nil, err
+			}
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "bestmove") {
+				// finalize
+				for i := 1; i <= k; i++ {
+					if r, ok := seen[i]; ok {
+						results = append(results, r)
+					}
+				}
+				return results, nil
+			}
+			if strings.HasPrefix(line, "info") {
+				res := parseInfoLine(line)
+				if res != nil && res.Move != "" {
+					if res.PV != nil && len(res.PV) > 0 {
+						res.Move = res.PV[0]
+					}
+					if res.Depth == 0 {
+						res.Depth = 1
+					}
+					// assume multipv index or just append first k unique
+					idx := len(seen) + 1
+					if idx <= k {
+						seen[idx] = *res
+					}
+				}
+			}
+		}
+	}
+}
+
+// parseInfoLine extracts score cp, pv, depth from an info line.
+func parseInfoLine(line string) *UCIResult {
+	res := &UCIResult{}
+	fields := strings.Fields(line)
+	for i := 0; i < len(fields); i++ {
+		switch fields[i] {
+		case "depth":
+			if i+1 < len(fields) {
+				fmt.Sscanf(fields[i+1], "%d", &res.Depth)
+			}
+		case "score":
+			if i+2 < len(fields) && fields[i+1] == "cp" {
+				fmt.Sscanf(fields[i+2], "%d", &res.Score)
+			}
+		case "pv":
+			res.PV = fields[i+1:]
+			if len(res.PV) > 0 {
+				res.Move = res.PV[0]
+			}
+		}
+	}
+	if res.Move == "" && res.PV == nil {
+		return nil
+	}
+	return res
 }
 
 func (fs *FairyStockfish) buildGoCmd(limit Limit) string {
