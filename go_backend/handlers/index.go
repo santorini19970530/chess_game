@@ -480,23 +480,34 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 
 	aiMoveApplied := ""
 
-	// Human vs AI orchestration (legacy path): after human move, call decision layer if mode is human_vs_ai
+	// Human vs AI: start AI thinking in background (legacy command path)
 	if finalGame.Mode == sessionpkg.GameModeHumanVsAI && finalGame.Result == sessionpkg.GameResultInProgress {
-		if aiMove, aiErr := SelectAIMove(gameID); aiErr == nil && aiMove != "" {
-			if _, applyErr := sessionpkg.ApplyMoveByCommandByID(gameID, aiMove); applyErr != nil {
-				log.Printf("warning: AI move failed to apply in human_vs_ai mode %s: %v", gameIDLabel(gameID), applyErr)
-			} else {
-				aiMoveApplied = aiMove
-				log.Printf("human_vs_ai: AI move applied %s command=%s", gameIDLabel(gameID), aiMove)
+		go func() {
+			if aiMove, aiErr := SelectAIMove(gameID); aiErr == nil && aiMove != "" {
+				if _, applyErr := sessionpkg.ApplyMoveByCommandByID(gameID, aiMove); applyErr != nil {
+					log.Printf("warning: background AI move failed %s: %v", gameIDLabel(gameID), applyErr)
+					return
+				}
+				log.Printf("human_vs_ai: background AI move applied %s command=%s", gameIDLabel(gameID), aiMove)
+
+				// Broadcast via WebSocket so frontend updates
+				gameSocketHub.Broadcast(gameID, socketEventMoveApplied, map[string]interface{}{
+					"command": aiMove,
+				})
+
+				// Enqueue analysis
+				enqueueCurrentPositionAnalysis(gameID, aiMove)
+
+				if _, refreshErr := sessionpkg.RefreshGameSessionOutcomeByID(gameID); refreshErr != nil {
+					log.Printf("warning: refresh after background AI failed %s: %v", gameIDLabel(gameID), refreshErr)
+				}
+				if g, _ := sessionpkg.GetGameSessionByID(gameID); g.Result != sessionpkg.GameResultInProgress {
+					_ = sessionpkg.ArchiveGameIfNeededByID(gameID)
+				}
+			} else if aiErr != nil {
+				log.Printf("warning: background SelectAIMove failed %s: %v", gameIDLabel(gameID), aiErr)
 			}
-			finalGame, err = sessionpkg.RefreshGameSessionOutcomeByID(gameID)
-			if err != nil {
-				http.Error(w, "Game session not found after AI move", http.StatusNotFound)
-				return
-			}
-		} else if aiErr != nil {
-			log.Printf("warning: SelectAIMove failed for %s: %v", gameIDLabel(gameID), aiErr)
-		}
+		}()
 	}
 
 	if finalGame.Result != sessionpkg.GameResultInProgress {

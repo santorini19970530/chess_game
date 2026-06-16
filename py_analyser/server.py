@@ -56,6 +56,7 @@ def _parse_common_payload(payload: dict[str, Any]) -> tuple[dict[str, Any] | Non
     variant = str(payload.get("variant", "")).strip().lower() or game_type
     move_number_raw = payload.get("move_number", 0)
     move_history_raw = payload.get("move_history", [])
+    profile = str(payload.get("profile", "")).strip().lower() or "intermediate"
 
     if not fen:
         return None, _error_response(request_id, 'Missing required field: "fen"')
@@ -92,6 +93,7 @@ def _parse_common_payload(payload: dict[str, Any]) -> tuple[dict[str, Any] | Non
             "variant": variant or game_type,
             "move_number": move_number,
             "move_history": move_history,
+            "profile": profile,
         },
         None,
     )
@@ -159,6 +161,7 @@ def history() -> tuple:
             color=common["color"],
             move_history=common["move_history"],
             request_id=common["request_id"],
+            profile=common.get("profile", "intermediate"),
         )
     except ValueError as exc:
         return _error_response(common["request_id"], str(exc), "validation", 400)
@@ -188,6 +191,7 @@ def policy() -> tuple:
             color=common["color"],
             top_k=top_k_value,
             request_id=common["request_id"],
+            profile=common.get("profile", "intermediate"),
         )
     except ValueError as exc:
         return _error_response(common["request_id"], str(exc), "validation", 400)
@@ -209,6 +213,7 @@ def value() -> tuple:
             fen=common["fen"],
             color=common["color"],
             request_id=common["request_id"],
+            profile=common.get("profile", "intermediate"),
         )
     except ValueError as exc:
         return _error_response(common["request_id"], str(exc), "validation", 400)

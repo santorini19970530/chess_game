@@ -43,6 +43,10 @@ func SelectAIMove(gameID string) (string, error) {
 	}
 
 	ai := NewAIClient()
+	profile := snapshot.Game.Config.AIProfile
+	if profile == "" {
+		profile = "intermediate"
+	}
 	commonReq := AICommonRequest{
 		RequestID:   fmt.Sprintf("%s-ai-%d", gameID, len(history)+1),
 		GameID:      gameID,
@@ -52,6 +56,7 @@ func SelectAIMove(gameID string) (string, error) {
 		Color:       strings.ToLower(color),
 		MoveNumber:  len(history) + 1,
 		MoveHistory: history,
+		Profile:     profile,
 	}
 
 	// Context is optional for correctness in this stage.

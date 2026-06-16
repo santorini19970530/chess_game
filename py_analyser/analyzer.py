@@ -16,12 +16,53 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
+import random
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import chess
+import chess.engine
+
+
+# Fairy-Stockfish binary path (override via environment variable)
+FS_BINARY_PATH: str = os.environ.get(
+    "FAIRY_STOCKFISH_PATH",
+    os.path.join(os.path.dirname(__file__), "Fairy-Stockfish-fairy_sf_14", "src", "stockfish"),
+)
+
+_engine: Optional[chess.engine.SimpleEngine] = None
+
+
+def _get_engine() -> chess.engine.SimpleEngine:
+    """Return a singleton Fairy-Stockfish engine instance (opened once)."""
+    global _engine
+    if _engine is None:
+        if not os.path.exists(FS_BINARY_PATH):
+            raise FileNotFoundError(
+                f"Fairy-Stockfish binary not found at {FS_BINARY_PATH}. "
+                "Set FAIRY_STOCKFISH_PATH environment variable to the correct path."
+            )
+        _engine = chess.engine.SimpleEngine.popen_uci(FS_BINARY_PATH)
+    return _engine
+
+
+def _profile_to_uci_options(profile: str) -> tuple[dict, chess.engine.Limit]:
+    """Map strength profile to Fairy-Stockfish UCI options and search limits."""
+    p = (profile or "intermediate").lower()
+    if p == "beginner":
+        return {"Skill Level": 0}, chess.engine.Limit(depth=5, time=0.2)
+    if p == "intermediate":
+        return {"Skill Level": 5}, chess.engine.Limit(depth=8, time=0.4)
+    if p == "advanced":
+        return {"Skill Level": 15}, chess.engine.Limit(depth=12, time=0.8)
+    if p == "master":
+        return {"Skill Level": 20}, chess.engine.Limit(depth=18, time=1.5)
+    # default
+    return {"Skill Level": 5}, chess.engine.Limit(depth=8, time=0.4)
+
 
 PIECE_VALUES = {
     chess.PAWN: 100,
@@ -122,6 +163,53 @@ def suggest_moves(fen: str, color: str, top_k: int = 5) -> List[MoveSuggestion]:
     return ranked
 
 
+def suggest_moves_fs(
+    fen: str,
+    color: str,
+    top_k: int = 5,
+    profile: str = "intermediate",
+) -> List[MoveSuggestion]:
+    """Use Fairy-Stockfish to generate move suggestions according to the given strength profile."""
+    board = chess.Board(fen)
+    target_color = parse_color(color)
+    board.turn = target_color
+
+    if board.is_game_over():
+        return []
+
+    try:
+        engine = _get_engine()
+        options, limit = _profile_to_uci_options(profile)
+        engine.configure(options)
+
+        # Use MultiPV to get multiple candidate moves when top_k > 1
+        multipv = max(1, min(top_k, 10))
+        analysis = engine.analyse(board, limit, multipv=multipv)
+
+        suggestions: List[MoveSuggestion] = []
+        for idx, info in enumerate(analysis, start=1):
+            move = info.get("pv", [None])[0]
+            if move is None:
+                continue
+            score = info.get("score")
+            cp = score.white().score(mate_score=100000) if score else 0
+            san = board.san(move)
+            suggestions.append(
+                MoveSuggestion(rank=idx, uci=move.uci(), san=san, score=cp)
+            )
+
+        # If we got fewer than requested, fall back to legal moves
+        if len(suggestions) < top_k:
+            for move in list(board.legal_moves)[len(suggestions) : top_k]:
+                san = board.san(move)
+                suggestions.append(MoveSuggestion(rank=len(suggestions) + 1, uci=move.uci(), san=san, score=0))
+
+        return suggestions[:top_k]
+    except Exception:
+        # On any engine error, fall back to the old heuristic so the service stays up
+        return suggest_moves(fen, color, top_k)
+
+
 def cp_to_win_chance(cp_score: int) -> float:
     # Logistic mapping from centipawn-like score to probability.
     return 1.0 / (1.0 + math.exp(-cp_score / 300.0))
@@ -209,6 +297,7 @@ def build_history_payload(
     color: str,
     move_history: List[str] | None = None,
     request_id: str | None = None,
+    profile: str = "intermediate",
 ) -> Dict[str, object]:
     started_at = time.perf_counter()
     board = chess.Board(fen)
@@ -252,9 +341,13 @@ def build_policy_payload(
     color: str,
     top_k: int = 5,
     request_id: str | None = None,
+    profile: str = "intermediate",
 ) -> Dict[str, object]:
     started_at = time.perf_counter()
-    suggestions = suggest_moves(fen, color, top_k)
+
+    # Use real Fairy-Stockfish when available (profile controls UCI options)
+    suggestions = suggest_moves_fs(fen, color, top_k, profile)
+
     if not suggestions:
         candidates = []
     else:
@@ -278,7 +371,7 @@ def build_policy_payload(
     return {
         "request_id": request_id or str(uuid.uuid4()),
         "status": "ok",
-        "source": "heuristic",
+        "source": "fairy-stockfish",
         "best_move_uci": best_move_uci,
         "candidates": candidates,
         "latency_ms": latency_ms,
@@ -289,6 +382,7 @@ def build_value_payload(
     fen: str,
     color: str,
     request_id: str | None = None,
+    profile: str = "intermediate",
 ) -> Dict[str, object]:
     started_at = time.perf_counter()
     board = chess.Board(fen)

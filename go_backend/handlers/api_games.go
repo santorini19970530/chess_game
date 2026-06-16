@@ -198,27 +198,40 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 
 	aiMoveApplied := ""
 
-	// Human vs AI orchestration: after human move, call decision layer if mode is human_vs_ai
+	// Human vs AI: start AI thinking in background so the human move returns immediately.
+	// The AI move (governed by the selected strength profile) will be applied later.
 	if finalGame.Mode == sessionpkg.GameModeHumanVsAI && finalGame.Result == sessionpkg.GameResultInProgress {
-		aiMove, aiErr := SelectAIMove(gameID)
-		if aiErr != nil || aiMove == "" {
-			if aiErr != nil {
-				log.Printf("warning: SelectAIMove failed for %s (continuing with human move only): %v", gameIDLabel(gameID), aiErr)
-			}
-		} else {
-			if _, applyErr := sessionpkg.ApplyMoveByCommandByID(gameID, aiMove); applyErr != nil {
-				log.Printf("warning: AI move failed to apply in human_vs_ai mode %s: %v", gameIDLabel(gameID), applyErr)
-			} else {
-				aiMoveApplied = aiMove
-				log.Printf("human_vs_ai: AI move applied %s command=%s", gameIDLabel(gameID), aiMove)
-			}
-			// Refresh final state after AI move
-			finalGame, err = sessionpkg.RefreshGameSessionOutcomeByID(gameID)
-			if err != nil {
-				writeJSONError(w, http.StatusNotFound, "Game session not found after AI move")
+		go func() {
+			aiMove, aiErr := SelectAIMove(gameID)
+			if aiErr != nil || aiMove == "" {
+				if aiErr != nil {
+					log.Printf("warning: background SelectAIMove failed for %s: %v", gameIDLabel(gameID), aiErr)
+				}
 				return
 			}
-		}
+			if _, applyErr := sessionpkg.ApplyMoveByCommandByID(gameID, aiMove); applyErr != nil {
+				log.Printf("warning: background AI move failed for %s: %v", gameIDLabel(gameID), applyErr)
+				return
+			}
+			log.Printf("human_vs_ai: background AI move applied %s command=%s", gameIDLabel(gameID), aiMove)
+
+			// Broadcast the AI move via WebSocket so the frontend updates immediately
+			gameSocketHub.Broadcast(gameID, socketEventMoveApplied, map[string]interface{}{
+				"command": aiMove,
+			})
+
+			// Enqueue analysis (for the analysis panel / win prob update)
+			enqueueCurrentPositionAnalysis(gameID, aiMove)
+
+			// Refresh outcome (may end the game)
+			if _, refreshErr := sessionpkg.RefreshGameSessionOutcomeByID(gameID); refreshErr != nil {
+				log.Printf("warning: refresh after background AI move failed %s: %v", gameIDLabel(gameID), refreshErr)
+			}
+			// Archive if the game just ended
+			if g, _ := sessionpkg.GetGameSessionByID(gameID); g.Result != sessionpkg.GameResultInProgress {
+				_ = sessionpkg.ArchiveGameIfNeededByID(gameID)
+			}
+		}()
 	}
 
 	if finalGame.Result != sessionpkg.GameResultInProgress {
@@ -433,18 +446,28 @@ func (h *Handler) postAPIGameNew(w http.ResponseWriter, r *http.Request, gameID 
 		return
 	}
 
-	// Auto-play first AI move if human is Black
+	// Auto-play first AI move if human is Black — run in background so "New Game" returns instantly.
 	if game.Mode == sessionpkg.GameModeHumanVsAI && strings.ToLower(game.Config.HumanColor) == "black" && game.Result == sessionpkg.GameResultInProgress {
-		if aiMove, aiErr := SelectAIMove(game.ID); aiErr == nil && aiMove != "" {
-			if _, applyErr := sessionpkg.ApplyMoveByCommandByID(game.ID, aiMove); applyErr != nil {
-				log.Printf("warning: initial AI move failed for %s: %v", gameIDLabel(game.ID), applyErr)
-			} else {
-				log.Printf("human_vs_ai: initial AI move applied %s command=%s", gameIDLabel(game.ID), aiMove)
+		go func() {
+			if aiMove, aiErr := SelectAIMove(game.ID); aiErr == nil && aiMove != "" {
+				if _, applyErr := sessionpkg.ApplyMoveByCommandByID(game.ID, aiMove); applyErr != nil {
+					log.Printf("warning: initial background AI move failed for %s: %v", gameIDLabel(game.ID), applyErr)
+					return
+				}
+				log.Printf("human_vs_ai: initial background AI move applied %s command=%s", gameIDLabel(game.ID), aiMove)
+
+				gameSocketHub.Broadcast(game.ID, socketEventMoveApplied, map[string]interface{}{
+					"command": aiMove,
+				})
+				enqueueCurrentPositionAnalysis(game.ID, aiMove)
+
+				if _, refreshErr := sessionpkg.RefreshGameSessionOutcomeByID(game.ID); refreshErr != nil {
+					log.Printf("warning: refresh after initial background AI failed %s: %v", gameIDLabel(game.ID), refreshErr)
+				}
+			} else if aiErr != nil {
+				log.Printf("warning: initial SelectAIMove failed %s: %v", gameIDLabel(game.ID), aiErr)
 			}
-			game, _ = sessionpkg.RefreshGameSessionOutcomeByID(game.ID)
-		} else {
-			log.Printf("warning: SelectAIMove failed: %v", aiErr)
-		}
+		}()
 	}
 	snapshot, err := sessionpkg.BuildSnapshotByID(game.ID)
 	if err != nil {
