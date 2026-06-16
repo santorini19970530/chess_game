@@ -443,6 +443,25 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Game session not found", http.StatusNotFound)
 		return
 	}
+
+	// Human vs AI orchestration (legacy path): after human move, call decision layer if mode is human_vs_ai
+	if finalGame.Mode == sessionpkg.GameModeHumanVsAI && finalGame.Result == sessionpkg.GameResultInProgress {
+		if aiMove, aiErr := SelectAIMove(gameID); aiErr == nil && aiMove != "" {
+			if _, applyErr := sessionpkg.ApplyMoveByCommandByID(gameID, aiMove); applyErr != nil {
+				log.Printf("warning: AI move failed to apply in human_vs_ai mode %s: %v", gameIDLabel(gameID), applyErr)
+			} else {
+				log.Printf("human_vs_ai: AI move applied %s command=%s", gameIDLabel(gameID), aiMove)
+			}
+			finalGame, err = sessionpkg.RefreshGameSessionOutcomeByID(gameID)
+			if err != nil {
+				http.Error(w, "Game session not found after AI move", http.StatusNotFound)
+				return
+			}
+		} else if aiErr != nil {
+			log.Printf("warning: SelectAIMove failed for %s: %v", gameIDLabel(gameID), aiErr)
+		}
+	}
+
 	if finalGame.Result != sessionpkg.GameResultInProgress {
 		if err := sessionpkg.ArchiveGameIfNeededByID(gameID); err != nil {
 			http.Error(w, "Failed to archive completed game", http.StatusInternalServerError)

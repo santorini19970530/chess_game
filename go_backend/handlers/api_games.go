@@ -182,6 +182,26 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 		writeJSONError(w, http.StatusNotFound, "Game session not found")
 		return
 	}
+
+	// Human vs AI orchestration: after human move, call decision layer if mode is human_vs_ai
+	if finalGame.Mode == sessionpkg.GameModeHumanVsAI && finalGame.Result == sessionpkg.GameResultInProgress {
+		if aiMove, aiErr := SelectAIMove(gameID); aiErr == nil && aiMove != "" {
+			if _, applyErr := sessionpkg.ApplyMoveByCommandByID(gameID, aiMove); applyErr != nil {
+				log.Printf("warning: AI move failed to apply in human_vs_ai mode %s: %v", gameIDLabel(gameID), applyErr)
+			} else {
+				log.Printf("human_vs_ai: AI move applied %s command=%s", gameIDLabel(gameID), aiMove)
+			}
+			// Refresh final state after AI move
+			finalGame, err = sessionpkg.RefreshGameSessionOutcomeByID(gameID)
+			if err != nil {
+				writeJSONError(w, http.StatusNotFound, "Game session not found after AI move")
+				return
+			}
+		} else if aiErr != nil {
+			log.Printf("warning: SelectAIMove failed for %s: %v", gameIDLabel(gameID), aiErr)
+		}
+	}
+
 	if finalGame.Result != sessionpkg.GameResultInProgress {
 		if err := sessionpkg.ArchiveGameIfNeededByID(gameID); err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "Failed to archive completed game")
