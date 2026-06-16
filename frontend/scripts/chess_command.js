@@ -27,6 +27,7 @@
   const humanSideSelect = document.getElementById("human_side");
   const aiGameCountInput = document.getElementById("ai_game_count");
   const fenInput = document.getElementById("fen_input");
+  const aiStrengthSelect = document.getElementById("ai_strength");
   const configApplyButton = document.getElementById("game_config_apply");
   const boardElement = document.querySelector(".chess_board");
   const promotionPicker = document.getElementById("promotion_picker");
@@ -397,6 +398,10 @@
       aiGameCountInput.disabled = mode !== "ai_vs_ai";
       if (fenProvided) aiGameCountInput.value = "1";
     }
+    if (aiStrengthSelect) {
+      // Show strength selector only for modes that involve AI
+      aiStrengthSelect.disabled = !(mode === "human_vs_ai" || mode === "ai_vs_ai");
+    }
   };
 
   const renderGameConfig = (game) => {
@@ -407,6 +412,7 @@
     if (humanSideSelect) humanSideSelect.value = String(cfg.humanColor || "white");
     if (aiGameCountInput) aiGameCountInput.value = String(cfg.aiGameCount || 1);
     if (fenInput) fenInput.value = String(cfg.startFen || "");
+    if (aiStrengthSelect) aiStrengthSelect.value = String(cfg.aiProfile || cfg.aiStrength || "intermediate");
     // Update the internal humanColor variable used for move validation
     humanColor = String(cfg.humanColor || "white").toLowerCase();
     updateSetupControlState();
@@ -1028,6 +1034,7 @@
       mode,
       humanColor: String(humanSideSelect?.value || "white"),
       aiGameCount: aiCount,
+      aiProfile: String(aiStrengthSelect?.value || "intermediate"),
       fen,
     });
 
@@ -1183,6 +1190,7 @@
   button.addEventListener("click", submitCommand);
   if (gameModeSelect) gameModeSelect.addEventListener("change", updateSetupControlState);
   if (fenInput) fenInput.addEventListener("input", updateSetupControlState);
+  if (aiStrengthSelect) aiStrengthSelect.addEventListener("change", updateSetupControlState);
   if (configApplyButton) {
     configApplyButton.addEventListener("click", async () => {
       try {
@@ -1198,6 +1206,7 @@
           mode,
           humanColor: String(humanSideSelect?.value || "white"),
           aiGameCount: aiCount,
+          aiProfile: String(aiStrengthSelect?.value || "intermediate"),
           fen,
         });
         const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/config`, {
@@ -1274,10 +1283,14 @@
           setStatus("Missing game session. Start a new game first.", "error");
           return;
         }
-        // Send current dropdown values so the new game respects the selected mode/side
+        // Send current dropdown values so the new game respects the selected mode/side/profile
         const mode = String(gameModeSelect?.value || "human_vs_human");
         const humanColor = String(humanSideSelect?.value || "white");
-        const body = new URLSearchParams({ mode, humanColor });
+        const body = new URLSearchParams({
+          mode,
+          humanColor,
+          aiProfile: String(aiStrengthSelect?.value || "intermediate"),
+        });
 
         const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/new`, {
           method: "POST",

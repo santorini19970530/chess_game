@@ -82,6 +82,8 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`<select id="human_side"><option value="white">White</option><option value="black">Black</option></select>`)
 	mainHTMLCode.WriteString(`<label for="ai_game_count">AI game count</label>`)
 	mainHTMLCode.WriteString(`<input id="ai_game_count" type="number" min="1" value="1" />`)
+	mainHTMLCode.WriteString(`<label for="ai_strength">AI strength</label>`)
+	mainHTMLCode.WriteString(`<select id="ai_strength"><option value="beginner">Beginner</option><option value="intermediate" selected>Intermediate</option><option value="advanced">Advanced</option><option value="master">Master</option></select>`)
 	mainHTMLCode.WriteString(`<label for="fen_input">Starting FEN (optional)</label>`)
 	mainHTMLCode.WriteString(`<textarea id="fen_input" rows="3" placeholder="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>`)
 	mainHTMLCode.WriteString(`<button id="game_config_apply" type="button">Apply Setup</button>`)

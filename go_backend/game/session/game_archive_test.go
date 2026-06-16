@@ -110,3 +110,62 @@ func TestArchiveActiveGameIfNeeded_IncludesFlaggedByInHistory(t *testing.T) {
 		t.Fatalf("expected history to include flag entry with side")
 	}
 }
+
+// TestNewUniqueGameID_RapidCreationYieldsDistinctIDs verifies that many games created
+// in quick succession all receive distinct IDs (covers the strengthened ID generator).
+func TestNewUniqueGameID_RapidCreationYieldsDistinctIDs(t *testing.T) {
+	resetGameSessionForTest()
+	ids := make(map[string]bool)
+	const n = 100
+	for i := 0; i < n; i++ {
+		g, err := CreateGame(GameModeHumanVsHuman, GameTypeChess, "white", 1, "")
+		if err != nil {
+			t.Fatalf("create game %d failed: %v", i, err)
+		}
+		if ids[g.ID] {
+			t.Fatalf("duplicate ID generated: %s", g.ID)
+		}
+		ids[g.ID] = true
+	}
+	if len(ids) != n {
+		t.Fatalf("expected %d unique IDs, got %d", n, len(ids))
+	}
+}
+
+// TestArchiveActiveGameIfNeeded_DoesNotDuplicateOnSecondCall ensures the archive
+// logic (guarded by the Archived flag) never writes the same game ID twice.
+func TestArchiveActiveGameIfNeeded_DoesNotDuplicateOnSecondCall(t *testing.T) {
+	resetGameSessionForTest()
+	ResetGame()
+
+	tempDir := t.TempDir()
+	previousArchivePath := archivePath
+	archivePath = filepath.Join(tempDir, "game_history.json")
+	t.Cleanup(func() { archivePath = previousArchivePath })
+
+	// Make a move so it qualifies for archiving
+	if _, err := ApplyMoveByCommand("e2e4"); err != nil {
+		t.Fatalf("setup move failed: %v", err)
+	}
+	RefreshGameSessionOutcome()
+
+	if err := ArchiveActiveGameIfNeeded(); err != nil {
+		t.Fatalf("first archive failed: %v", err)
+	}
+	records1, _ := loadArchivedGames()
+	if len(records1) != 1 {
+		t.Fatalf("expected 1 record after first archive, got %d", len(records1))
+	}
+
+	// Second call should be no-op (Archived flag set)
+	if err := ArchiveActiveGameIfNeeded(); err != nil {
+		t.Fatalf("second archive should succeed but do nothing: %v", err)
+	}
+	records2, _ := loadArchivedGames()
+	if len(records2) != 1 {
+		t.Fatalf("expected still 1 record after second archive, got %d", len(records2))
+	}
+	if records2[0].Game.ID != records1[0].Game.ID {
+		t.Fatalf("ID changed unexpectedly")
+	}
+}
