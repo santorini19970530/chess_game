@@ -93,6 +93,12 @@ func (fs *FairyStockfish) IsReady() error {
 	return fs.waitFor("readyok", 2*time.Second)
 }
 
+// Restart stops and restarts the engine (useful after crashes or timeouts).
+func (fs *FairyStockfish) Restart() error {
+	_ = fs.Close()
+	return fs.Start()
+}
+
 // SetOption sends setoption name ... value ...
 func (fs *FairyStockfish) SetOption(name, value string) error {
 	fs.mu.Lock()
@@ -204,13 +210,6 @@ func (fs *FairyStockfish) Close() error {
 		fs.cmd.Process.Kill()
 	}
 	return nil
-}
-
-// Restart attempts to stop and restart the engine (for crash recovery).
-func (fs *FairyStockfish) Restart() error {
-	_ = fs.Close()
-	time.Sleep(100 * time.Millisecond)
-	return fs.Start()
 }
 
 // --- internal helpers ---
