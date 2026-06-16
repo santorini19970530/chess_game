@@ -208,6 +208,18 @@ func (h *Handler) NewGame(w http.ResponseWriter, r *http.Request) {
 		log.Printf("archive game failed: %v", err)
 		return
 	}
+
+	// Parse form to allow "New Game" to respect current dropdown selections
+	// without requiring the user to click "Apply Setup" first.
+	if err := r.ParseForm(); err == nil {
+		if m := r.FormValue("mode"); m != "" {
+			currentGame.Mode = sessionpkg.GameMode(m)
+		}
+		if h := r.FormValue("humanColor"); h != "" {
+			currentGame.Config.HumanColor = h
+		}
+	}
+
 	game, err := sessionpkg.CreateGame(
 		currentGame.Mode,
 		currentGame.Type,
@@ -219,6 +231,21 @@ func (h *Handler) NewGame(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	// Auto-play first AI move if human is Black (use the new game's config)
+	if game.Mode == sessionpkg.GameModeHumanVsAI && strings.ToLower(game.Config.HumanColor) == "black" && game.Result == sessionpkg.GameResultInProgress {
+		if aiMove, aiErr := SelectAIMove(game.ID); aiErr == nil && aiMove != "" {
+			if _, applyErr := sessionpkg.ApplyMoveByCommandByID(game.ID, aiMove); applyErr != nil {
+				log.Printf("warning: initial AI move failed for %s: %v", gameIDLabel(game.ID), applyErr)
+			} else {
+				log.Printf("human_vs_ai: initial AI move applied %s command=%s", gameIDLabel(game.ID), aiMove)
+			}
+			game, _ = sessionpkg.RefreshGameSessionOutcomeByID(game.ID)
+		} else {
+			log.Printf("warning: SelectAIMove failed: %v", aiErr)
+		}
+	}
+
 	log.Printf("new game created from UI %s previous=%s", gameIDLabel(game.ID), gameIDLabel(gameID))
 	snapshot, err := sessionpkg.BuildSnapshotByID(game.ID)
 	if err != nil {
@@ -443,6 +470,28 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Game session not found", http.StatusNotFound)
 		return
 	}
+
+	aiMoveApplied := ""
+
+	// Human vs AI orchestration (legacy path): after human move, call decision layer if mode is human_vs_ai
+	if finalGame.Mode == sessionpkg.GameModeHumanVsAI && finalGame.Result == sessionpkg.GameResultInProgress {
+		if aiMove, aiErr := SelectAIMove(gameID); aiErr == nil && aiMove != "" {
+			if _, applyErr := sessionpkg.ApplyMoveByCommandByID(gameID, aiMove); applyErr != nil {
+				log.Printf("warning: AI move failed to apply in human_vs_ai mode %s: %v", gameIDLabel(gameID), applyErr)
+			} else {
+				aiMoveApplied = aiMove
+				log.Printf("human_vs_ai: AI move applied %s command=%s", gameIDLabel(gameID), aiMove)
+			}
+			finalGame, err = sessionpkg.RefreshGameSessionOutcomeByID(gameID)
+			if err != nil {
+				http.Error(w, "Game session not found after AI move", http.StatusNotFound)
+				return
+			}
+		} else if aiErr != nil {
+			log.Printf("warning: SelectAIMove failed for %s: %v", gameIDLabel(gameID), aiErr)
+		}
+	}
+
 	if finalGame.Result != sessionpkg.GameResultInProgress {
 		if err := sessionpkg.ArchiveGameIfNeededByID(gameID); err != nil {
 			http.Error(w, "Failed to archive completed game", http.StatusInternalServerError)
@@ -474,6 +523,7 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 		History         []string                      `json:"history"`
 		HistoryDetailed []sessionpkg.MoveHistoryEntry `json:"historyDetailed"`
 		State           []sessionpkg.PieceState       `json:"state"`
+		AIMove          string                        `json:"aiMove,omitempty"`
 	}{
 		Command:         normalizedMove,
 		CurrentTurn:     snapshot.CurrentTurn,
@@ -483,6 +533,7 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 		History:         snapshot.History,
 		HistoryDetailed: snapshot.HistoryDetailed,
 		State:           snapshot.State,
+		AIMove:          aiMoveApplied,
 	}
 	response.From.File = string(parsed.FromFile)
 	response.From.Rank = parsed.FromRank

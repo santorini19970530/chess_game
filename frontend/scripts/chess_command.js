@@ -38,6 +38,7 @@
   const LEGAL_CAPTURE_DESTINATION_CLASS = "chess_board_square_legal_capture";
   let gameOver = false;
   let currentTurn = "white";
+  let humanColor = "white";           // human's chosen color in Human vs AI mode
   let selectedSquareSequence = null;
   let dragSourceSequence = null;
   let legalMovesRequestVersion = 0;
@@ -406,6 +407,8 @@
     if (humanSideSelect) humanSideSelect.value = String(cfg.humanColor || "white");
     if (aiGameCountInput) aiGameCountInput.value = String(cfg.aiGameCount || 1);
     if (fenInput) fenInput.value = String(cfg.startFen || "");
+    // Update the internal humanColor variable used for move validation
+    humanColor = String(cfg.humanColor || "white").toLowerCase();
     updateSetupControlState();
   };
 
@@ -709,6 +712,16 @@
     const piece = getPieceOnSquare(square);
     if (!piece) return false;
     const pieceColor = String(piece.getAttribute("data-color") || "").toLowerCase();
+
+    // In Human vs AI mode, only allow the human to move their chosen color
+    // (use the stored humanColor from the game config, not the select box)
+    const mode = String(gameModeSelect?.value || "");
+    if (mode === "human_vs_ai") {
+      if (pieceColor !== humanColor) {
+        return false;
+      }
+    }
+
     return pieceColor === currentTurn;
   };
 
@@ -1200,6 +1213,12 @@
         const result = await response.json();
         syncGameIdFromResult(result);
         renderGameConfig(result.game);
+
+        // Immediately store the human color from the applied config
+        if (result.game?.config?.humanColor) {
+          humanColor = String(result.game.config.humanColor).toLowerCase();
+        }
+
         setStatus("Game setup applied. Click New Game to start.", "success");
       } catch (_error) {
         setStatus("Network error. Please try again.", "error");
@@ -1232,6 +1251,12 @@
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
         renderGameOutcome(result.game);
         renderGameConfig(result.game);
+
+        // Store the human color from the game config for Human vs AI mode
+        if (result.game?.config?.humanColor) {
+          humanColor = String(result.game.config.humanColor).toLowerCase();
+        }
+
         cachedAnalysis = null;
         renderGameInfo(result.captured, result.analysis);
         stopAnalysisPolling();
@@ -1249,8 +1274,15 @@
           setStatus("Missing game session. Start a new game first.", "error");
           return;
         }
+        // Send current dropdown values so the new game respects the selected mode/side
+        const mode = String(gameModeSelect?.value || "human_vs_human");
+        const humanColor = String(humanSideSelect?.value || "white");
+        const body = new URLSearchParams({ mode, humanColor });
+
         const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/new`, {
           method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: body.toString(),
         });
         if (!response.ok) {
           const errorMessage = await readErrorMessage(response, "Failed to start a new game.");
@@ -1265,6 +1297,12 @@
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
         renderGameOutcome(result.game);
         renderGameConfig(result.game);
+
+        // Store the human color from the game config for Human vs AI mode
+        if (result.game?.config?.humanColor) {
+          humanColor = String(result.game.config.humanColor).toLowerCase();
+        }
+
         cachedAnalysis = null;
         renderGameInfo(result.captured, result.analysis);
         stopAnalysisPolling();
@@ -1301,4 +1339,22 @@
     config: { humanColor: "white", aiGameCount: 1, startFen: "" },
   });
   void createSessionOnLoad();
+
+  // Helper for step 4 – apply AI move when the backend returns it together with the human move
+  window.applyAIMoveFromResult = (result) => {
+    if (!result || !result.aiMove) return false;
+    const uci = String(result.aiMove).toLowerCase();
+    if (uci.length < 4) return false;
+
+    const fromFile = uci.charCodeAt(0) - 97 + 1;
+    const fromRank = parseInt(uci[1], 10);
+    const toFile = uci.charCodeAt(2) - 97 + 1;
+    const toRank = parseInt(uci[3], 10);
+
+    if (fromFile && fromRank && toFile && toRank) {
+      applyMoveOnBoard(fromFile, fromRank, toFile, toRank);
+      return true;
+    }
+    return false;
+  };
 })();
