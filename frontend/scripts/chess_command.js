@@ -1434,6 +1434,54 @@
       }
     });
   }
+
+  if (aiGameCountInput && configApplyButton) {
+    const simBtn = document.createElement("button");
+    simBtn.id = "run_simulation_btn";
+    simBtn.type = "button";
+    simBtn.textContent = "Run AI Simulation";
+    simBtn.style.marginLeft = "8px";
+
+    configApplyButton.parentNode.appendChild(simBtn);
+
+    simBtn.addEventListener("click", async () => {
+      const n = parseInt(aiGameCountInput.value, 10) || 1;
+      if (n < 1) {
+        setStatus("Please enter a valid number of games (>=1).", "error");
+        return;
+      }
+
+      setStatus(`Running ${n} AI vs AI game(s)...`, "success");
+      simBtn.disabled = true;
+
+      try {
+        const resp = await fetch("/api/simulate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ games: n, profile: "intermediate" }),
+        });
+
+        if (!resp.ok) {
+          const err = await resp.text();
+          setStatus(`Simulation failed: ${err}`, "error");
+          return;
+        }
+
+        const data = await resp.json();
+        const summary = `White ${data.white_wins} | Black ${data.black_wins} | Draws ${data.draws} | Avg moves: ${data.avg_moves.toFixed(1)}`;
+        setStatus(`Simulation complete. ${summary}`, "success");
+
+        if (gameInfoNotesBox) {
+          gameInfoNotesBox.value = `Simulation results:\n${summary}\n\n(games=${data.games})`;
+        }
+      } catch (e) {
+        setStatus("Network error while running simulation.", "error");
+      } finally {
+        simBtn.disabled = false;
+      }
+    });
+  }
+
   if (flagButton) {
     flagButton.addEventListener("click", async () => {
       if (gameOver) {
