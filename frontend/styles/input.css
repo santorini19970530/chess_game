@@ -653,3 +653,55 @@ main {
   background: rgba(103, 232, 249, 0.10);
   position: relative;
 }
+
+/* Config panel buttons (Apply Setup + Run AI Simulation) */
+#game_config_apply,
+#run_simulation_btn {
+  padding: 8px 16px;
+  margin-left: 0px;
+  border-radius: 6px;
+  background-color: #334155;
+  color: #fff;
+  font-size: 0.875rem;
+  border: none;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+#game_config_apply:hover,
+#run_simulation_btn:hover {
+  background-color: #475569;
+}
+
+/* Keep simulation button slightly offset but vertically aligned with inputs */
+#run_simulation_btn {
+  margin-top: 2px;
+}
+
+/* Flag + New Game buttons - same color scheme, keep original size */
+#chess_flag,
+#chess_new_game {
+  background-color: #334155;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#chess_flag:hover,
+#chess_new_game:hover {
+  background-color: #475569;
+}
+
+/* Submit command button - same color scheme, keep original size */
+#chess_command_submit {
+  background-color: #334155;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#chess_command_submit:hover {
+  background-color: #475569;
+}
