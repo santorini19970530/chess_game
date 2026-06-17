@@ -5,16 +5,13 @@ Persistent Python analyzer service.
 Endpoints:
   - GET /health
   - POST /analyze
+  - POST /explain          (LLM move explanation, provider selected via LLM_PROVIDER)
 """
 
 from __future__ import annotations
 
-import json
 import os
-import socket
 import time
-import urllib.error
-import urllib.request
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -23,11 +20,11 @@ from flask import Flask, jsonify, request
 
 from analyzer import (
     analyze_position,
-    build_explanation_fallback,
     build_history_payload,
     build_policy_payload,
     build_value_payload,
 )
+from llm_providers import get_llm_provider
 
 
 app = Flask(__name__)
@@ -251,47 +248,24 @@ def explain() -> tuple:
         return merr
 
     started_at = time.perf_counter()
-    ollama_url = "http://localhost:11434/api/generate"
-    model = os.getenv("OLLAMA_MODEL", "gemma2:2b")
-    move_text = move_san or move_uci or ""
+    provider = get_llm_provider()
     history = common.get("move_history", [])
-    history_str = " ".join(history[-6:]) if history else "(no prior moves)"
 
-    prompt = (
-        f"You are a calm chess coach for an intermediate club player. "
-        f"Explain the move {move_text} in 2-4 short sentences. "
-        f"FEN: {common['fen']}. Recent moves: {history_str}. "
-        f"Mention whether it creates threats, changes material balance, or improves safety. "
-        f"Keep the tone educational and encouraging; avoid engine jargon."
-    )
-
-    source = "ollama"
+    source = getattr(provider, "name", "ollama")
     explanation = ""
     try:
-        req = urllib.request.Request(
-            ollama_url,
-            data=json.dumps({"model": model, "prompt": prompt, "stream": False}).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=9) as resp:
-            if resp.status != 200:
-                raise urllib.error.HTTPError(ollama_url, resp.status, "bad status", {}, None)
-            data = json.loads(resp.read().decode("utf-8"))
-            explanation = (data.get("response") or "").strip()
-            if not explanation:
-                raise ValueError("empty response from ollama")
-    except (urllib.error.URLError, socket.timeout, TimeoutError, json.JSONDecodeError, ValueError):
-        explanation = build_explanation_fallback(
+        explanation = provider.explain(
             fen=common["fen"],
             color=common["color"],
             move_uci=move_uci or "",
             move_san=move_san,
+            move_history=history,
         )
-        source = "heuristic_fallback"
     except Exception:
-        # Any unexpected error also falls back; never crash the endpoint.
-        explanation = build_explanation_fallback(
+        # Any failure (Ollama down, timeout, bad response, etc.) → heuristic
+        from analyzer import build_explanation_fallback as _fallback
+
+        explanation = _fallback(
             fen=common["fen"],
             color=common["color"],
             move_uci=move_uci or "",
@@ -315,13 +289,11 @@ def explain() -> tuple:
         200,
     )
 
-
 def main() -> None:
     host = os.getenv("PY_ANALYSER_HOST", "127.0.0.1")
     port = int(os.getenv("PY_ANALYSER_PORT", "8001"))
     debug = os.getenv("PY_ANALYSER_DEBUG", "0") == "1"
     app.run(host=host, port=port, debug=debug)
-
 
 if __name__ == "__main__":
     main()
