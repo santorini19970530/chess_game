@@ -31,6 +31,15 @@
   const configApplyButton = document.getElementById("game_config_apply");
   const boardElement = document.querySelector(".chess_board");
   const promotionPicker = document.getElementById("promotion_picker");
+  const simulationSummaryPanel = document.getElementById("simulation_summary_panel");
+  const simulationSummaryGames = document.getElementById("simulation_summary_games");
+  const simulationSummaryWhite = document.getElementById("simulation_summary_white");
+  const simulationSummaryBlack = document.getElementById("simulation_summary_black");
+  const simulationSummaryDraws = document.getElementById("simulation_summary_draws");
+  const simulationSummaryAvg = document.getElementById("simulation_summary_avg");
+  const simulationResultList = document.getElementById("simulation_result_list");
+  const simulationResultDetails = document.getElementById("simulation_result_details");
+  const simulationResultSummaryText = document.getElementById("simulation_result_summary_text");
   const moveSound = new Audio("/sounds/chess_movement.wav");
   const captureSound = new Audio("/sounds/capture.wav");
   const CHECK_CLASS = "game_info_col_in_check";
@@ -49,6 +58,15 @@
   let isSubmitting = false;
   let pendingPromotionResolve = null;
   let analysisPollTimer = null;
+  let isSimulationPlayback = false; // Flag to suppress hints during AI sim
+  // Manual simulation playback state
+  let simulationData = null;
+  let currentSimGameIdx = 0;
+  let currentSimMoveIdx = 0;
+  let simulationRequestInFlight = false;
+  let simRunBtn = null;
+  let simNextMoveBtn = null;
+  let simNextGameBtn = null;
   let analysisPollFallbackTimer = null;
   let pendingAnalysisTargetMove = 0;
   let pendingAnalysisCapturedSnapshot = null;
@@ -87,6 +105,80 @@
   const setStatus = (message, type) => {
     status.textContent = message;
     status.className = `command_status ${type}`;
+  };
+
+  const setNotesText = (text) => {
+    if (!gameInfoNotesBox) return;
+    gameInfoNotesBox.value = String(text || "");
+    gameInfoNotesBox.scrollTop = gameInfoNotesBox.scrollHeight;
+  };
+
+  const appendNotesLine = (line) => {
+    if (!gameInfoNotesBox) return;
+    const next = String(line || "").trim();
+    if (!next) return;
+    const current = gameInfoNotesBox.value.trim();
+    gameInfoNotesBox.value = current ? `${current}\n${next}` : next;
+    gameInfoNotesBox.scrollTop = gameInfoNotesBox.scrollHeight;
+  };
+
+  const isAIVsAIModeSelected = () => String(gameModeSelect?.value || "") === "ai_vs_ai";
+
+  const clearSimulationSummary = () => {
+    if (simulationSummaryGames) simulationSummaryGames.textContent = "0";
+    if (simulationSummaryWhite) simulationSummaryWhite.textContent = "0";
+    if (simulationSummaryBlack) simulationSummaryBlack.textContent = "0";
+    if (simulationSummaryDraws) simulationSummaryDraws.textContent = "0";
+    if (simulationSummaryAvg) simulationSummaryAvg.textContent = "0.0";
+    if (simulationResultList) simulationResultList.innerHTML = "";
+    if (simulationResultSummaryText) simulationResultSummaryText.textContent = "Per-game results";
+    if (simulationResultDetails) simulationResultDetails.open = false;
+    if (simulationSummaryPanel) simulationSummaryPanel.classList.add("simulation_summary_hidden");
+  };
+
+  const renderSimulationSummary = (summary) => {
+    const games = Number(summary?.games || 0);
+    const whiteWins = Number(summary?.white_wins || 0);
+    const blackWins = Number(summary?.black_wins || 0);
+    const draws = Number(summary?.draws || 0);
+    const avgMoves = Number(summary?.avg_moves || 0);
+
+    if (simulationSummaryGames) simulationSummaryGames.textContent = String(games);
+    if (simulationSummaryWhite) simulationSummaryWhite.textContent = String(whiteWins);
+    if (simulationSummaryBlack) simulationSummaryBlack.textContent = String(blackWins);
+    if (simulationSummaryDraws) simulationSummaryDraws.textContent = String(draws);
+    if (simulationSummaryAvg) simulationSummaryAvg.textContent = Number.isFinite(avgMoves) ? avgMoves.toFixed(1) : "0.0";
+
+    if (simulationResultList) {
+      simulationResultList.innerHTML = "";
+      const results = Array.isArray(summary?.results) ? summary.results : [];
+      if (simulationResultSummaryText) {
+        simulationResultSummaryText.textContent = `Per-game results (${results.length})`;
+      }
+      if (simulationResultDetails) {
+        simulationResultDetails.open = false;
+      }
+      for (let i = 0; i < results.length; i++) {
+        const item = document.createElement("li");
+        const one = results[i] || {};
+        const result = String(one.result || "unknown");
+        const winner = String(one.winner || "-");
+        const moves = Number(one.moves || 0);
+        item.textContent = `Game ${i + 1}: ${result} | winner: ${winner} | moves: ${moves}`;
+        simulationResultList.appendChild(item);
+      }
+    }
+
+    if (simulationSummaryPanel) simulationSummaryPanel.classList.remove("simulation_summary_hidden");
+  };
+
+  const readSimulationCount = () => {
+    const raw = String(aiGameCountInput?.value || "").trim();
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n < 1 || n > 1000) {
+      return { ok: false, message: "Please enter an integer game count between 1 and 1000." };
+    }
+    return { ok: true, count: n };
   };
 
   const readErrorMessage = async (response, fallback) => {
@@ -187,7 +279,9 @@
   const handleSocketMessage = (payload) => {
     const event = String(payload?.event || "");
     const gameId = String(payload?.game_id || "");
-    if (!event || !gameId || gameId !== currentGameId) return;
+    // Allow simulation events even if they don't match currentGameId
+    const isSimulationEvent = event.startsWith("simulation_");
+    if (!event || (!isSimulationEvent && gameId !== currentGameId)) return;
     const data = payload?.data || {};
 
     if (event === "move_applied") {
@@ -215,7 +309,7 @@
     if (event === "analysis_status_update") {
       const statusText = String(data?.status || "").toLowerCase();
       if (statusText === "pending") {
-        if (gameInfoNotesBox) gameInfoNotesBox.value = "Analyzing...";
+        setNotesText("Analyzing...");
         return;
       }
       if (statusText === "ready" && data?.analysis) {
@@ -225,7 +319,7 @@
       }
       if (statusText === "error") {
         const safeMessage = String(data?.last_error || "").trim();
-        if (safeMessage && gameInfoNotesBox) gameInfoNotesBox.value = safeMessage;
+        if (safeMessage) setNotesText(safeMessage);
       }
     }
     if (event === "explanation_ready" || event === "explanationReady") {
@@ -234,14 +328,70 @@
       if (!expl) return;
       const prefix = data?.source === "heuristic_fallback" ? "(heuristic) " : "";
       lastExplanationText = prefix + expl;
-      const current = gameInfoNotesBox.value.trim();
+      const current = String(gameInfoNotesBox.value || "").trim();
       if (current && current !== "Analyzing...") {
         if (!current.includes(lastExplanationText)) {
-          gameInfoNotesBox.value = current + "\n\n" + lastExplanationText;
+          setNotesText(current + "\n\n" + lastExplanationText);
         }
       } else {
-        gameInfoNotesBox.value = lastExplanationText;
+        setNotesText(lastExplanationText);
       }
+    }
+
+    // Optional live socket simulation stream (kept for observers).
+    // Manual playback mode uses API response history instead.
+    if (event === "simulation_move" && !simulationData && !isSimulationPlayback) {
+      const move = data?.move || "";
+      const gameNum = data?.game_num || "";
+
+      // Use a timeout to slow down the visual playback so moves are observable
+      setTimeout(() => {
+        if (move && boardElement) {
+          applyUciMoveToBoard(move);
+          playMoveSound(false);
+          // Explicitly clear any suggested move highlights during simulation
+          highlightSuggestedMoves([]);
+        }
+
+        // Update move history panels
+        // We don't have piece kind easily, so we use a generic approach or just the command.
+        // For simplicity in simulation, we append to the correct side based on move parity.
+        const moveNum = data?.move_num || 0;
+        const side = (moveNum % 2 === 1) ? "white" : "black";
+        const listEl = side === "white" ? moveHistoryWhiteList : moveHistoryBlackList;
+
+        if (listEl) {
+          // Clear placeholder if exists
+          const placeholder = listEl.querySelector(".chess_move_history_placeholder");
+          if (placeholder) placeholder.remove();
+
+          const item = document.createElement("li");
+          item.textContent = move;
+          listEl.appendChild(item);
+          listEl.scrollTop = listEl.scrollHeight;
+        }
+
+        // Log to notes box as well
+        const line = gameNum ? `Game ${gameNum}: ${move}` : move;
+        appendNotesLine(line);
+      }, 300); // 300ms delay between moves for visibility
+      return;
+    }
+    if (event === "simulation_game_end" && !isSimulationPlayback) {
+      const status = data?.status || "finished";
+      const gameNum = data?.game_num || 0;
+
+      appendNotesLine(`[Game ${gameNum} ${status}]`);
+
+      if (status === "started" && gameNum > 1) {
+        resetBoardToInitialState();
+        resetSimulationHistoryPanels();
+      }
+      return;
+    }
+    if (event === "simulation_completed" && !isSimulationPlayback && data) {
+      renderSimulationSummary(data);
+      return;
     }
   };
 
@@ -436,15 +586,35 @@
 
   const updateSetupControlState = () => {
     const mode = String(gameModeSelect?.value || "human_vs_human");
+    const isAIVsAI = mode === "ai_vs_ai";
+    const simulationBusy = simulationRequestInFlight || isSimulationPlayback;
     const fenProvided = Boolean(String(fenInput?.value || "").trim());
-    if (humanSideSelect) humanSideSelect.disabled = mode === "ai_vs_ai";
+    if (humanSideSelect) humanSideSelect.disabled = isAIVsAI || simulationBusy;
     if (aiGameCountInput) {
-      aiGameCountInput.disabled = mode !== "ai_vs_ai";
+      aiGameCountInput.disabled = !isAIVsAI || simulationBusy;
       if (fenProvided) aiGameCountInput.value = "1";
     }
     if (aiStrengthSelect) {
       // Show strength selector only for modes that involve AI
-      aiStrengthSelect.disabled = !(mode === "human_vs_ai" || mode === "ai_vs_ai");
+      aiStrengthSelect.disabled = !(mode === "human_vs_ai" || isAIVsAI) || simulationBusy;
+    }
+    if (gameModeSelect) gameModeSelect.disabled = simulationBusy;
+    if (gameTypeSelect) gameTypeSelect.disabled = simulationBusy;
+    if (fenInput) fenInput.disabled = simulationBusy;
+    if (configApplyButton) configApplyButton.disabled = simulationBusy;
+    if (newGameButton) newGameButton.disabled = simulationBusy;
+    if (input) input.disabled = simulationBusy || gameOver;
+    if (button) button.disabled = simulationBusy || gameOver;
+    if (flagButton) flagButton.disabled = simulationBusy || gameOver;
+
+    // Keep simulation controls sane when user leaves AI vs AI mode.
+    if (!isAIVsAI && !simulationBusy && simulationData) {
+      cleanupSimulationControls();
+      clearSimulationSummary();
+    }
+    if (simRunBtn) {
+      simRunBtn.style.display = isAIVsAI ? "inline-block" : "none";
+      simRunBtn.disabled = simulationBusy;
     }
   };
 
@@ -563,13 +733,13 @@
       if (lastExplanationText) {
         notesText += `\n\n${lastExplanationText}`;
       }
-      gameInfoNotesBox.value = notesText;
+      setNotesText(notesText);
     }
   };
 
   const startAnalysisPolling = (targetMoveNumber, capturedSnapshot) => {
     stopAnalysisPolling();
-    if (gameInfoNotesBox) gameInfoNotesBox.value = "Analyzing...";
+    setNotesText("Analyzing...");
     const target = Number(targetMoveNumber) || 0;
     pendingAnalysisTargetMove = target;
     pendingAnalysisCapturedSnapshot = capturedSnapshot || cachedCapturedSummary;
@@ -752,6 +922,42 @@
     };
   };
 
+  // Helper to apply a UCI move string (e.g. "e2e4") to the visual board DOM.
+  // Used for live AI simulation playback.
+  const applyUciMoveToBoard = (uci) => {
+    if (!uci || uci.length < 4) return;
+    const fromSq = uci.substring(0, 2);
+    const toSq = uci.substring(2, 4);
+
+    // Find squares by their algebraic notation (data-square or by calculating sequence)
+    // We use the existing sequence calculation logic.
+    const getSequenceFromAlgebraic = (alg) => {
+      if (!alg || alg.length !== 2) return -1;
+      const file = alg.charCodeAt(0) - 'a'.charCodeAt(0) + 1;
+      const rank = parseInt(alg[1], 10);
+      if (file < 1 || file > 8 || rank < 1 || rank > 8) return -1;
+      return (8 - rank) * 8 + (file - 1);
+    };
+
+    const fromSeq = getSequenceFromAlgebraic(fromSq);
+    const toSeq = getSequenceFromAlgebraic(toSq);
+
+    const fromEl = boardElement.querySelector(`.chess_board_square[data-sequence="${fromSeq}"]`);
+    const toEl = boardElement.querySelector(`.chess_board_square[data-sequence="${toSeq}"]`);
+
+    if (!fromEl || !toEl) return;
+
+    const piece = fromEl.querySelector(".piece_img");
+    if (!piece) return;
+
+    // Capture logic: remove piece at destination if exists
+    const captured = toEl.querySelector(".piece_img");
+    if (captured) captured.remove();
+
+    // Move piece
+    toEl.appendChild(piece);
+  };
+
   const getSquareElement = (target) =>
     target instanceof Element ? target.closest(".chess_board_square[data-sequence]") : null;
 
@@ -926,6 +1132,7 @@
   let selectedSuggestedMoves = [];
 
   const refreshSuggestedMoves = async (retry = true) => {
+    if (isSimulationPlayback) return;
     if (!currentGameId || gameOver) {
       highlightSuggestedMoves([]);
       return;
@@ -974,9 +1181,9 @@
         // Preserve any LLM explanation that may still be relevant.
         if (gameInfoNotesBox.dataset.fsSuggestions === "1") {
           if (lastExplanationText) {
-            gameInfoNotesBox.value = lastExplanationText;
+            setNotesText(lastExplanationText);
           } else {
-            gameInfoNotesBox.value = "";
+            setNotesText("");
           }
           delete gameInfoNotesBox.dataset.fsSuggestions;
         }
@@ -1014,12 +1221,13 @@
       if (lastExplanationText) {
         text += "\n" + lastExplanationText;
       }
-      gameInfoNotesBox.value = text.trim();
+      setNotesText(text.trim());
       gameInfoNotesBox.dataset.fsSuggestions = "1";
     }
   };
 
   const loadSuggestedMovesForSelection = async (sequence) => {
+    if (isSimulationPlayback) return; // Suppress during simulation
     if (!currentGameId) {
       highlightSuggestedMoves([]);
       return;
@@ -1113,6 +1321,10 @@
   // send the movement command to backend
   const submitCommand = async (commandText = "") => {
     if (isSubmitting) return false;
+    if (simulationRequestInFlight || isSimulationPlayback) {
+      setStatus("Simulation is in progress. Please wait for it to finish.", "error");
+      return false;
+    }
     if (gameOver) {
       setStatus("Game has ended. Refresh to start a new game.", "error");
       return false;
@@ -1393,6 +1605,10 @@
 
   if (configApplyButton) {
     configApplyButton.addEventListener("click", async () => {
+      if (simulationRequestInFlight || isSimulationPlayback) {
+        setStatus("Simulation is in progress. Please wait for it to finish.", "error");
+        return;
+      }
       try {
         const mode = String(gameModeSelect?.value || "human_vs_human");
         const fen = String(fenInput?.value || "").trim();
@@ -1434,8 +1650,90 @@
       }
     });
   }
+
+  if (aiGameCountInput && configApplyButton) {
+    simRunBtn = document.createElement("button");
+    simRunBtn.id = "run_simulation_btn";
+    simRunBtn.type = "button";
+    simRunBtn.textContent = "Run AI Simulation";
+    simRunBtn.className = "run-simulation-btn";
+
+    // Insert right after the Apply Setup button for better alignment
+    configApplyButton.insertAdjacentElement("afterend", simRunBtn);
+    updateSetupControlState();
+
+    simRunBtn.addEventListener("click", async () => {
+      const parsed = readSimulationCount();
+      if (!parsed.ok) {
+        setStatus(parsed.message, "error");
+        return;
+      }
+      if (simRunBtn.disabled) return;
+
+      const n = parsed.count;
+      const profile = String(aiStrengthSelect?.value || "intermediate");
+      clearSelectedSquare();
+      highlightSuggestedMoves([]);
+      setNotesText("Simulation running...");
+      setStatus("Running AI simulation...", "success");
+
+      simRunBtn.disabled = true;
+      isSimulationPlayback = true;
+      simulationRequestInFlight = true;
+      simulationData = null;
+      currentSimGameIdx = -1;
+      currentSimMoveIdx = 0;
+      clearSimulationSummary();
+      updateSetupControlState();
+
+      try {
+        const resp = await fetch("/api/simulate?details=true", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ games: n, profile }),
+        });
+        simulationRequestInFlight = false;
+        updateSetupControlState();
+
+        if (!resp.ok) {
+          const errorMessage = await readErrorMessage(resp, "Simulation request failed.");
+          if (resp.status === 409) {
+            setStatus(`Simulation already running on server. ${errorMessage}`, "error");
+          } else {
+            setStatus(`Simulation failed: ${errorMessage}`, "error");
+          }
+          cleanupSimulationControls();
+          return;
+        }
+
+        const payload = await resp.json();
+        if (!Array.isArray(payload?.results)) {
+          setStatus("Simulation failed: missing results payload.", "error");
+          cleanupSimulationControls();
+          return;
+        }
+
+        simulationData = payload;
+        renderSimulationSummary(simulationData);
+        if (simRunBtn) simRunBtn.style.display = "none";
+        ensureSimulationControls();
+        startNextSimulationGame();
+        setStatus(`Simulation loaded (${n} game${n > 1 ? "s" : ""}).`, "success");
+      } catch (_e) {
+        simulationRequestInFlight = false;
+        updateSetupControlState();
+        setStatus("Network error while loading simulation.", "error");
+        cleanupSimulationControls();
+      }
+    });
+  }
+
   if (flagButton) {
     flagButton.addEventListener("click", async () => {
+      if (simulationRequestInFlight || isSimulationPlayback) {
+        setStatus("Simulation is in progress. Please wait for it to finish.", "error");
+        return;
+      }
       if (gameOver) {
         setStatus("Game has ended. Start a new game.", "error");
         return;
@@ -1478,6 +1776,10 @@
   }
   if (newGameButton) {
     newGameButton.addEventListener("click", async () => {
+      if (simulationRequestInFlight || isSimulationPlayback) {
+        setStatus("Simulation is in progress. Please wait for it to finish.", "error");
+        return;
+      }
       try {
         if (!currentGameId) {
           setStatus("Missing game session. Start a new game first.", "error");
@@ -1517,8 +1819,18 @@
         }
 
         cachedAnalysis = null;
-        renderGameInfo(result.captured, result.analysis);
+        cachedCapturedSummary = null;
+
+        renderGameInfo(result.captured, null);
         stopAnalysisPolling();
+
+        // Force reset win probability to 50/50 AFTER renderGameInfo, 
+        // in case any async update tries to restore old analysis values.
+        if (winProbWhiteValue) winProbWhiteValue.textContent = "50.0%";
+        if (winProbBlackValue) winProbBlackValue.textContent = "50.0%";
+        if (winProbWhiteBar) winProbWhiteBar.style.width = "50%";
+        if (winProbBlackBar) winProbBlackBar.style.width = "50%";
+
         input.value = "";
         input.disabled = false;
         button.disabled = false;
@@ -1526,6 +1838,7 @@
         gameOver = false;
         resolvePromotionChoice("");
         clearSelectedSquare();
+        cleanupSimulationControls();
         setStatus("New game started.", "success");
         input.focus();
       } catch (_error) {
@@ -1533,6 +1846,211 @@
       }
     });
   }
+  // --- Simulation Manual Playback Helpers ---
+  function initialChessState() {
+    const order = ["rook", "knight", "bishop", "queen", "king", "bishop", "knight", "rook"];
+    const state = [];
+    for (let file = 1; file <= 8; file++) {
+      state.push({ file, rank: 1, kind: order[file - 1], color: "white" });
+      state.push({ file, rank: 2, kind: "pawn", color: "white" });
+      state.push({ file, rank: 7, kind: "pawn", color: "black" });
+      state.push({ file, rank: 8, kind: order[file - 1], color: "black" });
+    }
+    return state;
+  }
+
+  function resetSimulationHistoryPanels() {
+    if (moveHistoryWhiteList) moveHistoryWhiteList.innerHTML = '<li class="chess_move_history_placeholder">No moves yet.</li>';
+    if (moveHistoryBlackList) moveHistoryBlackList.innerHTML = '<li class="chess_move_history_placeholder">No moves yet.</li>';
+  }
+
+  function resetBoardToInitialState() {
+    renderBoardFromState(initialChessState());
+  }
+
+  function clearResultLabelClasses() {
+    if (resultWhiteValue) resultWhiteValue.classList.remove("game_info_result_win", "game_info_result_loss", "game_info_result_draw");
+    if (resultBlackValue) resultBlackValue.classList.remove("game_info_result_win", "game_info_result_loss", "game_info_result_draw");
+  }
+
+  function setPlayingResultLabels() {
+    clearResultLabelClasses();
+    if (resultWhiteValue) resultWhiteValue.textContent = "Result: PLAYING";
+    if (resultBlackValue) resultBlackValue.textContent = "Result: PLAYING";
+  }
+
+  function applySimulationResultLabels(gameResult) {
+    clearResultLabelClasses();
+    const resultText = String(gameResult?.result || "").toLowerCase();
+    if (resultText === "white_win") {
+      if (resultWhiteValue) {
+        resultWhiteValue.textContent = "Result: WIN";
+        resultWhiteValue.classList.add("game_info_result_win");
+      }
+      if (resultBlackValue) {
+        resultBlackValue.textContent = "Result: LOSS";
+        resultBlackValue.classList.add("game_info_result_loss");
+      }
+      return;
+    }
+    if (resultText === "black_win") {
+      if (resultWhiteValue) {
+        resultWhiteValue.textContent = "Result: LOSS";
+        resultWhiteValue.classList.add("game_info_result_loss");
+      }
+      if (resultBlackValue) {
+        resultBlackValue.textContent = "Result: WIN";
+        resultBlackValue.classList.add("game_info_result_win");
+      }
+      return;
+    }
+    if (resultWhiteValue) {
+      resultWhiteValue.textContent = "Result: DRAW";
+      resultWhiteValue.classList.add("game_info_result_draw");
+    }
+    if (resultBlackValue) {
+      resultBlackValue.textContent = "Result: DRAW";
+      resultBlackValue.classList.add("game_info_result_draw");
+    }
+  }
+
+  function ensureSimulationControls() {
+    if (!configApplyButton || !configApplyButton.parentNode) return;
+
+    if (!simNextMoveBtn) {
+      simNextMoveBtn = document.createElement("button");
+      simNextMoveBtn.id = "sim_next_move_btn";
+      simNextMoveBtn.type = "button";
+      simNextMoveBtn.textContent = "Next Move";
+      simNextMoveBtn.className = "run-simulation-btn";
+      simNextMoveBtn.addEventListener("click", playNextSimulationMove);
+      configApplyButton.parentNode.appendChild(simNextMoveBtn);
+    }
+
+    if (!simNextGameBtn) {
+      simNextGameBtn = document.createElement("button");
+      simNextGameBtn.id = "sim_next_game_btn";
+      simNextGameBtn.type = "button";
+      simNextGameBtn.textContent = "Next Game";
+      simNextGameBtn.className = "run-simulation-btn";
+      simNextGameBtn.style.display = "none";
+      simNextGameBtn.addEventListener("click", startNextSimulationGame);
+      configApplyButton.parentNode.appendChild(simNextGameBtn);
+    }
+  }
+
+  function finishCurrentSimulationGame() {
+    const gameResult = simulationData?.results?.[currentSimGameIdx] || null;
+    if (!gameResult) return;
+    applySimulationResultLabels(gameResult);
+    if (simNextMoveBtn) simNextMoveBtn.style.display = "none";
+    if (simNextGameBtn) simNextGameBtn.style.display = "inline-block";
+    const totalGames = Array.isArray(simulationData?.results) ? simulationData.results.length : 0;
+    const isLastGame = currentSimGameIdx >= totalGames - 1;
+    if (isLastGame) {
+      setStatus(`Game ${currentSimGameIdx + 1} finished. All simulation games completed.`, "success");
+      cleanupSimulationControls();
+    } else {
+      setStatus(`Game ${currentSimGameIdx + 1} finished. Click Next Game.`, "success");
+    }
+  }
+
+  function startNextSimulationGame() {
+    if (!simulationData || !Array.isArray(simulationData.results)) return;
+
+    currentSimGameIdx++;
+    currentSimMoveIdx = 0;
+
+    if (currentSimGameIdx >= simulationData.results.length) {
+      setStatus("All simulation games completed.", "success");
+      cleanupSimulationControls();
+      return;
+    }
+
+    if (simNextGameBtn) {
+      simNextGameBtn.textContent = "Next Game";
+      simNextGameBtn.disabled = false;
+      simNextGameBtn.style.display = "none";
+    }
+    if (simNextMoveBtn) simNextMoveBtn.style.display = "inline-block";
+
+    resetBoardToInitialState();
+    resetSimulationHistoryPanels();
+    setPlayingResultLabels();
+    highlightSuggestedMoves([]);
+
+    const totalGames = simulationData.results.length;
+    setNotesText(`Simulation playback: Game ${currentSimGameIdx + 1}/${totalGames}`);
+    setStatus(`Game ${currentSimGameIdx + 1} ready. Click Next Move.`, "success");
+  }
+
+  function playNextSimulationMove() {
+    const gameResult = simulationData?.results?.[currentSimGameIdx];
+    if (!gameResult) return;
+    const moves = Array.isArray(gameResult.history_detailed) ? gameResult.history_detailed : [];
+
+    if (moves.length === 0) {
+      setStatus(`Game ${currentSimGameIdx + 1} has no move history in response.`, "error");
+      finishCurrentSimulationGame();
+      return;
+    }
+    if (currentSimMoveIdx >= moves.length) {
+      finishCurrentSimulationGame();
+      return;
+    }
+
+    const moveEntry = moves[currentSimMoveIdx] || {};
+    const uciMove = String(moveEntry.command || "").trim();
+    if (uciMove) {
+      applyUciMoveToBoard(uciMove);
+      playMoveSound(Boolean(moveEntry.isCapture));
+      const side = String(moveEntry.side || (currentSimMoveIdx % 2 === 0 ? "white" : "black")).toLowerCase();
+      const listEl = side === "black" ? moveHistoryBlackList : moveHistoryWhiteList;
+      if (listEl) {
+        clearHistoryPlaceholder(listEl);
+        appendHistoryMove(
+          listEl,
+          side,
+          String(moveEntry.pieceKind || "pawn"),
+          String(moveEntry.to || ""),
+          destinationFromCommand(uciMove),
+          Boolean(moveEntry.isCapture),
+          String(moveEntry.capturedPieceKind || "")
+        );
+        listEl.scrollTop = listEl.scrollHeight;
+      }
+      const line = `#${currentSimMoveIdx + 1} ${uciMove}`;
+      appendNotesLine(line);
+    }
+    currentSimMoveIdx++;
+  }
+
+  function cleanupSimulationControls() {
+    if (simNextMoveBtn) {
+      simNextMoveBtn.remove();
+      simNextMoveBtn = null;
+    }
+    if (simNextGameBtn) {
+      simNextGameBtn.remove();
+      simNextGameBtn = null;
+    }
+    if (simRunBtn) {
+      simRunBtn.textContent = "Run AI Simulation";
+      simRunBtn.style.display = "inline-block";
+      simRunBtn.disabled = false;
+      if (!isAIVsAIModeSelected()) {
+        simRunBtn.style.display = "none";
+      }
+    }
+    simulationData = null;
+    currentSimGameIdx = 0;
+    currentSimMoveIdx = 0;
+    simulationRequestInFlight = false;
+    isSimulationPlayback = false;
+    updateSetupControlState();
+  }
+  // --- End Simulation Helpers ---
+
   input.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -1544,6 +2062,7 @@
   window.addEventListener("beforeunload", () => closeGameSocket(false));
 
   renderGameInfo(null, null);
+  clearSimulationSummary();
   renderCheckState("");
   renderGameOutcome({ status: "in_progress", result: "in_progress" });
   renderGameConfig({
