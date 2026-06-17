@@ -5,6 +5,7 @@ Persistent Python analyzer service.
 Endpoints:
   - GET /health
   - POST /analyze
+  - POST /explain          (LLM move explanation, provider selected via LLM_PROVIDER)
 """
 
 from __future__ import annotations

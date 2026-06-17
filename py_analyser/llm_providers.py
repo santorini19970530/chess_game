@@ -102,3 +102,10 @@ def get_llm_provider() -> LLMProvider:
     if name in ("heuristic", "fallback", "offline"):
         return HeuristicProvider()
     return OllamaProvider()
+
+
+if __name__ == "__main__" or os.getenv("LLM_PROVIDER_SELFCHECK"):
+    # ponytail: tiny runnable check that both providers are constructible
+    p1 = get_llm_provider()
+    p2 = HeuristicProvider()
+    assert hasattr(p1, "explain") and hasattr(p2, "explain")
