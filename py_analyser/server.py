@@ -9,7 +9,13 @@ Endpoints:
 
 from __future__ import annotations
 
+import json
 import os
+import socket
+import time
+import urllib.error
+import urllib.request
+import uuid
 from datetime import datetime, timezone
 from typing import Any
 
@@ -17,6 +23,7 @@ from flask import Flask, jsonify, request
 
 from analyzer import (
     analyze_position,
+    build_explanation_fallback,
     build_history_payload,
     build_policy_payload,
     build_value_payload,
@@ -97,6 +104,15 @@ def _parse_common_payload(payload: dict[str, Any]) -> tuple[dict[str, Any] | Non
         },
         None,
     )
+
+
+def _extract_move_fields(payload: dict[str, Any]) -> tuple[str | None, str | None, tuple | None]:
+    move_uci = str(payload.get("move_uci", "")).strip() or None
+    move_san = str(payload.get("move_san", "")).strip() or None
+    if not move_uci and not move_san:
+        rid = str(payload.get("request_id", "")).strip() or None
+        return None, None, _error_response(rid, 'Missing required field: "move_uci" or "move_san"')
+    return move_uci, move_san, None
 
 
 @app.get("/health")
@@ -222,6 +238,84 @@ def value() -> tuple:
     return jsonify(result), 200
 
 
+@app.post("/explain")
+def explain() -> tuple:
+    payload = request.get_json(silent=True) or {}
+    common, err = _parse_common_payload(payload)
+    if err is not None:
+        return err
+
+    assert common is not None
+    move_uci, move_san, merr = _extract_move_fields(payload)
+    if merr is not None:
+        return merr
+
+    started_at = time.perf_counter()
+    ollama_url = "http://localhost:11434/api/generate"
+    model = os.getenv("OLLAMA_MODEL", "gemma2:2b")
+    move_text = move_san or move_uci or ""
+    history = common.get("move_history", [])
+    history_str = " ".join(history[-6:]) if history else "(no prior moves)"
+
+    prompt = (
+        f"You are a calm chess coach for an intermediate club player. "
+        f"Explain the move {move_text} in 2-4 short sentences. "
+        f"FEN: {common['fen']}. Recent moves: {history_str}. "
+        f"Mention whether it creates threats, changes material balance, or improves safety. "
+        f"Keep the tone educational and encouraging; avoid engine jargon."
+    )
+
+    source = "ollama"
+    explanation = ""
+    try:
+        req = urllib.request.Request(
+            ollama_url,
+            data=json.dumps({"model": model, "prompt": prompt, "stream": False}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=9) as resp:
+            if resp.status != 200:
+                raise urllib.error.HTTPError(ollama_url, resp.status, "bad status", {}, None)
+            data = json.loads(resp.read().decode("utf-8"))
+            explanation = (data.get("response") or "").strip()
+            if not explanation:
+                raise ValueError("empty response from ollama")
+    except (urllib.error.URLError, socket.timeout, TimeoutError, json.JSONDecodeError, ValueError):
+        explanation = build_explanation_fallback(
+            fen=common["fen"],
+            color=common["color"],
+            move_uci=move_uci or "",
+            move_san=move_san,
+        )
+        source = "heuristic_fallback"
+    except Exception:
+        # Any unexpected error also falls back; never crash the endpoint.
+        explanation = build_explanation_fallback(
+            fen=common["fen"],
+            color=common["color"],
+            move_uci=move_uci or "",
+            move_san=move_san,
+        )
+        source = "heuristic_fallback"
+    latency_ms = int((time.perf_counter() - started_at) * 1000)
+
+    return (
+        jsonify(
+            {
+                "request_id": common["request_id"] or uuid.uuid4().hex,
+                "status": "ok",
+                "source": source,
+                "explanation": explanation,
+                "move_uci": move_uci,
+                "move_san": move_san,
+                "latency_ms": latency_ms,
+            }
+        ),
+        200,
+    )
+
+
 def main() -> None:
     host = os.getenv("PY_ANALYSER_HOST", "127.0.0.1")
     port = int(os.getenv("PY_ANALYSER_PORT", "8001"))
@@ -231,3 +325,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+elif os.getenv("PY_EXPLAIN_SELFCHECK"):
+    # ponytail: one tiny runnable check that the /explain route is registered
+    assert any(r.rule == "/explain" for r in app.url_map.iter_rules())
