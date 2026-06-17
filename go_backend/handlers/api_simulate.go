@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -39,9 +40,23 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req simulateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid json body")
-		return
+
+	// Support both JSON and application/x-www-form-urlencoded
+	ct := r.Header.Get("Content-Type")
+	if ct == "" || ct == "application/x-www-form-urlencoded" {
+		if err := r.ParseForm(); err == nil {
+			if g := r.FormValue("games"); g != "" {
+				fmt.Sscanf(g, "%d", &req.Games)
+			}
+			req.Profile = r.FormValue("profile")
+		}
+	}
+
+	if req.Games == 0 {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeJSONError(w, http.StatusBadRequest, "invalid request body")
+			return
+		}
 	}
 
 	if req.Games < 1 {
@@ -56,6 +71,12 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 	profile := req.Profile
 	if profile == "" {
 		profile = "intermediate"
+	}
+
+	// Lightweight mode: skip heavy history_detailed unless explicitly requested
+	includeDetails := true
+	if d := r.URL.Query().Get("details"); d == "false" || d == "0" {
+		includeDetails = false
 	}
 
 	var white, black, draws, totalMoves int
@@ -92,11 +113,16 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 		}
 		totalMoves += res.MoveCount
 
+		var hist []session.MoveHistoryEntry
+		if includeDetails {
+			hist = res.HistoryDetailed
+		}
+
 		results = append(results, gameResult{
 			Result:          string(res.Result),
 			Winner:          res.Winner,
 			Moves:           res.MoveCount,
-			HistoryDetailed: res.HistoryDetailed,
+			HistoryDetailed: hist,
 		})
 
 		archiveItems = append(archiveItems, simulation.ResultWithGameID{
@@ -105,7 +131,7 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 			Result:          res.Result,
 			Winner:          res.Winner,
 			MoveCount:       res.MoveCount,
-			HistoryDetailed: res.HistoryDetailed,
+			HistoryDetailed: res.HistoryDetailed, // always keep full history for archive
 		})
 	}
 
