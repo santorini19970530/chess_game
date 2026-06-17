@@ -557,15 +557,49 @@ func recordMoveAnalysis(command string, result analyzerResponse) {
 	recordMoveAnalysisForGame(game.ID, moveNumber, command, result)
 }
 
-// enqueueExplanation is the planned hook for issue0026.
-// It will call explainByRequest and broadcast an explanation event (or enrich analysis_status_update).
-// Body will be filled in the next steps.
+// enqueueExplanation calls the Python /explain endpoint asynchronously (non-blocking).
+// On success it broadcasts a dedicated "explanation_ready" socket event.
+// Any failure (Ollama down, timeout, etc.) is silently ignored so the game is never affected.
 func enqueueExplanation(gameID, moveUCI, moveSAN string) {
-	// TODO(issue0026): fetch FEN + history, build explainRequest, call explainByRequest,
-	// then broadcast via gameSocketHub (either reuse analysis_status_update or a new event).
-	_ = gameID
-	_ = moveUCI
-	_ = moveSAN
+	go func() {
+		history, err := sessionpkg.MoveHistoryByID(gameID)
+		if err != nil {
+			return
+		}
+		fen, err := sessionpkg.CurrentFENByID(gameID)
+		if err != nil {
+			return
+		}
+		color, err := sessionpkg.CurrentTurnColorByID(gameID)
+		if err != nil {
+			return
+		}
+		moveNumber := len(history)
+
+		req := explainRequest{
+			RequestID:   fmt.Sprintf("%s-explain-%d", gameID, moveNumber),
+			FEN:         fen,
+			Color:       color,
+			GameType:    "chess",
+			MoveUCI:     moveUCI,
+			MoveSAN:     moveSAN,
+			MoveHistory: history,
+		}
+
+		result, err := explainByRequest(req)
+		if err != nil || result == nil || strings.TrimSpace(result.Explanation) == "" {
+			return // graceful: do not emit anything on failure
+		}
+
+		gameSocketHub.Broadcast(gameID, socketEventExplanationReady, map[string]interface{}{
+			"move_number": moveNumber,
+			"move_uci":    result.MoveUCI,
+			"move_san":    result.MoveSAN,
+			"explanation": result.Explanation,
+			"source":      result.Source,
+			"latency_ms":  result.LatencyMS,
+		})
+	}()
 }
 
 func recordMoveAnalysisForGame(gameID string, moveNumber int, command string, result analyzerResponse) {
