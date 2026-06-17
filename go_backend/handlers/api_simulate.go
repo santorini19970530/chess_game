@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
 	session "go_backend/game/session"
 	"go_backend/simulation"
@@ -59,21 +60,27 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 
 	var white, black, draws, totalMoves int
 	results := make([]gameResult, 0, req.Games)
+	archiveItems := make([]simulation.ResultWithGameID, 0, req.Games)
 
 	for i := 0; i < req.Games; i++ {
+		gameNum := i + 1
+		log.Printf("=== simulate game %d/%d started (profile=%s) ===", gameNum, req.Games, profile)
+
 		game, err := session.CreateGame(session.GameModeAIVsAI, session.GameTypeChess, "white", 1, "", profile)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "failed to create game")
 			return
 		}
+		start := time.Now()
 		res, err := simulation.RunSingleAIGame(game.ID, SelectAIMove)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "simulation failed")
 			return
 		}
+		elapsed := time.Since(start)
 
-		log.Printf("simulate game %d/%d result=%s winner=%q moves=%d",
-			i+1, req.Games, res.Result, res.Winner, res.MoveCount)
+		log.Printf("=== simulate game %d/%d finished: result=%s winner=%q moves=%d (%.1fs) ===",
+			gameNum, req.Games, res.Result, res.Winner, res.MoveCount, elapsed.Seconds())
 
 		switch res.Result {
 		case session.GameResultWhiteWin:
@@ -91,6 +98,20 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 			Moves:           res.MoveCount,
 			HistoryDetailed: res.HistoryDetailed,
 		})
+
+		archiveItems = append(archiveItems, simulation.ResultWithGameID{
+			GameID:          game.ID,
+			Profile:         profile,
+			Result:          res.Result,
+			Winner:          res.Winner,
+			MoveCount:       res.MoveCount,
+			HistoryDetailed: res.HistoryDetailed,
+		})
+	}
+
+	// Persist each game into its own JSON file under a run folder
+	if err := simulation.ArchiveSimulationRun(archiveItems); err != nil {
+		log.Printf("warning: failed to archive simulation run: %v", err)
 	}
 
 	avg := 0.0

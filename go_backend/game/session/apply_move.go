@@ -160,7 +160,7 @@ func ApplyMove(fromFile, fromRank, toFile, toRank int) error {
 	}
 
 	sourcePiece.Move(toFile, toRank)
-	log.Printf("move applied: %d%d -> %d%d", fromFile, fromRank, toFile, toRank)
+	log.Printf("move applied: %s", toUCI(fromFile, fromRank, toFile, toRank))
 	return nil
 }
 
@@ -193,7 +193,7 @@ func ApplyEnPassantMove(fromFile, fromRank, toFile, toRank int) error {
 	}
 	sourcePiece = &pieces.ChessPieces[sourceIdx]
 	sourcePiece.Move(toFile, toRank)
-	log.Printf("en passant applied: %d%d -> %d%d", fromFile, fromRank, toFile, toRank)
+	log.Printf("move applied: %s", toUCI(fromFile, fromRank, toFile, toRank))
 	return nil
 }
 
@@ -225,8 +225,7 @@ func ApplyCastlingMove(fromFile, fromRank, toFile, toRank int) error {
 
 	pieces.ChessPieces[kingIdx].Move(toFile, toRank)
 	pieces.ChessPieces[rookIdx].Move(rookToFile, fromRank)
-	log.Printf("castling applied: king %d%d -> %d%d, rook %d%d -> %d%d",
-		fromFile, fromRank, toFile, toRank, rookFromFile, fromRank, rookToFile, fromRank)
+	log.Printf("move applied: %s (castle)", toUCI(fromFile, fromRank, toFile, toRank))
 	return nil
 }
 
@@ -326,4 +325,15 @@ func castlingViolatesCheckRules(color pieces.PieceColor, rank, toFile int) bool 
 		return true
 	}
 	return false
+}
+
+// toUCI converts internal file/rank (1-8) to UCI square notation (e2e4).
+func toUCI(fromFile, fromRank, toFile, toRank int) string {
+	if fromFile < 1 || fromFile > 8 || toFile < 1 || toFile > 8 ||
+		fromRank < 1 || fromRank > 8 || toRank < 1 || toRank > 8 {
+		return fmt.Sprintf("%d%d->%d%d", fromFile, fromRank, toFile, toRank)
+	}
+	return fmt.Sprintf("%c%d%c%d",
+		'a'+byte(fromFile-1), fromRank,
+		'a'+byte(toFile-1), toRank)
 }
