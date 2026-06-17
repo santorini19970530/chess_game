@@ -307,8 +307,7 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 	}
 	log.Printf("api move accepted %s command=%s", gameIDLabel(gameID), normalizedMove)
 
-	// trigger point (human move): enqueue LLM explanation for the move just played.
-	// We pass the normalized move (UCI) as both moveUCI and a placeholder for moveSAN until SAN is available.
+	// Enqueue LLM explanation for the move just played (human move).
 	enqueueExplanation(gameID, normalizedMove, normalizedMove)
 
 	finalGame, err := sessionpkg.RefreshGameSessionOutcomeByID(gameID)
@@ -344,7 +343,7 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 			// Enqueue analysis (for the analysis panel / win prob update)
 			enqueueCurrentPositionAnalysis(gameID, aiMove)
 
-			// issue0026 trigger point (AI move): enqueue LLM explanation for the AI move.
+			// Enqueue LLM explanation for the AI move.
 			enqueueExplanation(gameID, aiMove, aiMove)
 
 			// Refresh outcome (may end the game)

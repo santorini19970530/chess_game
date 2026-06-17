@@ -228,17 +228,14 @@
         if (safeMessage && gameInfoNotesBox) gameInfoNotesBox.value = safeMessage;
       }
     }
-    if (event === "explanation_ready") {
+    if (event === "explanation_ready" || event === "explanationReady") {
       if (!gameInfoNotesBox) return;
-      const expl = String(data?.explanation || "").trim();
+      const expl = String(data?.explanation || data?.analysis_explanation || "").trim();
       if (!expl) return;
       const prefix = data?.source === "heuristic_fallback" ? "(heuristic) " : "";
       lastExplanationText = prefix + expl;
-
-      // Compose with existing suggestions/analysis text if present
       const current = gameInfoNotesBox.value.trim();
       if (current && current !== "Analyzing...") {
-        // Avoid duplicating if the explanation is already at the end
         if (!current.includes(lastExplanationText)) {
           gameInfoNotesBox.value = current + "\n\n" + lastExplanationText;
         }
@@ -562,7 +559,11 @@
 
     if (gameInfoNotesBox && effectiveAnalysis) {
       const threatSummary = String(effectiveAnalysis?.threat_summary || "").trim();
-      gameInfoNotesBox.value = threatSummary || "No analysis summary yet.";
+      let notesText = threatSummary || "No analysis summary yet.";
+      if (lastExplanationText) {
+        notesText += `\n\n${lastExplanationText}`;
+      }
+      gameInfoNotesBox.value = notesText;
     }
   };
 
