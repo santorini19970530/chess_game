@@ -12,6 +12,7 @@ import (
 
 	"go_backend/game/engine"
 	sessionpkg "go_backend/game/session"
+	"go_backend/simulation"
 )
 
 var (
@@ -247,4 +248,10 @@ func selectMoveWithFairyStockfish(fen, profile string) (string, error) {
 		}
 	}
 	return move, err
+}
+
+// RunAIGame is the step-1 entry point for a single AI vs AI game.
+// It delegates to simulation.RunSingleAIGame using the existing SelectAIMove.
+func RunAIGame(gameID string) (simulation.Result, error) {
+	return simulation.RunSingleAIGame(gameID, SelectAIMove)
 }
