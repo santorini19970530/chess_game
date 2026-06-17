@@ -94,4 +94,7 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 	// Primary REST API endpoints for game lifecycle and moves.
 	mux.HandleFunc("/api/games", h.APIGames)
 	mux.HandleFunc("/api/games/", h.APIGameRoutes)
+
+	// Simulation endpoint
+	mux.HandleFunc("/api/simulate", h.APISimulate)
 }

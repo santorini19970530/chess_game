@@ -9,9 +9,10 @@ var maxPlies = 600
 type MoveSelector func(gameID string) (string, error)
 
 type Result struct {
-	Result    session.GameResult
-	Winner    string
-	MoveCount int
+	Result          session.GameResult
+	Winner          string
+	MoveCount       int
+	HistoryDetailed []session.MoveHistoryEntry
 }
 
 func RunSingleAIGame(gameID string, pick MoveSelector) (Result, error) {
@@ -21,10 +22,12 @@ func RunSingleAIGame(gameID string, pick MoveSelector) (Result, error) {
 			return Result{}, err
 		}
 		if g.Result != session.GameResultInProgress {
+			snap, _ := session.BuildSnapshotByID(gameID)
 			return Result{
-				Result:    g.Result,
-				Winner:    g.Outcome.Winner,
-				MoveCount: sessionMoveHistoryLen(gameID),
+				Result:          g.Result,
+				Winner:          g.Outcome.Winner,
+				MoveCount:       len(snap.History),
+				HistoryDetailed: snap.HistoryDetailed,
 			}, nil
 		}
 		move, err := pick(gameID)
