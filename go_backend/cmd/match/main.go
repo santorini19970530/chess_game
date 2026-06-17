@@ -29,9 +29,13 @@ func main() {
 	}
 
 	var results []GameResult
+	var archiveItems []simulation.ResultWithGameID
 	var white, black, draws, totalMoves int
 
 	for i := 0; i < *games; i++ {
+		gameNum := i + 1
+		log.Printf("=== Game %d/%d started (profile=%s) ===", gameNum, *games, *profile)
+
 		game, err := session.CreateGame(session.GameModeAIVsAI, session.GameTypeChess, "white", 1, "", *profile)
 		if err != nil {
 			log.Fatalf("failed to create game: %v", err)
@@ -41,6 +45,9 @@ func main() {
 		if err != nil {
 			log.Fatalf("simulation failed: %v", err)
 		}
+
+		log.Printf("=== Game %d/%d finished: result=%s winner=%q moves=%d ===",
+			gameNum, *games, res.Result, res.Winner, res.MoveCount)
 
 		switch res.Result {
 		case session.GameResultWhiteWin:
@@ -58,9 +65,23 @@ func main() {
 			Moves:  res.MoveCount,
 		})
 
+		archiveItems = append(archiveItems, simulation.ResultWithGameID{
+			GameID:          game.ID,
+			Profile:         *profile,
+			Result:          res.Result,
+			Winner:          res.Winner,
+			MoveCount:       res.MoveCount,
+			HistoryDetailed: res.HistoryDetailed,
+		})
+
 		if *format == "text" {
-			fmt.Printf("Game %d/%d: %s (%d moves)\n", i+1, *games, res.Result, res.MoveCount)
+			// Per-move logs come from the session layer; we only print game boundaries here
 		}
+	}
+
+	// Archive results (same behaviour as /api/simulate)
+	if err := simulation.ArchiveSimulationRun(archiveItems); err != nil {
+		log.Printf("warning: failed to archive simulation run: %v", err)
 	}
 
 	avg := 0.0
