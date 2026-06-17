@@ -167,3 +167,23 @@ func TestAPISimulate_InvalidDetailsFlag_Returns400(t *testing.T) {
 		t.Fatalf("expected 400 for invalid details flag, got %d", rec.Code)
 	}
 }
+
+func TestAPISimulate_InProgress_Returns409(t *testing.T) {
+	h := NewHandler()
+
+	simulationRunMu.Lock()
+	simulationRunInFlight = true
+	simulationRunMu.Unlock()
+	defer finishSimulationRun()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/simulate",
+		strings.NewReader(`{"games":1}`))
+	req.Header.Set("Content-Type", "application/json")
+
+	rec := httptest.NewRecorder()
+	h.APISimulate(rec, req)
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expected 409 when simulation already running, got %d", rec.Code)
+	}
+}

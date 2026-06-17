@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	session "go_backend/game/session"
@@ -36,6 +39,27 @@ type simulateResponse struct {
 
 const maxSimulationPlies = 600
 
+var (
+	simulationRunMu       sync.Mutex
+	simulationRunInFlight bool
+)
+
+func tryStartSimulationRun() bool {
+	simulationRunMu.Lock()
+	defer simulationRunMu.Unlock()
+	if simulationRunInFlight {
+		return false
+	}
+	simulationRunInFlight = true
+	return true
+}
+
+func finishSimulationRun() {
+	simulationRunMu.Lock()
+	simulationRunInFlight = false
+	simulationRunMu.Unlock()
+}
+
 func parseDetailsFlag(r *http.Request) (bool, error) {
 	raw := strings.TrimSpace(r.URL.Query().Get("details"))
 	if raw == "" {
@@ -53,6 +77,20 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Allow", http.MethodPost)
 		writeJSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
+	}
+	if !tryStartSimulationRun() {
+		writeJSONError(w, http.StatusConflict, "simulation run already in progress")
+		return
+	}
+	defer finishSimulationRun()
+
+	originalActiveID := strings.TrimSpace(session.GetGameSession().ID)
+	if originalActiveID != "" {
+		defer func() {
+			if err := session.ActivateGame(originalActiveID); err != nil {
+				log.Printf("warning: failed to restore active game %s after simulation: %v", gameIDLabel(originalActiveID), err)
+			}
+		}()
 	}
 
 	includeDetails, detailsErr := parseDetailsFlag(r)
@@ -128,6 +166,10 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 		moveCount := 0
 		var runErr error
 		for ply := 0; ply < maxSimulationPlies; ply++ {
+			if ctxErr := r.Context().Err(); ctxErr != nil {
+				runErr = ctxErr
+				break
+			}
 			currentGame, _ := session.RefreshGameSessionOutcomeByID(game.ID)
 			if currentGame.Result != session.GameResultInProgress {
 				break
@@ -166,6 +208,10 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if runErr != nil {
+			if errors.Is(runErr, context.Canceled) || errors.Is(runErr, context.DeadlineExceeded) {
+				log.Printf("simulation request canceled by client while running game %d/%d", gameNum, req.Games)
+				return
+			}
 			writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("simulation game %d failed: %v", gameNum, runErr))
 			return
 		}
