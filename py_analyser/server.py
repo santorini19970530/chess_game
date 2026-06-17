@@ -17,6 +17,7 @@ from flask import Flask, jsonify, request
 
 from analyzer import (
     analyze_position,
+    build_explanation_fallback,
     build_history_payload,
     build_policy_payload,
     build_value_payload,
@@ -97,6 +98,15 @@ def _parse_common_payload(payload: dict[str, Any]) -> tuple[dict[str, Any] | Non
         },
         None,
     )
+
+
+def _extract_move_fields(payload: dict[str, Any]) -> tuple[str | None, str | None, tuple | None]:
+    move_uci = str(payload.get("move_uci", "")).strip() or None
+    move_san = str(payload.get("move_san", "")).strip() or None
+    if not move_uci and not move_san:
+        rid = str(payload.get("request_id", "")).strip() or None
+        return None, None, _error_response(rid, 'Missing required field: "move_uci" or "move_san"')
+    return move_uci, move_san, None
 
 
 @app.get("/health")
@@ -220,6 +230,49 @@ def value() -> tuple:
     except Exception:
         return _error_response(common["request_id"], "Internal analyzer error", "internal", 500)
     return jsonify(result), 200
+
+
+@app.post("/explain")
+def explain() -> tuple:
+    payload = request.get_json(silent=True) or {}
+    common, err = _parse_common_payload(payload)
+    if err is not None:
+        return err
+
+    assert common is not None
+    move_uci, move_san, merr = _extract_move_fields(payload)
+    if merr is not None:
+        return merr
+
+    started_at = __import__("time").perf_counter()
+    try:
+        # Real Ollama call will be implemented in the next step.
+        # For now we force the fallback path so the route is complete.
+        raise RuntimeError("ollama not yet wired")
+    except Exception:
+        explanation = build_explanation_fallback(
+            fen=common["fen"],
+            color=common["color"],
+            move_uci=move_uci or "",
+            move_san=move_san,
+        )
+        source = "heuristic_fallback"
+    latency_ms = int((__import__("time").perf_counter() - started_at) * 1000)
+
+    return (
+        jsonify(
+            {
+                "request_id": common["request_id"] or __import__("uuid").uuid4().hex,
+                "status": "ok",
+                "source": source,
+                "explanation": explanation,
+                "move_uci": move_uci,
+                "move_san": move_san,
+                "latency_ms": latency_ms,
+            }
+        ),
+        200,
+    )
 
 
 def main() -> None:
