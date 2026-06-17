@@ -9,6 +9,7 @@ if [[ "${1:-}" == "--help" ]]; then
   echo "  POST /api/games"
   echo "  GET  /api/games/:id"
   echo "  POST /api/games/:id/move"
+  echo "  POST /api/simulate"
   exit 0
 fi
 
@@ -53,6 +54,20 @@ if [[ "${move_cmd}" != "e2e4" ]]; then
   exit 1
 fi
 echo "Move accepted."
+
+simulate_json="$tmp_dir/simulate.json"
+echo "==> POST /api/simulate"
+curl -fsS -X POST "${BASE_URL}/api/simulate" \
+  -H "Content-Type: application/json" \
+  -d '{"games":1,"profile":"beginner"}' \
+  -o "$simulate_json"
+
+sim_games="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["games"])' "$simulate_json")"
+if [[ "$sim_games" != "1" ]]; then
+  echo "Smoke test failed: simulate games count mismatch"
+  exit 1
+fi
+echo "Simulate endpoint returned valid summary."
 
 echo
 echo "Smoke test passed for all /api/games endpoints."
