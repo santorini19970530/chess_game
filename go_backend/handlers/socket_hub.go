@@ -9,10 +9,11 @@ import (
 type socketEventType string
 
 const (
-	socketEventMoveApplied    socketEventType = "move_applied"
-	socketEventTurnChanged    socketEventType = "turn_changed"
-	socketEventGameOutcome    socketEventType = "game_outcome"
-	socketEventAnalysisStatus socketEventType = "analysis_status_update"
+	socketEventMoveApplied       socketEventType = "move_applied"
+	socketEventTurnChanged       socketEventType = "turn_changed"
+	socketEventGameOutcome       socketEventType = "game_outcome"
+	socketEventAnalysisStatus    socketEventType = "analysis_status_update"
+	socketEventExplanationReady  socketEventType = "explanation_ready"
 )
 
 type socketEnvelope struct {

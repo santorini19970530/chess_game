@@ -146,3 +146,58 @@ func TestEmitAnalysisLog_JSONShape(t *testing.T) {
 		t.Fatalf("expected event analysis_completed, got %v", payload["event"])
 	}
 }
+
+func TestExplainByRequest_Success(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/explain" {
+			t.Errorf("expected path /explain, got %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"request_id":"test-1",
+			"status":"ok",
+			"source":"ollama",
+			"explanation":"e4 develops the king's pawn and opens lines.",
+			"move_uci":"e2e4",
+			"move_san":"e4",
+			"latency_ms":123
+		}`))
+	}))
+	defer srv.Close()
+
+	t.Setenv("PY_ANALYSER_URL", srv.URL)
+
+	res, err := explainByRequest(explainRequest{
+		RequestID: "test-1",
+		FEN:       "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+		Color:     "black",
+		GameType:  "chess",
+		MoveUCI:   "e2e4",
+		MoveSAN:   "e4",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Source != "ollama" {
+		t.Fatalf("expected source ollama, got %s", res.Source)
+	}
+	if res.Explanation == "" {
+		t.Fatalf("expected non-empty explanation")
+	}
+}
+
+func TestExplainByRequest_FallsBackOnError(t *testing.T) {
+	t.Setenv("PY_ANALYSER_URL", "http://127.0.0.1:1") // unreachable
+	t.Setenv("PY_ANALYSER_TIMEOUT_MS", "100")
+
+	_, err := explainByRequest(explainRequest{
+		RequestID: "fail-test",
+		FEN:       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+		Color:     "white",
+		GameType:  "chess",
+		MoveUCI:   "e2e4",
+	})
+	if err == nil {
+		t.Fatalf("expected error for unreachable service, got nil")
+	}
+}

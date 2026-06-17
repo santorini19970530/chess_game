@@ -31,6 +31,28 @@ type analyzerRequest struct {
 	TopK      int    `json:"top_k"`
 }
 
+// explainRequest mirrors the payload expected by Python /explain.
+type explainRequest struct {
+	RequestID  string   `json:"request_id"`
+	FEN        string   `json:"fen"`
+	Color      string   `json:"color"`
+	GameType   string   `json:"game_type"`
+	MoveUCI    string   `json:"move_uci,omitempty"`
+	MoveSAN    string   `json:"move_san,omitempty"`
+	MoveHistory []string `json:"move_history,omitempty"`
+}
+
+// explainResponse is the JSON shape returned by Python /explain.
+type explainResponse struct {
+	RequestID   string `json:"request_id"`
+	Status      string `json:"status"`
+	Source      string `json:"source"`
+	Explanation string `json:"explanation"`
+	MoveUCI     string `json:"move_uci"`
+	MoveSAN     string `json:"move_san"`
+	LatencyMS   int    `json:"latency_ms"`
+}
+
 type analysisJob struct {
 	GameID          string
 	MoveNumber      int
@@ -282,6 +304,59 @@ func analyzeByRequest(reqPayload analyzerRequest) (*analyzerResponse, error) {
 	return &parsed, nil
 }
 
+// explainByRequest performs a POST to the Python /explain endpoint.
+// It follows the exact same error-handling and timeout pattern as analyzeByRequest.
+func explainByRequest(reqPayload explainRequest) (*explainResponse, error) {
+	body, err := json.Marshal(reqPayload)
+	if err != nil {
+		return nil, fmt.Errorf("explain request marshal failed: %w", err)
+	}
+
+	// Use a slightly longer timeout than analysis because LLM generation can be slower.
+	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, analyzerBaseURL()+"/explain", bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("explain request build failed: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := pyAnalyzerHTTPClient.Do(req)
+	if err != nil {
+		kind, _ := analyzerErrorDetails(err)
+		return nil, &analyzerCallError{
+			Kind: kind,
+			Err:  fmt.Errorf("explain request failed: %w", err),
+		}
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("explain response read failed: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, &analyzerCallError{
+			Kind:       analysisErrorKindBadStatus,
+			HTTPStatus: resp.StatusCode,
+			Err:        fmt.Errorf("explain returned status=%d body=%s", resp.StatusCode, string(respBody)),
+		}
+	}
+
+	var parsed explainResponse
+	if err := json.Unmarshal(respBody, &parsed); err != nil {
+		return nil, &analyzerCallError{
+			Kind: analysisErrorKindBadJSON,
+			Err:  fmt.Errorf("explain response parse failed: %w", err),
+		}
+	}
+
+	log.Printf("explain response: %s", string(respBody))
+	return &parsed, nil
+}
+
 func StartAnalyzerWorker() {
 	analysisWorkerOnce.Do(func() {
 		go analysisWorkerLoop()
@@ -480,6 +555,51 @@ func recordMoveAnalysis(command string, result analyzerResponse) {
 	history := sessionpkg.GetMoveHistory()
 	moveNumber := len(history)
 	recordMoveAnalysisForGame(game.ID, moveNumber, command, result)
+}
+
+// enqueueExplanation calls the Python /explain endpoint asynchronously (non-blocking).
+// On success it broadcasts a dedicated "explanation_ready" socket event.
+// Any failure (Ollama down, timeout, etc.) is silently ignored so the game is never affected.
+func enqueueExplanation(gameID, moveUCI, moveSAN string) {
+	go func() {
+		history, err := sessionpkg.MoveHistoryByID(gameID)
+		if err != nil {
+			return
+		}
+		fen, err := sessionpkg.CurrentFENByID(gameID)
+		if err != nil {
+			return
+		}
+		color, err := sessionpkg.CurrentTurnColorByID(gameID)
+		if err != nil {
+			return
+		}
+		moveNumber := len(history)
+
+		req := explainRequest{
+			RequestID:   fmt.Sprintf("%s-explain-%d", gameID, moveNumber),
+			FEN:         fen,
+			Color:       color,
+			GameType:    "chess",
+			MoveUCI:     moveUCI,
+			MoveSAN:     moveSAN,
+			MoveHistory: history,
+		}
+
+		result, err := explainByRequest(req)
+		if err != nil || result == nil || strings.TrimSpace(result.Explanation) == "" {
+			return // graceful: do not emit anything on failure
+		}
+
+		gameSocketHub.Broadcast(gameID, socketEventExplanationReady, map[string]interface{}{
+			"move_number": moveNumber,
+			"move_uci":    result.MoveUCI,
+			"move_san":    result.MoveSAN,
+			"explanation": result.Explanation,
+			"source":      result.Source,
+			"latency_ms":  result.LatencyMS,
+		})
+	}()
 }
 
 func recordMoveAnalysisForGame(gameID string, moveNumber int, command string, result analyzerResponse) {
