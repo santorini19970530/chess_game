@@ -13,13 +13,28 @@ import (
 )
 
 func main() {
-	games := flag.Int("games", 0, "number of games to simulate (required)")
-	profile := flag.String("profile", "intermediate", "AI strength profile")
-	format := flag.String("format", "text", "output format: text|json")
+	games := flag.Int("games", 0, "number of games to simulate (required, >=1)")
+	profile := flag.String("profile", "intermediate", "AI strength: beginner|intermediate|advanced|master")
+	format := flag.String("format", "text", "output format: text|json|csv")
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: match [flags]\n\n")
+		fmt.Fprintf(os.Stderr, "Run N AI vs AI games and print summary.\n\n")
+		fmt.Fprintf(os.Stderr, "Flags:\n")
+		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\nExamples:\n")
+		fmt.Fprintf(os.Stderr, "  match -games 5 -profile intermediate\n")
+		fmt.Fprintf(os.Stderr, "  match -games 10 -profile master -format json\n")
+		fmt.Fprintf(os.Stderr, "  match -games 20 -format csv > results.csv\n")
+	}
 	flag.Parse()
 
 	if *games < 1 {
 		log.Fatal("error: --games must be >= 1")
+	}
+
+	validProfiles := map[string]bool{"beginner": true, "intermediate": true, "advanced": true, "master": true}
+	if !validProfiles[*profile] {
+		log.Fatalf("error: invalid profile %q (use beginner|intermediate|advanced|master)", *profile)
 	}
 
 	type GameResult struct {
@@ -108,6 +123,13 @@ func main() {
 			Results:   results,
 		}
 		json.NewEncoder(os.Stdout).Encode(out)
+	} else if *format == "csv" {
+		fmt.Println("game,result,winner,moves")
+		for i, r := range results {
+			fmt.Printf("%d,%s,%s,%d\n", i+1, r.Result, r.Winner, r.Moves)
+		}
+		fmt.Printf("# Summary,%d games,White %d,Black %d,Draws %d,Avg %.1f\n",
+			*games, white, black, draws, avg)
 	} else {
 		fmt.Println()
 		fmt.Printf("Summary: %d games | White %d | Black %d | Draws %d | Avg moves: %.1f\n",
