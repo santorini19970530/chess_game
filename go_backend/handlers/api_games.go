@@ -249,9 +249,9 @@ func (h *Handler) getAPIGameTopMoves(w http.ResponseWriter, r *http.Request, gam
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"game_id":   gameID,
-		"profile":   profile,
-		"k":         k,
+		"game_id":     gameID,
+		"profile":     profile,
+		"k":           k,
 		"suggestions": suggestions,
 	})
 }
@@ -306,6 +306,11 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 		return
 	}
 	log.Printf("api move accepted %s command=%s", gameIDLabel(gameID), normalizedMove)
+
+	// trigger point (human move): enqueue LLM explanation for the move just played.
+	// We pass the normalized move (UCI) as both moveUCI and a placeholder for moveSAN until SAN is available.
+	enqueueExplanation(gameID, normalizedMove, normalizedMove)
+
 	finalGame, err := sessionpkg.RefreshGameSessionOutcomeByID(gameID)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "Game session not found")
@@ -338,6 +343,9 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 
 			// Enqueue analysis (for the analysis panel / win prob update)
 			enqueueCurrentPositionAnalysis(gameID, aiMove)
+
+			// issue0026 trigger point (AI move): enqueue LLM explanation for the AI move.
+			enqueueExplanation(gameID, aiMove, aiMove)
 
 			// Refresh outcome (may end the game)
 			if _, refreshErr := sessionpkg.RefreshGameSessionOutcomeByID(gameID); refreshErr != nil {
