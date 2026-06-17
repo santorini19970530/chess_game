@@ -54,6 +54,7 @@
   let pendingAnalysisCapturedSnapshot = null;
   let cachedAnalysis = null;
   let cachedCapturedSummary = null;
+  let lastExplanationText = "";
   let currentGameId = "";
   let gameSocket = null;
 
@@ -225,6 +226,24 @@
       if (statusText === "error") {
         const safeMessage = String(data?.last_error || "").trim();
         if (safeMessage && gameInfoNotesBox) gameInfoNotesBox.value = safeMessage;
+      }
+    }
+    if (event === "explanation_ready") {
+      if (!gameInfoNotesBox) return;
+      const expl = String(data?.explanation || "").trim();
+      if (!expl) return;
+      const prefix = data?.source === "heuristic_fallback" ? "(heuristic) " : "";
+      lastExplanationText = prefix + expl;
+
+      // Compose with existing suggestions/analysis text if present
+      const current = gameInfoNotesBox.value.trim();
+      if (current && current !== "Analyzing...") {
+        // Avoid duplicating if the explanation is already at the end
+        if (!current.includes(lastExplanationText)) {
+          gameInfoNotesBox.value = current + "\n\n" + lastExplanationText;
+        }
+      } else {
+        gameInfoNotesBox.value = lastExplanationText;
       }
     }
   };
@@ -810,24 +829,22 @@
       .querySelectorAll(`.piece_img.${SELECTED_PIECE_CLASS}`)
       .forEach((piece) => piece.classList.remove(SELECTED_PIECE_CLASS));
     boardElement
-      .querySelectorAll(`.${LEGAL_DESTINATION_CLASS}, .${LEGAL_PROMOTION_DESTINATION_CLASS}, .${LEGAL_CAPTURE_DESTINATION_CLASS}, .${SUGGESTED_MOVE_CLASS}`)
+      .querySelectorAll(`.${LEGAL_DESTINATION_CLASS}, .${LEGAL_PROMOTION_DESTINATION_CLASS}, .${LEGAL_CAPTURE_DESTINATION_CLASS}`)
       .forEach((square) => {
         square.classList.remove(LEGAL_DESTINATION_CLASS);
         square.classList.remove(LEGAL_PROMOTION_DESTINATION_CLASS);
         square.classList.remove(LEGAL_CAPTURE_DESTINATION_CLASS);
-        square.classList.remove(SUGGESTED_MOVE_CLASS);
       });
-    selectedSuggestedMoves = [];
+    // Do not clear FS suggestion highlights here; they are independent of piece selection.
   };
 
   const highlightLegalDestinations = (moves) => {
     boardElement
-      .querySelectorAll(`.${LEGAL_DESTINATION_CLASS}, .${LEGAL_PROMOTION_DESTINATION_CLASS}, .${LEGAL_CAPTURE_DESTINATION_CLASS}, .${SUGGESTED_MOVE_CLASS}`)
+      .querySelectorAll(`.${LEGAL_DESTINATION_CLASS}, .${LEGAL_PROMOTION_DESTINATION_CLASS}, .${LEGAL_CAPTURE_DESTINATION_CLASS}`)
       .forEach((square) => {
         square.classList.remove(LEGAL_DESTINATION_CLASS);
         square.classList.remove(LEGAL_PROMOTION_DESTINATION_CLASS);
         square.classList.remove(LEGAL_CAPTURE_DESTINATION_CLASS);
-        square.classList.remove(SUGGESTED_MOVE_CLASS);
       });
     if (!Array.isArray(moves)) return;
     const selectedSource = fileRankFromSequence(selectedSquareSequence);
@@ -952,9 +969,14 @@
 
     if (!top.length) {
       if (gameInfoNotesBox) {
-        // Only clear if we previously wrote FS suggestions here
+        // Only clear if we previously wrote FS suggestions here.
+        // Preserve any LLM explanation that may still be relevant.
         if (gameInfoNotesBox.dataset.fsSuggestions === "1") {
-          gameInfoNotesBox.value = "";
+          if (lastExplanationText) {
+            gameInfoNotesBox.value = lastExplanationText;
+          } else {
+            gameInfoNotesBox.value = "";
+          }
           delete gameInfoNotesBox.dataset.fsSuggestions;
         }
       }
@@ -988,6 +1010,9 @@
         const sc = typeof sug.score_cp === "number" ? ` (${sug.score_cp > 0 ? "+" : ""}${sug.score_cp})` : "";
         text += `${idx + 1}. ${mv}${sc}\n`;
       });
+      if (lastExplanationText) {
+        text += "\n" + lastExplanationText;
+      }
       gameInfoNotesBox.value = text.trim();
       gameInfoNotesBox.dataset.fsSuggestions = "1";
     }
@@ -1036,7 +1061,8 @@
     if (selectedPiece) {
       selectedPiece.classList.add(SELECTED_PIECE_CLASS);
       void loadLegalDestinationsForSelection(selectedSquareSequence);
-      void loadSuggestedMovesForSelection(selectedSquareSequence);
+      // Do NOT refresh FS suggestions on piece selection.
+      // Suggestions are only updated after a real move (human or AI) or on New Game.
     }
   };
 
