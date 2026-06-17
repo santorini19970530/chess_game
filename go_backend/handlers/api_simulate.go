@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	session "go_backend/game/session"
@@ -32,6 +34,20 @@ type simulateResponse struct {
 	Results   []gameResult `json:"results,omitempty"`
 }
 
+const maxSimulationPlies = 600
+
+func parseDetailsFlag(r *http.Request) (bool, error) {
+	raw := strings.TrimSpace(r.URL.Query().Get("details"))
+	if raw == "" {
+		return true, nil
+	}
+	value, err := strconv.ParseBool(raw)
+	if err != nil {
+		return false, fmt.Errorf("details must be true or false")
+	}
+	return value, nil
+}
+
 func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
@@ -39,21 +55,34 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	includeDetails, detailsErr := parseDetailsFlag(r)
+	if detailsErr != nil {
+		writeJSONError(w, http.StatusBadRequest, detailsErr.Error())
+		return
+	}
+
 	var req simulateRequest
 
 	// Support both JSON and application/x-www-form-urlencoded
-	ct := r.Header.Get("Content-Type")
-	if ct == "" || ct == "application/x-www-form-urlencoded" {
-		if err := r.ParseForm(); err == nil {
-			if g := r.FormValue("games"); g != "" {
-				fmt.Sscanf(g, "%d", &req.Games)
-			}
-			req.Profile = r.FormValue("profile")
+	ct := strings.ToLower(strings.TrimSpace(r.Header.Get("Content-Type")))
+	if ct == "" || strings.HasPrefix(ct, "application/x-www-form-urlencoded") {
+		if err := r.ParseForm(); err != nil {
+			writeJSONError(w, http.StatusBadRequest, "invalid form payload")
+			return
 		}
+		if g := strings.TrimSpace(r.FormValue("games")); g != "" {
+			if _, scanErr := fmt.Sscanf(g, "%d", &req.Games); scanErr != nil {
+				writeJSONError(w, http.StatusBadRequest, "games must be a valid integer")
+				return
+			}
+		}
+		req.Profile = strings.TrimSpace(r.FormValue("profile"))
 	}
 
 	if req.Games == 0 {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&req); err != nil {
 			writeJSONError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
@@ -68,7 +97,7 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profile := req.Profile
+	profile := strings.TrimSpace(req.Profile)
 	if profile == "" {
 		profile = "intermediate"
 	}
@@ -97,24 +126,26 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 
 		// Run game move-by-move for live streaming
 		moveCount := 0
-		var lastRes simulation.Result
-		for {
+		var runErr error
+		for ply := 0; ply < maxSimulationPlies; ply++ {
 			currentGame, _ := session.RefreshGameSessionOutcomeByID(game.ID)
 			if currentGame.Result != session.GameResultInProgress {
-				lastRes = simulation.Result{
-					Result:    currentGame.Result,
-					Winner:    currentGame.Outcome.Winner,
-					MoveCount: moveCount,
-				}
 				break
 			}
 
 			move, err := SelectAIMove(game.ID)
-			if err != nil || move == "" {
+			if err != nil {
+				runErr = fmt.Errorf("failed to select AI move: %w", err)
+				break
+			}
+			move = strings.TrimSpace(move)
+			if move == "" {
+				runErr = fmt.Errorf("failed to select AI move: empty move")
 				break
 			}
 
 			if _, applyErr := session.ApplyMoveByCommandByID(game.ID, move); applyErr != nil {
+				runErr = fmt.Errorf("failed to apply AI move: %w", applyErr)
 				break
 			}
 			moveCount++
@@ -126,13 +157,32 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 				"move_num": moveCount,
 			})
 		}
+		if runErr == nil {
+			currentGame, refreshErr := session.RefreshGameSessionOutcomeByID(game.ID)
+			if refreshErr != nil {
+				runErr = fmt.Errorf("failed to refresh game outcome: %w", refreshErr)
+			} else if currentGame.Result == session.GameResultInProgress {
+				runErr = fmt.Errorf("simulation exceeded max plies (%d)", maxSimulationPlies)
+			}
+		}
+		if runErr != nil {
+			writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("simulation game %d failed: %v", gameNum, runErr))
+			return
+		}
+
+		snapshot, snapshotErr := session.BuildSnapshotByID(game.ID)
+		if snapshotErr != nil {
+			writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("failed to snapshot simulation game %d", gameNum))
+			return
+		}
 
 		elapsed := time.Since(start)
+		moveCount = len(snapshot.History)
 
 		log.Printf("=== simulate game %d/%d finished: result=%s winner=%q moves=%d (%.1fs) ===",
-			gameNum, req.Games, lastRes.Result, lastRes.Winner, lastRes.MoveCount, elapsed.Seconds())
+			gameNum, req.Games, snapshot.Game.Result, snapshot.Game.Outcome.Winner, moveCount, elapsed.Seconds())
 
-		switch lastRes.Result {
+		switch snapshot.Game.Result {
 		case session.GameResultWhiteWin:
 			white++
 		case session.GameResultBlackWin:
@@ -140,22 +190,29 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 		case session.GameResultDraw:
 			draws++
 		}
-		totalMoves += lastRes.MoveCount
+		totalMoves += moveCount
 
-		// For live streaming we don't have full history in this path yet.
-		// We still archive full history by re-running a quick summary if needed (simplified here).
+		historyDetailed := []session.MoveHistoryEntry(nil)
+		if includeDetails {
+			historyDetailed = snapshot.HistoryDetailed
+		}
+
 		results = append(results, gameResult{
-			Result: string(lastRes.Result),
-			Winner: lastRes.Winner,
-			Moves:  lastRes.MoveCount,
+			Result:          string(snapshot.Game.Result),
+			Winner:          snapshot.Game.Outcome.Winner,
+			Moves:           moveCount,
+			HistoryDetailed: historyDetailed,
 		})
 
 		archiveItems = append(archiveItems, simulation.ResultWithGameID{
 			GameID:    game.ID,
 			Profile:   profile,
-			Result:    lastRes.Result,
-			Winner:    lastRes.Winner,
-			MoveCount: lastRes.MoveCount,
+			Result:    snapshot.Game.Result,
+			Winner:    snapshot.Game.Outcome.Winner,
+			MoveCount: moveCount,
+			// ponytail: keep archive self-contained; if this grows too large, switch to summary-only
+			// files with optional separate move-history export.
+			HistoryDetailed: snapshot.HistoryDetailed,
 		})
 	}
 
@@ -177,5 +234,13 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 		Draws:     draws,
 		AvgMoves:  avg,
 		Results:   results,
+	})
+
+	gameSocketHub.BroadcastGlobal(socketEventSimulationDone, map[string]interface{}{
+		"games":      req.Games,
+		"white_wins": white,
+		"black_wins": black,
+		"draws":      draws,
+		"avg_moves":  avg,
 	})
 }

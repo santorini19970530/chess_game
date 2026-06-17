@@ -31,6 +31,15 @@
   const configApplyButton = document.getElementById("game_config_apply");
   const boardElement = document.querySelector(".chess_board");
   const promotionPicker = document.getElementById("promotion_picker");
+  const simulationSummaryPanel = document.getElementById("simulation_summary_panel");
+  const simulationSummaryGames = document.getElementById("simulation_summary_games");
+  const simulationSummaryWhite = document.getElementById("simulation_summary_white");
+  const simulationSummaryBlack = document.getElementById("simulation_summary_black");
+  const simulationSummaryDraws = document.getElementById("simulation_summary_draws");
+  const simulationSummaryAvg = document.getElementById("simulation_summary_avg");
+  const simulationResultList = document.getElementById("simulation_result_list");
+  const simulationResultDetails = document.getElementById("simulation_result_details");
+  const simulationResultSummaryText = document.getElementById("simulation_result_summary_text");
   const moveSound = new Audio("/sounds/chess_movement.wav");
   const captureSound = new Audio("/sounds/capture.wav");
   const CHECK_CLASS = "game_info_col_in_check";
@@ -49,6 +58,14 @@
   let isSubmitting = false;
   let pendingPromotionResolve = null;
   let analysisPollTimer = null;
+  let isSimulationPlayback = false; // Flag to suppress hints during AI sim
+  // Manual simulation playback state
+  let simulationData = null;
+  let currentSimGameIdx = 0;
+  let currentSimMoveIdx = 0;
+  let simRunBtn = null;
+  let simNextMoveBtn = null;
+  let simNextGameBtn = null;
   let analysisPollFallbackTimer = null;
   let pendingAnalysisTargetMove = 0;
   let pendingAnalysisCapturedSnapshot = null;
@@ -87,6 +104,65 @@
   const setStatus = (message, type) => {
     status.textContent = message;
     status.className = `command_status ${type}`;
+  };
+
+  const isAIVsAIModeSelected = () => String(gameModeSelect?.value || "") === "ai_vs_ai";
+
+  const clearSimulationSummary = () => {
+    if (simulationSummaryGames) simulationSummaryGames.textContent = "0";
+    if (simulationSummaryWhite) simulationSummaryWhite.textContent = "0";
+    if (simulationSummaryBlack) simulationSummaryBlack.textContent = "0";
+    if (simulationSummaryDraws) simulationSummaryDraws.textContent = "0";
+    if (simulationSummaryAvg) simulationSummaryAvg.textContent = "0.0";
+    if (simulationResultList) simulationResultList.innerHTML = "";
+    if (simulationResultSummaryText) simulationResultSummaryText.textContent = "Per-game results";
+    if (simulationResultDetails) simulationResultDetails.open = false;
+    if (simulationSummaryPanel) simulationSummaryPanel.classList.add("simulation_summary_hidden");
+  };
+
+  const renderSimulationSummary = (summary) => {
+    const games = Number(summary?.games || 0);
+    const whiteWins = Number(summary?.white_wins || 0);
+    const blackWins = Number(summary?.black_wins || 0);
+    const draws = Number(summary?.draws || 0);
+    const avgMoves = Number(summary?.avg_moves || 0);
+
+    if (simulationSummaryGames) simulationSummaryGames.textContent = String(games);
+    if (simulationSummaryWhite) simulationSummaryWhite.textContent = String(whiteWins);
+    if (simulationSummaryBlack) simulationSummaryBlack.textContent = String(blackWins);
+    if (simulationSummaryDraws) simulationSummaryDraws.textContent = String(draws);
+    if (simulationSummaryAvg) simulationSummaryAvg.textContent = Number.isFinite(avgMoves) ? avgMoves.toFixed(1) : "0.0";
+
+    if (simulationResultList) {
+      simulationResultList.innerHTML = "";
+      const results = Array.isArray(summary?.results) ? summary.results : [];
+      if (simulationResultSummaryText) {
+        simulationResultSummaryText.textContent = `Per-game results (${results.length})`;
+      }
+      if (simulationResultDetails) {
+        simulationResultDetails.open = false;
+      }
+      for (let i = 0; i < results.length; i++) {
+        const item = document.createElement("li");
+        const one = results[i] || {};
+        const result = String(one.result || "unknown");
+        const winner = String(one.winner || "-");
+        const moves = Number(one.moves || 0);
+        item.textContent = `Game ${i + 1}: ${result} | winner: ${winner} | moves: ${moves}`;
+        simulationResultList.appendChild(item);
+      }
+    }
+
+    if (simulationSummaryPanel) simulationSummaryPanel.classList.remove("simulation_summary_hidden");
+  };
+
+  const readSimulationCount = () => {
+    const raw = String(aiGameCountInput?.value || "").trim();
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n < 1 || n > 1000) {
+      return { ok: false, message: "Please enter an integer game count between 1 and 1000." };
+    }
+    return { ok: true, count: n };
   };
 
   const readErrorMessage = async (response, fallback) => {
@@ -246,28 +322,64 @@
       }
     }
 
-    // Live AI simulation move streaming (issue0030) - Visual board update
-    if (event === "simulation_move") {
+    // Optional live socket simulation stream (kept for observers).
+    // Manual playback mode uses API response history instead.
+    if (event === "simulation_move" && !simulationData && !isSimulationPlayback) {
       const move = data?.move || "";
-      if (move && boardElement) {
-        // Update visual board
-        applyUciMoveToBoard(move);
-        playMoveSound(false); // Play sound for simulation moves too
-      }
-      // Also log to notes if available (optional text log)
+      const gameNum = data?.game_num || "";
+
+      // Use a timeout to slow down the visual playback so moves are observable
+      setTimeout(() => {
+        if (move && boardElement) {
+          applyUciMoveToBoard(move);
+          playMoveSound(false);
+          // Explicitly clear any suggested move highlights during simulation
+          highlightSuggestedMoves([]);
+        }
+
+        // Update move history panels
+        // We don't have piece kind easily, so we use a generic approach or just the command.
+        // For simplicity in simulation, we append to the correct side based on move parity.
+        const moveNum = data?.move_num || 0;
+        const side = (moveNum % 2 === 1) ? "white" : "black";
+        const listEl = side === "white" ? moveHistoryWhiteList : moveHistoryBlackList;
+
+        if (listEl) {
+          // Clear placeholder if exists
+          const placeholder = listEl.querySelector(".chess_move_history_placeholder");
+          if (placeholder) placeholder.remove();
+
+          const item = document.createElement("li");
+          item.textContent = move;
+          listEl.appendChild(item);
+          listEl.scrollTop = listEl.scrollHeight;
+        }
+
+        // Log to notes box as well
+        if (gameInfoNotesBox) {
+          const line = gameNum ? `Game ${gameNum}: ${move}` : move;
+          const current = gameInfoNotesBox.value.trim();
+          gameInfoNotesBox.value = current ? current + "\n" + line : line;
+        }
+      }, 300); // 300ms delay between moves for visibility
+      return;
+    }
+    if (event === "simulation_game_end" && !isSimulationPlayback) {
+      const status = data?.status || "finished";
+      const gameNum = data?.game_num || 0;
+
       if (gameInfoNotesBox) {
-        const gameNum = data?.game_num || "";
-        const line = gameNum ? `Game ${gameNum}: ${move}` : move;
-        const current = gameInfoNotesBox.value.trim();
-        gameInfoNotesBox.value = current ? current + "\n" + line : line;
+        gameInfoNotesBox.value += `\n[Game ${gameNum} ${status}]`;
+      }
+
+      if (status === "started" && gameNum > 1) {
+        resetBoardToInitialState();
+        resetSimulationHistoryPanels();
       }
       return;
     }
-    if (event === "simulation_game_end") {
-      if (gameInfoNotesBox) {
-        const status = data?.status || "finished";
-        gameInfoNotesBox.value += `\n[Game ${data?.game_num || ""} ${status}]`;
-      }
+    if (event === "simulation_completed" && !isSimulationPlayback && data) {
+      renderSimulationSummary(data);
       return;
     }
   };
@@ -463,15 +575,25 @@
 
   const updateSetupControlState = () => {
     const mode = String(gameModeSelect?.value || "human_vs_human");
+    const isAIVsAI = mode === "ai_vs_ai";
     const fenProvided = Boolean(String(fenInput?.value || "").trim());
-    if (humanSideSelect) humanSideSelect.disabled = mode === "ai_vs_ai";
+    if (humanSideSelect) humanSideSelect.disabled = isAIVsAI;
     if (aiGameCountInput) {
-      aiGameCountInput.disabled = mode !== "ai_vs_ai";
+      aiGameCountInput.disabled = !isAIVsAI;
       if (fenProvided) aiGameCountInput.value = "1";
     }
     if (aiStrengthSelect) {
       // Show strength selector only for modes that involve AI
-      aiStrengthSelect.disabled = !(mode === "human_vs_ai" || mode === "ai_vs_ai");
+      aiStrengthSelect.disabled = !(mode === "human_vs_ai" || isAIVsAI);
+    }
+
+    // Keep simulation controls sane when user leaves AI vs AI mode.
+    if (!isAIVsAI && (isSimulationPlayback || simulationData)) {
+      cleanupSimulationControls();
+      clearSimulationSummary();
+    }
+    if (simRunBtn) {
+      simRunBtn.style.display = isAIVsAI ? "inline-block" : "none";
     }
   };
 
@@ -989,6 +1111,7 @@
   let selectedSuggestedMoves = [];
 
   const refreshSuggestedMoves = async (retry = true) => {
+    if (isSimulationPlayback) return;
     if (!currentGameId || gameOver) {
       highlightSuggestedMoves([]);
       return;
@@ -1083,6 +1206,7 @@
   };
 
   const loadSuggestedMovesForSelection = async (sequence) => {
+    if (isSimulationPlayback) return; // Suppress during simulation
     if (!currentGameId) {
       highlightSuggestedMoves([]);
       return;
@@ -1499,68 +1623,68 @@
   }
 
   if (aiGameCountInput && configApplyButton) {
-    const simBtn = document.createElement("button");
-    simBtn.id = "run_simulation_btn";
-    simBtn.type = "button";
-    simBtn.textContent = "Run AI Simulation";
-    simBtn.className = "run-simulation-btn";
+    simRunBtn = document.createElement("button");
+    simRunBtn.id = "run_simulation_btn";
+    simRunBtn.type = "button";
+    simRunBtn.textContent = "Run AI Simulation";
+    simRunBtn.className = "run-simulation-btn";
 
     // Insert right after the Apply Setup button for better alignment
-    configApplyButton.insertAdjacentElement("afterend", simBtn);
+    configApplyButton.insertAdjacentElement("afterend", simRunBtn);
+    updateSetupControlState();
 
-    simBtn.addEventListener("click", async () => {
-      const n = parseInt(aiGameCountInput.value, 10) || 1;
-      if (n < 1) {
-        setStatus("Please enter a valid number of games (>=1).", "error");
+    simRunBtn.addEventListener("click", async () => {
+      const parsed = readSimulationCount();
+      if (!parsed.ok) {
+        setStatus(parsed.message, "error");
         return;
       }
+      if (simRunBtn.disabled) return;
 
-      const originalText = simBtn.textContent;
-      setStatus(`Running ${n} AI vs AI game(s)...`, "success");
-      simBtn.disabled = true;
-      simBtn.textContent = "Running...";
+      const n = parsed.count;
+      const profile = String(aiStrengthSelect?.value || "intermediate");
+      clearSelectedSquare();
+      highlightSuggestedMoves([]);
+      if (gameInfoNotesBox) gameInfoNotesBox.value = "Simulation running...";
+      setStatus("Running AI simulation...", "success");
+
+      simRunBtn.disabled = true;
+      isSimulationPlayback = true;
+      simulationData = null;
+      currentSimGameIdx = -1;
+      currentSimMoveIdx = 0;
+      clearSimulationSummary();
 
       try {
-        const resp = await fetch("/api/simulate", {
+        const resp = await fetch("/api/simulate?details=true", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ games: n, profile: "intermediate" }),
+          body: JSON.stringify({ games: n, profile }),
         });
 
         if (!resp.ok) {
-          const err = await resp.text();
-          setStatus(`Simulation failed: ${err}`, "error");
+          const errorMessage = await readErrorMessage(resp, "Simulation request failed.");
+          setStatus(`Simulation failed: ${errorMessage}`, "error");
+          cleanupSimulationControls();
           return;
         }
 
-        const data = await resp.json();
-        const summary = `White ${data.white_wins} | Black ${data.black_wins} | Draws ${data.draws} | Avg moves: ${data.avg_moves.toFixed(1)}`;
-        setStatus(`Simulation complete — ${summary}`, "success");
-
-        if (gameInfoNotesBox && Array.isArray(data.results)) {
-          let output = `AI Simulation Results\n${summary}\n\n`;
-
-          data.results.forEach((game, idx) => {
-            output += `Game ${idx + 1}: ${game.result} (${game.moves} moves)\n`;
-            if (Array.isArray(game.history_detailed)) {
-              game.history_detailed.forEach(move => {
-                const side = move.side || "";
-                const cmd = move.command || "";
-                output += `  ${side}: ${cmd}\n`;
-              });
-            }
-            output += `\n`;
-          });
-
-          gameInfoNotesBox.value = output.trim();
-        } else if (gameInfoNotesBox) {
-          gameInfoNotesBox.value = `AI Simulation Results\n${summary}`;
+        const payload = await resp.json();
+        if (!Array.isArray(payload?.results)) {
+          setStatus("Simulation failed: missing results payload.", "error");
+          cleanupSimulationControls();
+          return;
         }
-      } catch (e) {
-        setStatus("Network error while running simulation.", "error");
-      } finally {
-        simBtn.disabled = false;
-        simBtn.textContent = originalText;
+
+        simulationData = payload;
+        renderSimulationSummary(simulationData);
+        if (simRunBtn) simRunBtn.style.display = "none";
+        ensureSimulationControls();
+        startNextSimulationGame();
+        setStatus(`Simulation loaded (${n} game${n > 1 ? "s" : ""}).`, "success");
+      } catch (_e) {
+        setStatus("Network error while loading simulation.", "error");
+        cleanupSimulationControls();
       }
     });
   }
@@ -1667,6 +1791,7 @@
         gameOver = false;
         resolvePromotionChoice("");
         clearSelectedSquare();
+        cleanupSimulationControls();
         setStatus("New game started.", "success");
         input.focus();
       } catch (_error) {
@@ -1674,6 +1799,214 @@
       }
     });
   }
+  // --- Simulation Manual Playback Helpers ---
+  function initialChessState() {
+    const order = ["rook", "knight", "bishop", "queen", "king", "bishop", "knight", "rook"];
+    const state = [];
+    for (let file = 1; file <= 8; file++) {
+      state.push({ file, rank: 1, kind: order[file - 1], color: "white" });
+      state.push({ file, rank: 2, kind: "pawn", color: "white" });
+      state.push({ file, rank: 7, kind: "pawn", color: "black" });
+      state.push({ file, rank: 8, kind: order[file - 1], color: "black" });
+    }
+    return state;
+  }
+
+  function resetSimulationHistoryPanels() {
+    if (moveHistoryWhiteList) moveHistoryWhiteList.innerHTML = '<li class="chess_move_history_placeholder">No moves yet.</li>';
+    if (moveHistoryBlackList) moveHistoryBlackList.innerHTML = '<li class="chess_move_history_placeholder">No moves yet.</li>';
+  }
+
+  function resetBoardToInitialState() {
+    renderBoardFromState(initialChessState());
+  }
+
+  function clearResultLabelClasses() {
+    if (resultWhiteValue) resultWhiteValue.classList.remove("game_info_result_win", "game_info_result_loss", "game_info_result_draw");
+    if (resultBlackValue) resultBlackValue.classList.remove("game_info_result_win", "game_info_result_loss", "game_info_result_draw");
+  }
+
+  function setPlayingResultLabels() {
+    clearResultLabelClasses();
+    if (resultWhiteValue) resultWhiteValue.textContent = "Result: PLAYING";
+    if (resultBlackValue) resultBlackValue.textContent = "Result: PLAYING";
+  }
+
+  function applySimulationResultLabels(gameResult) {
+    clearResultLabelClasses();
+    const resultText = String(gameResult?.result || "").toLowerCase();
+    if (resultText === "white_win") {
+      if (resultWhiteValue) {
+        resultWhiteValue.textContent = "Result: WIN";
+        resultWhiteValue.classList.add("game_info_result_win");
+      }
+      if (resultBlackValue) {
+        resultBlackValue.textContent = "Result: LOSS";
+        resultBlackValue.classList.add("game_info_result_loss");
+      }
+      return;
+    }
+    if (resultText === "black_win") {
+      if (resultWhiteValue) {
+        resultWhiteValue.textContent = "Result: LOSS";
+        resultWhiteValue.classList.add("game_info_result_loss");
+      }
+      if (resultBlackValue) {
+        resultBlackValue.textContent = "Result: WIN";
+        resultBlackValue.classList.add("game_info_result_win");
+      }
+      return;
+    }
+    if (resultWhiteValue) {
+      resultWhiteValue.textContent = "Result: DRAW";
+      resultWhiteValue.classList.add("game_info_result_draw");
+    }
+    if (resultBlackValue) {
+      resultBlackValue.textContent = "Result: DRAW";
+      resultBlackValue.classList.add("game_info_result_draw");
+    }
+  }
+
+  function ensureSimulationControls() {
+    if (!configApplyButton || !configApplyButton.parentNode) return;
+
+    if (!simNextMoveBtn) {
+      simNextMoveBtn = document.createElement("button");
+      simNextMoveBtn.id = "sim_next_move_btn";
+      simNextMoveBtn.type = "button";
+      simNextMoveBtn.textContent = "Next Move";
+      simNextMoveBtn.className = "run-simulation-btn";
+      simNextMoveBtn.addEventListener("click", playNextSimulationMove);
+      configApplyButton.parentNode.appendChild(simNextMoveBtn);
+    }
+
+    if (!simNextGameBtn) {
+      simNextGameBtn = document.createElement("button");
+      simNextGameBtn.id = "sim_next_game_btn";
+      simNextGameBtn.type = "button";
+      simNextGameBtn.textContent = "Next Game";
+      simNextGameBtn.className = "run-simulation-btn";
+      simNextGameBtn.style.display = "none";
+      simNextGameBtn.addEventListener("click", startNextSimulationGame);
+      configApplyButton.parentNode.appendChild(simNextGameBtn);
+    }
+  }
+
+  function finishCurrentSimulationGame() {
+    const gameResult = simulationData?.results?.[currentSimGameIdx] || null;
+    if (!gameResult) return;
+    applySimulationResultLabels(gameResult);
+    if (simNextMoveBtn) simNextMoveBtn.style.display = "none";
+    if (simNextGameBtn) simNextGameBtn.style.display = "inline-block";
+    const totalGames = Array.isArray(simulationData?.results) ? simulationData.results.length : 0;
+    const isLastGame = currentSimGameIdx >= totalGames - 1;
+    if (isLastGame) {
+      setStatus(`Game ${currentSimGameIdx + 1} finished. All simulation games completed.`, "success");
+      cleanupSimulationControls();
+    } else {
+      setStatus(`Game ${currentSimGameIdx + 1} finished. Click Next Game.`, "success");
+    }
+  }
+
+  function startNextSimulationGame() {
+    if (!simulationData || !Array.isArray(simulationData.results)) return;
+
+    currentSimGameIdx++;
+    currentSimMoveIdx = 0;
+
+    if (currentSimGameIdx >= simulationData.results.length) {
+      setStatus("All simulation games completed.", "success");
+      cleanupSimulationControls();
+      return;
+    }
+
+    if (simNextGameBtn) {
+      simNextGameBtn.textContent = "Next Game";
+      simNextGameBtn.disabled = false;
+      simNextGameBtn.style.display = "none";
+    }
+    if (simNextMoveBtn) simNextMoveBtn.style.display = "inline-block";
+
+    resetBoardToInitialState();
+    resetSimulationHistoryPanels();
+    setPlayingResultLabels();
+    highlightSuggestedMoves([]);
+
+    if (gameInfoNotesBox) {
+      const totalGames = simulationData.results.length;
+      gameInfoNotesBox.value = `Simulation playback: Game ${currentSimGameIdx + 1}/${totalGames}`;
+    }
+    setStatus(`Game ${currentSimGameIdx + 1} ready. Click Next Move.`, "success");
+  }
+
+  function playNextSimulationMove() {
+    const gameResult = simulationData?.results?.[currentSimGameIdx];
+    if (!gameResult) return;
+    const moves = Array.isArray(gameResult.history_detailed) ? gameResult.history_detailed : [];
+
+    if (moves.length === 0) {
+      setStatus(`Game ${currentSimGameIdx + 1} has no move history in response.`, "error");
+      finishCurrentSimulationGame();
+      return;
+    }
+    if (currentSimMoveIdx >= moves.length) {
+      finishCurrentSimulationGame();
+      return;
+    }
+
+    const moveEntry = moves[currentSimMoveIdx] || {};
+    const uciMove = String(moveEntry.command || "").trim();
+    if (uciMove) {
+      applyUciMoveToBoard(uciMove);
+      playMoveSound(Boolean(moveEntry.isCapture));
+      const side = String(moveEntry.side || (currentSimMoveIdx % 2 === 0 ? "white" : "black")).toLowerCase();
+      const listEl = side === "black" ? moveHistoryBlackList : moveHistoryWhiteList;
+      if (listEl) {
+        clearHistoryPlaceholder(listEl);
+        appendHistoryMove(
+          listEl,
+          side,
+          String(moveEntry.pieceKind || "pawn"),
+          String(moveEntry.to || ""),
+          destinationFromCommand(uciMove),
+          Boolean(moveEntry.isCapture),
+          String(moveEntry.capturedPieceKind || "")
+        );
+        listEl.scrollTop = listEl.scrollHeight;
+      }
+      if (gameInfoNotesBox) {
+        const current = gameInfoNotesBox.value.trim();
+        const line = `#${currentSimMoveIdx + 1} ${uciMove}`;
+        gameInfoNotesBox.value = current ? `${current}\n${line}` : line;
+      }
+    }
+    currentSimMoveIdx++;
+  }
+
+  function cleanupSimulationControls() {
+    if (simNextMoveBtn) {
+      simNextMoveBtn.remove();
+      simNextMoveBtn = null;
+    }
+    if (simNextGameBtn) {
+      simNextGameBtn.remove();
+      simNextGameBtn = null;
+    }
+    if (simRunBtn) {
+      simRunBtn.textContent = "Run AI Simulation";
+      simRunBtn.style.display = "inline-block";
+      simRunBtn.disabled = false;
+      if (!isAIVsAIModeSelected()) {
+        simRunBtn.style.display = "none";
+      }
+    }
+    simulationData = null;
+    currentSimGameIdx = 0;
+    currentSimMoveIdx = 0;
+    isSimulationPlayback = false;
+  }
+  // --- End Simulation Helpers ---
+
   input.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -1685,6 +2018,7 @@
   window.addEventListener("beforeunload", () => closeGameSocket(false));
 
   renderGameInfo(null, null);
+  clearSimulationSummary();
   renderCheckState("");
   renderGameOutcome({ status: "in_progress", result: "in_progress" });
   renderGameConfig({
