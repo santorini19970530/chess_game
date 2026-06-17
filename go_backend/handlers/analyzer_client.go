@@ -305,7 +305,6 @@ func analyzeByRequest(reqPayload analyzerRequest) (*analyzerResponse, error) {
 }
 
 // explainByRequest performs a POST to the Python /explain endpoint.
-// It follows the exact same error-handling and timeout pattern as analyzeByRequest.
 func explainByRequest(reqPayload explainRequest) (*explainResponse, error) {
 	body, err := json.Marshal(reqPayload)
 	if err != nil {
