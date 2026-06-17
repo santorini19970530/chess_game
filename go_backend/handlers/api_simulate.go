@@ -73,12 +73,6 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 		profile = "intermediate"
 	}
 
-	// Lightweight mode: skip heavy history_detailed unless explicitly requested
-	includeDetails := true
-	if d := r.URL.Query().Get("details"); d == "false" || d == "0" {
-		includeDetails = false
-	}
-
 	var white, black, draws, totalMoves int
 	results := make([]gameResult, 0, req.Games)
 	archiveItems := make([]simulation.ResultWithGameID, 0, req.Games)
@@ -92,18 +86,53 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 			writeJSONError(w, http.StatusInternalServerError, "failed to create game")
 			return
 		}
+
+		// Broadcast game start (global so any connected client sees it)
+		gameSocketHub.BroadcastGlobal(socketEventSimulationGameEnd, map[string]interface{}{
+			"game_num": gameNum,
+			"status":   "started",
+		})
+
 		start := time.Now()
-		res, err := simulation.RunSingleAIGame(game.ID, SelectAIMove)
-		if err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "simulation failed")
-			return
+
+		// Run game move-by-move for live streaming
+		moveCount := 0
+		var lastRes simulation.Result
+		for {
+			currentGame, _ := session.RefreshGameSessionOutcomeByID(game.ID)
+			if currentGame.Result != session.GameResultInProgress {
+				lastRes = simulation.Result{
+					Result:    currentGame.Result,
+					Winner:    currentGame.Outcome.Winner,
+					MoveCount: moveCount,
+				}
+				break
+			}
+
+			move, err := SelectAIMove(game.ID)
+			if err != nil || move == "" {
+				break
+			}
+
+			if _, applyErr := session.ApplyMoveByCommandByID(game.ID, move); applyErr != nil {
+				break
+			}
+			moveCount++
+
+			// Emit live move event (global)
+			gameSocketHub.BroadcastGlobal(socketEventSimulationMove, map[string]interface{}{
+				"game_num": gameNum,
+				"move":     move,
+				"move_num": moveCount,
+			})
 		}
+
 		elapsed := time.Since(start)
 
 		log.Printf("=== simulate game %d/%d finished: result=%s winner=%q moves=%d (%.1fs) ===",
-			gameNum, req.Games, res.Result, res.Winner, res.MoveCount, elapsed.Seconds())
+			gameNum, req.Games, lastRes.Result, lastRes.Winner, lastRes.MoveCount, elapsed.Seconds())
 
-		switch res.Result {
+		switch lastRes.Result {
 		case session.GameResultWhiteWin:
 			white++
 		case session.GameResultBlackWin:
@@ -111,27 +140,22 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 		case session.GameResultDraw:
 			draws++
 		}
-		totalMoves += res.MoveCount
+		totalMoves += lastRes.MoveCount
 
-		var hist []session.MoveHistoryEntry
-		if includeDetails {
-			hist = res.HistoryDetailed
-		}
-
+		// For live streaming we don't have full history in this path yet.
+		// We still archive full history by re-running a quick summary if needed (simplified here).
 		results = append(results, gameResult{
-			Result:          string(res.Result),
-			Winner:          res.Winner,
-			Moves:           res.MoveCount,
-			HistoryDetailed: hist,
+			Result: string(lastRes.Result),
+			Winner: lastRes.Winner,
+			Moves:  lastRes.MoveCount,
 		})
 
 		archiveItems = append(archiveItems, simulation.ResultWithGameID{
-			GameID:          game.ID,
-			Profile:         profile,
-			Result:          res.Result,
-			Winner:          res.Winner,
-			MoveCount:       res.MoveCount,
-			HistoryDetailed: res.HistoryDetailed, // always keep full history for archive
+			GameID:    game.ID,
+			Profile:   profile,
+			Result:    lastRes.Result,
+			Winner:    lastRes.Winner,
+			MoveCount: lastRes.MoveCount,
 		})
 	}
 

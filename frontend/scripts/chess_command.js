@@ -187,7 +187,9 @@
   const handleSocketMessage = (payload) => {
     const event = String(payload?.event || "");
     const gameId = String(payload?.game_id || "");
-    if (!event || !gameId || gameId !== currentGameId) return;
+    // Allow simulation events even if they don't match currentGameId
+    const isSimulationEvent = event.startsWith("simulation_");
+    if (!event || (!isSimulationEvent && gameId !== currentGameId)) return;
     const data = payload?.data || {};
 
     if (event === "move_applied") {
@@ -242,6 +244,31 @@
       } else {
         gameInfoNotesBox.value = lastExplanationText;
       }
+    }
+
+    // Live AI simulation move streaming (issue0030) - Visual board update
+    if (event === "simulation_move") {
+      const move = data?.move || "";
+      if (move && boardElement) {
+        // Update visual board
+        applyUciMoveToBoard(move);
+        playMoveSound(false); // Play sound for simulation moves too
+      }
+      // Also log to notes if available (optional text log)
+      if (gameInfoNotesBox) {
+        const gameNum = data?.game_num || "";
+        const line = gameNum ? `Game ${gameNum}: ${move}` : move;
+        const current = gameInfoNotesBox.value.trim();
+        gameInfoNotesBox.value = current ? current + "\n" + line : line;
+      }
+      return;
+    }
+    if (event === "simulation_game_end") {
+      if (gameInfoNotesBox) {
+        const status = data?.status || "finished";
+        gameInfoNotesBox.value += `\n[Game ${data?.game_num || ""} ${status}]`;
+      }
+      return;
     }
   };
 
@@ -750,6 +777,42 @@
       file: (seq % 8) + 1,
       rank: 8 - Math.floor(seq / 8),
     };
+  };
+
+  // Helper to apply a UCI move string (e.g. "e2e4") to the visual board DOM.
+  // Used for live AI simulation playback.
+  const applyUciMoveToBoard = (uci) => {
+    if (!uci || uci.length < 4) return;
+    const fromSq = uci.substring(0, 2);
+    const toSq = uci.substring(2, 4);
+
+    // Find squares by their algebraic notation (data-square or by calculating sequence)
+    // We use the existing sequence calculation logic.
+    const getSequenceFromAlgebraic = (alg) => {
+      if (!alg || alg.length !== 2) return -1;
+      const file = alg.charCodeAt(0) - 'a'.charCodeAt(0) + 1;
+      const rank = parseInt(alg[1], 10);
+      if (file < 1 || file > 8 || rank < 1 || rank > 8) return -1;
+      return (8 - rank) * 8 + (file - 1);
+    };
+
+    const fromSeq = getSequenceFromAlgebraic(fromSq);
+    const toSeq = getSequenceFromAlgebraic(toSq);
+
+    const fromEl = boardElement.querySelector(`.chess_board_square[data-sequence="${fromSeq}"]`);
+    const toEl = boardElement.querySelector(`.chess_board_square[data-sequence="${toSeq}"]`);
+
+    if (!fromEl || !toEl) return;
+
+    const piece = fromEl.querySelector(".piece_img");
+    if (!piece) return;
+
+    // Capture logic: remove piece at destination if exists
+    const captured = toEl.querySelector(".piece_img");
+    if (captured) captured.remove();
+
+    // Move piece
+    toEl.appendChild(piece);
   };
 
   const getSquareElement = (target) =>
@@ -1474,13 +1537,24 @@
         const summary = `White ${data.white_wins} | Black ${data.black_wins} | Draws ${data.draws} | Avg moves: ${data.avg_moves.toFixed(1)}`;
         setStatus(`Simulation complete — ${summary}`, "success");
 
-        if (gameInfoNotesBox) {
-          gameInfoNotesBox.value = `AI Simulation Results\n` +
-            `Games: ${data.games}\n` +
-            `White wins: ${data.white_wins}\n` +
-            `Black wins: ${data.black_wins}\n` +
-            `Draws: ${data.draws}\n` +
-            `Average moves: ${data.avg_moves.toFixed(1)}`;
+        if (gameInfoNotesBox && Array.isArray(data.results)) {
+          let output = `AI Simulation Results\n${summary}\n\n`;
+
+          data.results.forEach((game, idx) => {
+            output += `Game ${idx + 1}: ${game.result} (${game.moves} moves)\n`;
+            if (Array.isArray(game.history_detailed)) {
+              game.history_detailed.forEach(move => {
+                const side = move.side || "";
+                const cmd = move.command || "";
+                output += `  ${side}: ${cmd}\n`;
+              });
+            }
+            output += `\n`;
+          });
+
+          gameInfoNotesBox.value = output.trim();
+        } else if (gameInfoNotesBox) {
+          gameInfoNotesBox.value = `AI Simulation Results\n${summary}`;
         }
       } catch (e) {
         setStatus("Network error while running simulation.", "error");
@@ -1574,8 +1648,18 @@
         }
 
         cachedAnalysis = null;
-        renderGameInfo(result.captured, result.analysis);
+        cachedCapturedSummary = null;
+
+        renderGameInfo(result.captured, null);
         stopAnalysisPolling();
+
+        // Force reset win probability to 50/50 AFTER renderGameInfo, 
+        // in case any async update tries to restore old analysis values.
+        if (winProbWhiteValue) winProbWhiteValue.textContent = "50.0%";
+        if (winProbBlackValue) winProbBlackValue.textContent = "50.0%";
+        if (winProbWhiteBar) winProbWhiteBar.style.width = "50%";
+        if (winProbBlackBar) winProbBlackBar.style.width = "50%";
+
         input.value = "";
         input.disabled = false;
         button.disabled = false;

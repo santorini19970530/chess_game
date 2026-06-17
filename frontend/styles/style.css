@@ -1,4 +1,5 @@
 /*! tailwindcss v4.2.2 | MIT License | https://tailwindcss.com */
+@layer properties;
 @layer theme, base, components, utilities;
 @layer theme {
   :root, :host {
@@ -161,7 +162,199 @@
     display: none !important;
   }
 }
-@layer utilities;
+@layer utilities {
+  .collapse {
+    visibility: collapse;
+  }
+  .visible {
+    visibility: visible;
+  }
+  .absolute {
+    position: absolute;
+  }
+  .fixed {
+    position: fixed;
+  }
+  .relative {
+    position: relative;
+  }
+  .static {
+    position: static;
+  }
+  .start {
+    inset-inline-start: var(--spacing);
+  }
+  .end {
+    inset-inline-end: var(--spacing);
+  }
+  .top-3 {
+    top: calc(var(--spacing) * 3);
+  }
+  .container {
+    width: 100%;
+    @media (width >= 40rem) {
+      max-width: 40rem;
+    }
+    @media (width >= 48rem) {
+      max-width: 48rem;
+    }
+    @media (width >= 64rem) {
+      max-width: 64rem;
+    }
+    @media (width >= 80rem) {
+      max-width: 80rem;
+    }
+    @media (width >= 96rem) {
+      max-width: 96rem;
+    }
+  }
+  .block {
+    display: block;
+  }
+  .contents {
+    display: contents;
+  }
+  .grid {
+    display: grid;
+  }
+  .hidden {
+    display: none;
+  }
+  .inline {
+    display: inline;
+  }
+  .table {
+    display: table;
+  }
+  .grow {
+    flex-grow: 1;
+  }
+  .transform {
+    transform: var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,);
+  }
+  .truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .capitalize {
+    text-transform: capitalize;
+  }
+  .lowercase {
+    text-transform: lowercase;
+  }
+  .uppercase {
+    text-transform: uppercase;
+  }
+  .ring {
+    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+  .transition {
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+  }
+  .\[active\:chess\] {
+    active: chess;
+  }
+  .\[advancedpawn\:chess\] {
+    advancedpawn: chess;
+  }
+  .\[anti-losalamos\:losalamos\] {
+    anti-losalamos: losalamos;
+  }
+  .\[atomic-giveaway-hill\:giveaway\] {
+    atomic-giveaway-hill: giveaway;
+  }
+  .\[atomic-giveaway\:giveaway\] {
+    atomic-giveaway: giveaway;
+  }
+  .\[capture\:chess\] {
+    capture: chess;
+  }
+  .\[captureall\:extinction\] {
+    captureall: extinction;
+  }
+  .\[coffeehouse\:crazyhouse\] {
+    coffeehouse: crazyhouse;
+  }
+  .\[cornerrook\:chess\] {
+    cornerrook: chess;
+  }
+  .\[crossing\:kingofthehill\] {
+    crossing: kingofthehill;
+  }
+  .\[diana\:losalamos\] {
+    diana: losalamos;
+  }
+  .\[doublearmy\:chess\] {
+    doublearmy: chess;
+  }
+  .\[empire\:chess\] {
+    empire: chess;
+  }
+  .\[flipello\:flipersi\] {
+    flipello: flipersi;
+  }
+  .\[gemini\:janus\] {
+    gemini: janus;
+  }
+  .\[gothhouse\:capablanca\] {
+    gothhouse: capablanca;
+  }
+  .\[grandhouse\:grand\] {
+    grandhouse: grand;
+  }
+  .\[janggihouse\:janggi\] {
+    janggihouse: janggi;
+  }
+  .\[makrukhouse\:makruk\] {
+    makrukhouse: makruk;
+  }
+  .\[microchess\:gardner\] {
+    microchess: gardner;
+  }
+  .\[orda\:chess\] {
+    orda: chess;
+  }
+  .\[ordamirror\:chess\] {
+    ordamirror: chess;
+  }
+  .\[pawnsmassacre\:chess\] {
+    pawnsmassacre: chess;
+  }
+  .\[peasant\:chess\] {
+    peasant: chess;
+  }
+  .\[screen\:placement\] {
+    screen: placement;
+  }
+  .\[semitorpedo\:chess\] {
+    semitorpedo: chess;
+  }
+  .\[shinobi\:chess\] {
+    shinobi: chess;
+  }
+  .\[shogun\:crazyhouse\] {
+    shogun: crazyhouse;
+  }
+  .\[synochess\:pocketknight\] {
+    synochess: pocketknight;
+  }
+  .\[upsidedown\:chess\] {
+    upsidedown: chess;
+  }
+  .\[weak\:chess\] {
+    weak: chess;
+  }
+  .\[wildebeest\:chess\] {
+    wildebeest: chess;
+  }
+  .\[xiangqihouse\:xiangqi\] {
+    xiangqihouse: xiangqi;
+  }
+}
 * {
   margin: 0px;
   padding: 0px;
@@ -735,4 +928,114 @@ main {
 }
 #chess_command_submit:hover {
   background-color: #475569;
+}
+@property --tw-rotate-x {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-rotate-y {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-rotate-z {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-skew-x {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-skew-y {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-shadow-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+@property --tw-inset-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-inset-shadow-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-inset-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+@property --tw-ring-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-ring-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-inset-ring-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-inset-ring-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-ring-inset {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-ring-offset-width {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --tw-ring-offset-color {
+  syntax: "*";
+  inherits: false;
+  initial-value: #fff;
+}
+@property --tw-ring-offset-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@layer properties {
+  @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
+    *, ::before, ::after, ::backdrop {
+      --tw-rotate-x: initial;
+      --tw-rotate-y: initial;
+      --tw-rotate-z: initial;
+      --tw-skew-x: initial;
+      --tw-skew-y: initial;
+      --tw-shadow: 0 0 #0000;
+      --tw-shadow-color: initial;
+      --tw-shadow-alpha: 100%;
+      --tw-inset-shadow: 0 0 #0000;
+      --tw-inset-shadow-color: initial;
+      --tw-inset-shadow-alpha: 100%;
+      --tw-ring-color: initial;
+      --tw-ring-shadow: 0 0 #0000;
+      --tw-inset-ring-color: initial;
+      --tw-inset-ring-shadow: 0 0 #0000;
+      --tw-ring-inset: initial;
+      --tw-ring-offset-width: 0px;
+      --tw-ring-offset-color: #fff;
+      --tw-ring-offset-shadow: 0 0 #0000;
+    }
+  }
 }

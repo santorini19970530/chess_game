@@ -14,6 +14,12 @@ const (
 	socketEventGameOutcome       socketEventType = "game_outcome"
 	socketEventAnalysisStatus    socketEventType = "analysis_status_update"
 	socketEventExplanationReady  socketEventType = "explanation_ready"
+
+	// Simulation live progress events (issue0030 Option A)
+	socketEventSimulationStarted socketEventType = "simulation_started"
+	socketEventSimulationMove    socketEventType = "simulation_move"
+	socketEventSimulationGameEnd socketEventType = "simulation_game_end"
+	socketEventSimulationDone    socketEventType = "simulation_completed"
 )
 
 type socketEnvelope struct {
@@ -107,3 +113,36 @@ func (h *socketHub) Broadcast(gameID string, event socketEventType, data interfa
 }
 
 var gameSocketHub = newSocketHub()
+
+// BroadcastGlobal sends a message to every connected WebSocket client
+// regardless of which game they are viewing. Useful for simulation progress.
+func (h *socketHub) BroadcastGlobal(event socketEventType, data interface{}) {
+	if h == nil {
+		return
+	}
+	envelope := socketEnvelope{
+		Event:        event,
+		TimestampUTC: time.Now().UTC().Format(time.RFC3339Nano),
+		Data:         data,
+	}
+	payload, err := json.Marshal(envelope)
+	if err != nil {
+		return
+	}
+
+	h.mu.RLock()
+	var sinks []chan<- []byte
+	for _, clients := range h.clientsByGame {
+		for _, sink := range clients {
+			sinks = append(sinks, sink)
+		}
+	}
+	h.mu.RUnlock()
+
+	for _, sink := range sinks {
+		select {
+		case sink <- payload:
+		default:
+		}
+	}
+}
