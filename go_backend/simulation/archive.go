@@ -5,12 +5,40 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	session "go_backend/game/session"
 )
 
-const simulationArchiveDir = "data/simulations"
+// simulationArchiveRoot resolves data/simulations relative to the go.mod directory
+// so archives land in one place whether the server or tests run from subpackages.
+func simulationArchiveRoot() string {
+	if v := strings.TrimSpace(os.Getenv("SIMULATION_ARCHIVE_DIR")); v != "" {
+		return v
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return filepath.Join("data", "simulations")
+	}
+
+	dir := cwd
+	for {
+		if _, statErr := os.Stat(filepath.Join(dir, "go.mod")); statErr == nil {
+			if resolved, resolveErr := filepath.EvalSymlinks(dir); resolveErr == nil {
+				dir = resolved
+			}
+			return filepath.Join(dir, "data", "simulations")
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return filepath.Join("data", "simulations")
+}
 
 // ArchiveSimulationRun saves each completed game into its own JSON file
 // inside a timestamped folder for this run. Future runs create new folders.
@@ -20,7 +48,7 @@ func ArchiveSimulationRun(results []ResultWithGameID) error {
 	}
 
 	runID := fmt.Sprintf("%d-%dgames", time.Now().UnixNano(), len(results))
-	runDir := filepath.Join(simulationArchiveDir, runID)
+	runDir := filepath.Join(simulationArchiveRoot(), runID)
 
 	if err := os.MkdirAll(runDir, 0o755); err != nil {
 		return err

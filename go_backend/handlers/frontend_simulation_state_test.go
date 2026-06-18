@@ -16,6 +16,35 @@ func loadChessCommandSource(t *testing.T) string {
 		filepath.Join("frontend", "scripts", "chess_command.js"),
 	}
 
+	return loadFrontendSource(t, candidates, "chess_command.js")
+}
+
+func loadInputCSSSource(t *testing.T) string {
+	t.Helper()
+
+	candidates := []string{
+		filepath.Join("..", "..", "frontend", "styles", "input.css"),
+		filepath.Join("..", "frontend", "styles", "input.css"),
+		filepath.Join("frontend", "styles", "input.css"),
+	}
+
+	return loadFrontendSource(t, candidates, "input.css")
+}
+
+func loadIndexHandlerSource(t *testing.T) string {
+	t.Helper()
+
+	candidates := []string{
+		"index.go",
+		filepath.Join("handlers", "index.go"),
+	}
+
+	return loadFrontendSource(t, candidates, "index.go")
+}
+
+func loadFrontendSource(t *testing.T, candidates []string, label string) string {
+	t.Helper()
+
 	var lastErr error
 	for _, candidate := range candidates {
 		data, err := os.ReadFile(candidate)
@@ -25,7 +54,7 @@ func loadChessCommandSource(t *testing.T) string {
 		lastErr = err
 	}
 
-	t.Fatalf("failed to load frontend script for regression test: %v", lastErr)
+	t.Fatalf("failed to load %s for regression test: %v", label, lastErr)
 	return ""
 }
 
@@ -81,4 +110,33 @@ func TestFrontendSimulationState_BusyGuardMarkers(t *testing.T) {
 	if strings.Count(source, "Simulation is in progress. Please wait for it to finish.") < 3 {
 		t.Fatalf("expected simulation-in-progress guard message in multiple action handlers")
 	}
+}
+
+func TestFrontendSimulationDownload_Step1ButtonMarkers(t *testing.T) {
+	source := loadIndexHandlerSource(t)
+
+	requireSnippet(t, source, `id="simulation_download_json_btn"`)
+	requireSnippet(t, source, `id="simulation_download_csv_btn"`)
+	requireSnippet(t, source, `class="simulation_download_actions"`)
+	requireSnippet(t, source, "Download JSON")
+	requireSnippet(t, source, "Download CSV")
+}
+
+func TestFrontendSimulationDownload_Step2StyleMarkers(t *testing.T) {
+	source := loadInputCSSSource(t)
+
+	requireSnippet(t, source, ".simulation_download_actions")
+	requireSnippet(t, source, ".simulation_download_btn")
+	requireSnippet(t, source, "#simulation_download_json_btn[disabled]")
+	requireSnippet(t, source, "#simulation_download_csv_btn[disabled]")
+}
+
+func TestFrontendSimulationDownload_ExportMarkers(t *testing.T) {
+	source := loadChessCommandSource(t)
+
+	requireSnippet(t, source, "buildSimulationExportPayload")
+	requireSnippet(t, source, "buildSimulationJSON")
+	requireSnippet(t, source, "buildSimulationCSV")
+	requireSnippet(t, source, "downloadTextFile")
+	requireSnippet(t, source, "setSimulationDownloadEnabled")
 }
