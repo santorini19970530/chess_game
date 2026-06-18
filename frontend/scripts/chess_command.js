@@ -40,6 +40,8 @@
   const simulationResultList = document.getElementById("simulation_result_list");
   const simulationResultDetails = document.getElementById("simulation_result_details");
   const simulationResultSummaryText = document.getElementById("simulation_result_summary_text");
+  const simulationDownloadJsonBtn = document.getElementById("simulation_download_json_btn");
+  const simulationDownloadCsvBtn = document.getElementById("simulation_download_csv_btn");
   const moveSound = new Audio("/sounds/chess_movement.wav");
   const captureSound = new Audio("/sounds/capture.wav");
   const CHECK_CLASS = "game_info_col_in_check";
@@ -124,6 +126,76 @@
 
   const isAIVsAIModeSelected = () => String(gameModeSelect?.value || "") === "ai_vs_ai";
 
+  const setSimulationDownloadEnabled = (enabled) => {
+    if (simulationDownloadJsonBtn) simulationDownloadJsonBtn.disabled = !enabled;
+    if (simulationDownloadCsvBtn) simulationDownloadCsvBtn.disabled = !enabled;
+  };
+
+  const buildSimulationExportPayload = () => {
+    if (!simulationData || !Array.isArray(simulationData.results)) return null;
+    return {
+      exported_at: new Date().toISOString(),
+      profile: String(aiStrengthSelect?.value || "intermediate"),
+      mode: String(gameModeSelect?.value || "ai_vs_ai"),
+      game_type: String(gameTypeSelect?.value || "chess"),
+      summary: {
+        games: Number(simulationData.games || 0),
+        white_wins: Number(simulationData.white_wins || 0),
+        black_wins: Number(simulationData.black_wins || 0),
+        draws: Number(simulationData.draws || 0),
+        avg_moves: Number(simulationData.avg_moves || 0),
+      },
+      results: simulationData.results,
+    };
+  };
+
+  const buildSimulationJSON = () => {
+    const payload = buildSimulationExportPayload();
+    return payload ? JSON.stringify(payload, null, 2) : "";
+  };
+
+  const csvEscape = (value) => {
+    const text = String(value ?? "");
+    if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+    return text;
+  };
+
+  const buildSimulationCSV = () => {
+    const payload = buildSimulationExportPayload();
+    if (!payload) return "";
+    const lines = ["game,result,winner,moves"];
+    for (let i = 0; i < payload.results.length; i++) {
+      const row = payload.results[i] || {};
+      lines.push([
+        i + 1,
+        csvEscape(row.result || ""),
+        csvEscape(row.winner || ""),
+        Number(row.moves || 0),
+      ].join(","));
+    }
+    const summary = payload.summary;
+    lines.push(
+      `# Summary,${summary.games} games,White ${summary.white_wins},Black ${summary.black_wins},Draws ${summary.draws},Avg ${Number(summary.avg_moves || 0).toFixed(1)}`
+    );
+    return lines.join("\n");
+  };
+
+  const simulationDownloadFilename = (ext) => {
+    const profile = String(aiStrengthSelect?.value || "intermediate");
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    return `simulation-${profile}-${stamp}.${ext}`;
+  };
+
+  const downloadTextFile = (filename, mimeType, content) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const clearSimulationSummary = () => {
     if (simulationSummaryGames) simulationSummaryGames.textContent = "0";
     if (simulationSummaryWhite) simulationSummaryWhite.textContent = "0";
@@ -134,6 +206,7 @@
     if (simulationResultSummaryText) simulationResultSummaryText.textContent = "Per-game results";
     if (simulationResultDetails) simulationResultDetails.open = false;
     if (simulationSummaryPanel) simulationSummaryPanel.classList.add("simulation_summary_hidden");
+    setSimulationDownloadEnabled(false);
   };
 
   const renderSimulationSummary = (summary) => {
@@ -170,6 +243,7 @@
     }
 
     if (simulationSummaryPanel) simulationSummaryPanel.classList.remove("simulation_summary_hidden");
+    setSimulationDownloadEnabled(Array.isArray(summary?.results) && summary.results.length > 0);
   };
 
   const readSimulationCount = () => {
@@ -2042,12 +2116,33 @@
         simRunBtn.style.display = "none";
       }
     }
-    simulationData = null;
     currentSimGameIdx = 0;
     currentSimMoveIdx = 0;
     simulationRequestInFlight = false;
     isSimulationPlayback = false;
     updateSetupControlState();
+  }
+
+  if (simulationDownloadJsonBtn) {
+    simulationDownloadJsonBtn.addEventListener("click", () => {
+      const json = buildSimulationJSON();
+      if (!json) {
+        setStatus("Run a simulation first to download results.", "error");
+        return;
+      }
+      downloadTextFile(simulationDownloadFilename("json"), "application/json", json);
+    });
+  }
+
+  if (simulationDownloadCsvBtn) {
+    simulationDownloadCsvBtn.addEventListener("click", () => {
+      const csv = buildSimulationCSV();
+      if (!csv) {
+        setStatus("Run a simulation first to download results.", "error");
+        return;
+      }
+      downloadTextFile(simulationDownloadFilename("csv"), "text/csv", csv);
+    });
   }
   // --- End Simulation Helpers ---
 

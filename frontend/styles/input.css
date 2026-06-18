@@ -732,6 +732,14 @@ main {
 
 .simulation_download_btn {
   margin-left: 0;
+  font-size: 0.78rem;
+  padding: 6px 12px;
+}
+
+#simulation_download_json_btn[disabled],
+#simulation_download_csv_btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Config panel buttons (Apply Setup + simulation controls) */

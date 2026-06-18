@@ -19,6 +19,18 @@ func loadChessCommandSource(t *testing.T) string {
 	return loadFrontendSource(t, candidates, "chess_command.js")
 }
 
+func loadInputCSSSource(t *testing.T) string {
+	t.Helper()
+
+	candidates := []string{
+		filepath.Join("..", "..", "frontend", "styles", "input.css"),
+		filepath.Join("..", "frontend", "styles", "input.css"),
+		filepath.Join("frontend", "styles", "input.css"),
+	}
+
+	return loadFrontendSource(t, candidates, "input.css")
+}
+
 func loadIndexHandlerSource(t *testing.T) string {
 	t.Helper()
 
@@ -108,4 +120,23 @@ func TestFrontendSimulationDownload_Step1ButtonMarkers(t *testing.T) {
 	requireSnippet(t, source, `class="simulation_download_actions"`)
 	requireSnippet(t, source, "Download JSON")
 	requireSnippet(t, source, "Download CSV")
+}
+
+func TestFrontendSimulationDownload_Step2StyleMarkers(t *testing.T) {
+	source := loadInputCSSSource(t)
+
+	requireSnippet(t, source, ".simulation_download_actions")
+	requireSnippet(t, source, ".simulation_download_btn")
+	requireSnippet(t, source, "#simulation_download_json_btn[disabled]")
+	requireSnippet(t, source, "#simulation_download_csv_btn[disabled]")
+}
+
+func TestFrontendSimulationDownload_ExportMarkers(t *testing.T) {
+	source := loadChessCommandSource(t)
+
+	requireSnippet(t, source, "buildSimulationExportPayload")
+	requireSnippet(t, source, "buildSimulationJSON")
+	requireSnippet(t, source, "buildSimulationCSV")
+	requireSnippet(t, source, "downloadTextFile")
+	requireSnippet(t, source, "setSimulationDownloadEnabled")
 }
