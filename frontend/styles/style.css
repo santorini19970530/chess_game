@@ -950,7 +950,16 @@ main {
   font-size: 0.76rem;
   line-height: 1.35;
 }
-#game_config_apply, #run_simulation_btn, #sim_next_move_btn, #sim_next_game_btn, .run-simulation-btn {
+.simulation_download_actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.simulation_download_btn {
+  margin-left: 0;
+}
+#game_config_apply, #run_simulation_btn, #sim_next_move_btn, #sim_next_game_btn, #simulation_download_json_btn, #simulation_download_csv_btn, .run-simulation-btn {
   padding: 8px 16px;
   margin-left: 0px;
   border-radius: 6px;
@@ -961,7 +970,7 @@ main {
   cursor: pointer;
   vertical-align: middle;
 }
-#game_config_apply:hover, #run_simulation_btn:hover, #sim_next_move_btn:hover, #sim_next_game_btn:hover, .run-simulation-btn:hover {
+#game_config_apply:hover, #run_simulation_btn:hover, #sim_next_move_btn:hover, #sim_next_game_btn:hover, #simulation_download_json_btn:hover, #simulation_download_csv_btn:hover, .run-simulation-btn:hover {
   background-color: #475569;
 }
 #run_simulation_btn, #sim_next_move_btn, #sim_next_game_btn {

@@ -723,11 +723,24 @@ main {
   line-height: 1.35;
 }
 
+.simulation_download_actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.simulation_download_btn {
+  margin-left: 0;
+}
+
 /* Config panel buttons (Apply Setup + simulation controls) */
 #game_config_apply,
 #run_simulation_btn,
 #sim_next_move_btn,
 #sim_next_game_btn,
+#simulation_download_json_btn,
+#simulation_download_csv_btn,
 .run-simulation-btn {
   padding: 8px 16px;
   margin-left: 0px;
@@ -744,6 +757,8 @@ main {
 #run_simulation_btn:hover,
 #sim_next_move_btn:hover,
 #sim_next_game_btn:hover,
+#simulation_download_json_btn:hover,
+#simulation_download_csv_btn:hover,
 .run-simulation-btn:hover {
   background-color: #475569;
 }
