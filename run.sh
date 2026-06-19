@@ -28,10 +28,10 @@ fi
 echo "starting python analyzer server on http://127.0.0.1:8001 ..."
 if lsof -t -nP -iTCP:11434 -sTCP:LISTEN >/dev/null 2>&1; then
   echo "Ollama detected → LLM explainer enabled (model=llama3.2)"
-  OLLAMA_MODEL=llama3.2 python3 "$PY_SERVER" &
+  LLM_PROVIDER=ollama OLLAMA_MODEL=llama3.2 python3 "$PY_SERVER" &
 else
   echo "Ollama not running → /explain will use heuristic fallback only"
-  python3 "$PY_SERVER" &
+  LLM_PROVIDER=heuristic python3 "$PY_SERVER" &
 fi
 PY_PID=$!
 
