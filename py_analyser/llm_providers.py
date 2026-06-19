@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import socket
 import urllib.error
 import urllib.request
 from typing import Protocol
@@ -32,10 +31,15 @@ class OllamaProvider:
 
     name = "ollama"
 
-    def __init__(self, model: str | None = None, timeout: float = 9.0) -> None:
+    def __init__(self, model: str | None = None, timeout: float | None = None) -> None:
         self.model = model or os.getenv("OLLAMA_MODEL", "gemma2:2b")
-        self.timeout = timeout
-        self.url = "http://localhost:11434/api/generate"
+        timeout_ms_raw = os.getenv("OLLAMA_TIMEOUT_MS", "15000").strip()
+        try:
+            timeout_ms = max(1000, int(timeout_ms_raw))
+        except ValueError:
+            timeout_ms = 15000
+        self.timeout = timeout if timeout is not None else (timeout_ms / 1000.0)
+        self.url = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate").strip()
 
     def explain(
         self,
