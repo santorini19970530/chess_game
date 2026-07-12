@@ -192,7 +192,7 @@ func (h *Handler) getAPIGameTopMoves(w http.ResponseWriter, r *http.Request, gam
 		return
 	}
 
-	fs, err := getFairyStockfish()
+	fs, err := getFairyStockfish("white")
 	if err != nil {
 		writeJSONError(w, http.StatusServiceUnavailable, "Fairy-Stockfish engine unavailable")
 		return

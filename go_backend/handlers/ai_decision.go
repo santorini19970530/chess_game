@@ -16,9 +16,8 @@ import (
 )
 
 var (
-	fsEngine     *engine.FairyStockfish
-	fsEngineOnce sync.Once
-	fsEngineErr  error
+	fsEngines  = map[string]*engine.FairyStockfish{}
+	fsEngineMu sync.Mutex
 )
 
 // useFairyStockfish reports whether the Go UCI path should be used (env flag).
@@ -37,27 +36,30 @@ func fairyStockfishBinary() string {
 	return filepath.Join("..", "py_analyser", "Fairy-Stockfish-fairy_sf_14", "src", "stockfish")
 }
 
-// getFairyStockfish returns a started engine instance (lazy singleton).
-func getFairyStockfish() (*engine.FairyStockfish, error) {
-	fsEngineOnce.Do(func() {
-		bin := fairyStockfishBinary()
-		fsEngine, fsEngineErr = engine.NewFairyStockfish(bin)
-		if fsEngineErr != nil {
-			return
-		}
-		fsEngineErr = fsEngine.Start()
-		if fsEngineErr != nil {
-			fsEngine = nil
-		}
-	})
-	if fsEngineErr != nil {
-		return nil, fsEngineErr
+// getFairyStockfish returns a started engine instance for one side (white|black).
+func getFairyStockfish(side string) (*engine.FairyStockfish, error) {
+	key := strings.ToLower(strings.TrimSpace(side))
+	if key != "black" {
+		key = "white"
 	}
-	// If previously failed or closed, try restart once
-	if fsEngine == nil {
-		return nil, fmt.Errorf("fairy stockfish not available")
+
+	fsEngineMu.Lock()
+	defer fsEngineMu.Unlock()
+
+	if fs, ok := fsEngines[key]; ok && fs != nil {
+		return fs, nil
 	}
-	return fsEngine, nil
+
+	bin := fairyStockfishBinary()
+	fs, err := engine.NewFairyStockfish(bin)
+	if err != nil {
+		return nil, err
+	}
+	if err := fs.Start(); err != nil {
+		return nil, err
+	}
+	fsEngines[key] = fs
+	return fs, nil
 }
 
 // SelectAIMove picks one legal UCI move for the given game using AI endpoints.
@@ -94,14 +96,15 @@ func SelectAIMove(gameID string) (string, error) {
 	}
 
 	ai := NewAIClient()
-	profile := snapshot.Game.Config.AIProfile
-	if profile == "" {
-		profile = "intermediate"
+	profile := sessionpkg.ProfileForSide(snapshot.Game.Config, color)
+	gameType := string(snapshot.Game.Type)
+	if gameType == "" {
+		gameType = "chess"
 	}
 
 	// Optional Go-side Fairy-Stockfish path (env-gated, backward compatible)
 	if useFairyStockfish() {
-		if move, err := selectMoveWithFairyStockfish(fen, profile); err == nil && move != "" {
+		if move, err := selectMoveWithFairyStockfish(fen, profile, color); err == nil && move != "" {
 			if _, ok := legalSet[normalizeUCI(move)]; ok {
 				return move, nil
 			}
@@ -113,8 +116,8 @@ func SelectAIMove(gameID string) (string, error) {
 	commonReq := AICommonRequest{
 		RequestID:   fmt.Sprintf("%s-ai-%d", gameID, len(history)+1),
 		GameID:      gameID,
-		GameType:    "chess",
-		Variant:     "chess",
+		GameType:    gameType,
+		Variant:     gameType,
 		FEN:         fen,
 		Color:       strings.ToLower(color),
 		MoveNumber:  len(history) + 1,
@@ -211,8 +214,9 @@ func normalizeUCI(raw string) string {
 
 // selectMoveWithFairyStockfish uses the local UCI engine for one legal best move.
 // Strength is controlled via SetStrengthProfile (Skill Level + MultiPV).
-func selectMoveWithFairyStockfish(fen, profile string) (string, error) {
-	fs, err := getFairyStockfish()
+// side selects which engine process to use (white|black).
+func selectMoveWithFairyStockfish(fen, profile, side string) (string, error) {
+	fs, err := getFairyStockfish(side)
 	if err != nil {
 		return "", err
 	}

@@ -17,24 +17,36 @@ import (
 )
 
 type simulateRequest struct {
-	Games   int    `json:"games"`
-	Profile string `json:"profile"`
+	Games         int    `json:"games"`
+	Profile       string `json:"profile"`
+	WhiteProfile  string `json:"white_profile"`
+	BlackProfile  string `json:"black_profile"`
+	GameType      string `json:"game"`
+	GameTypeAlt   string `json:"game_type"`
 }
 
 type gameResult struct {
 	Result          string                     `json:"result"`
 	Winner          string                     `json:"winner,omitempty"`
 	Moves           int                        `json:"moves"`
+	DurationMs      int64                      `json:"duration_ms"`
+	AvgMoveMs       int64                      `json:"avg_move_ms"`
 	HistoryDetailed []session.MoveHistoryEntry `json:"history_detailed,omitempty"`
 }
 
 type simulateResponse struct {
-	Games     int          `json:"games"`
-	WhiteWins int          `json:"white_wins"`
-	BlackWins int          `json:"black_wins"`
-	Draws     int          `json:"draws"`
-	AvgMoves  float64      `json:"avg_moves"`
-	Results   []gameResult `json:"results,omitempty"`
+	Games           int          `json:"games"`
+	GameType        string       `json:"game_type"`
+	WhiteProfile    string       `json:"white_profile"`
+	BlackProfile    string       `json:"black_profile"`
+	Profile         string       `json:"profile,omitempty"`
+	WhiteWins       int          `json:"white_wins"`
+	BlackWins       int          `json:"black_wins"`
+	Draws           int          `json:"draws"`
+	AvgMoves        float64      `json:"avg_moves"`
+	AvgDurationMs   float64      `json:"avg_duration_ms"`
+	P95DurationMs   int64        `json:"p95_duration_ms"`
+	Results         []gameResult `json:"results,omitempty"`
 }
 
 const maxSimulationPlies = 600
@@ -115,6 +127,12 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		req.Profile = strings.TrimSpace(r.FormValue("profile"))
+		req.WhiteProfile = strings.TrimSpace(r.FormValue("white_profile"))
+		req.BlackProfile = strings.TrimSpace(r.FormValue("black_profile"))
+		req.GameType = strings.TrimSpace(r.FormValue("game"))
+		if req.GameType == "" {
+			req.GameType = strings.TrimSpace(r.FormValue("game_type"))
+		}
 	}
 
 	if req.Games == 0 {
@@ -135,22 +153,41 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profile := strings.TrimSpace(req.Profile)
-	if profile == "" {
-		profile = "intermediate"
+	whiteProfile, blackProfile, profileErr := resolveSimulateProfiles(req.Profile, req.WhiteProfile, req.BlackProfile)
+	if profileErr != nil {
+		writeJSONError(w, http.StatusBadRequest, profileErr.Error())
+		return
+	}
+
+	gameTypeRaw := strings.TrimSpace(req.GameType)
+	if gameTypeRaw == "" {
+		gameTypeRaw = strings.TrimSpace(req.GameTypeAlt)
+	}
+	if gameTypeRaw == "" {
+		gameTypeRaw = "chess"
+	}
+	if gameTypeRaw != "chess" {
+		// Xiangqi/Shogi adapters land in Step 6; reject early so eval logs stay honest.
+		writeJSONError(w, http.StatusBadRequest, "game must be chess for now")
+		return
 	}
 
 	var white, black, draws, totalMoves int
 	results := make([]gameResult, 0, req.Games)
 	archiveItems := make([]simulation.ResultWithGameID, 0, req.Games)
+	durations := make([]int64, 0, req.Games)
 
 	for i := 0; i < req.Games; i++ {
 		gameNum := i + 1
-		log.Printf("=== simulate game %d/%d started (profile=%s) ===", gameNum, req.Games, profile)
+		log.Printf("=== simulate game %d/%d started (white=%s black=%s) ===", gameNum, req.Games, whiteProfile, blackProfile)
 
-		game, err := session.CreateGame(session.GameModeAIVsAI, session.GameTypeChess, "white", 1, "", profile)
+		game, err := session.CreateGame(session.GameModeAIVsAI, session.GameTypeChess, "white", 1, "", whiteProfile)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "failed to create game")
+			return
+		}
+		if _, err := session.SetAISideProfilesByID(game.ID, whiteProfile, blackProfile); err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "failed to set side profiles")
 			return
 		}
 
@@ -224,6 +261,9 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 
 		elapsed := time.Since(start)
 		moveCount = len(snapshot.History)
+		durationMs := elapsed.Milliseconds()
+		avgMoveMs := simulation.ComputeAvgMoveMs(durationMs, moveCount)
+		durations = append(durations, durationMs)
 
 		log.Printf("=== simulate game %d/%d finished: result=%s winner=%q moves=%d (%.1fs) ===",
 			gameNum, req.Games, snapshot.Game.Result, snapshot.Game.Outcome.Winner, moveCount, elapsed.Seconds())
@@ -247,19 +287,26 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 			Result:          string(snapshot.Game.Result),
 			Winner:          snapshot.Game.Outcome.Winner,
 			Moves:           moveCount,
+			DurationMs:      durationMs,
+			AvgMoveMs:       avgMoveMs,
 			HistoryDetailed: historyDetailed,
 		})
 
 		archiveItems = append(archiveItems, simulation.ResultWithGameID{
-			GameID:    game.ID,
-			Profile:   profile,
-			Result:    snapshot.Game.Result,
-			Winner:    snapshot.Game.Outcome.Winner,
-			MoveCount: moveCount,
-			// ponytail: keep archive self-contained; if this grows too large, switch to summary-only
-			// files with optional separate move-history export.
+			GameID:       game.ID,
+			GameType:     gameTypeRaw,
+			WhiteProfile: whiteProfile,
+			BlackProfile: blackProfile,
+			Result:       snapshot.Game.Result,
+			Winner:       snapshot.Game.Outcome.Winner,
+			MoveCount:    moveCount,
+			DurationMs:   durationMs,
+			AvgMoveMs:    avgMoveMs,
 			HistoryDetailed: snapshot.HistoryDetailed,
 		})
+		if whiteProfile == blackProfile {
+			archiveItems[len(archiveItems)-1].Profile = whiteProfile
+		}
 	}
 
 	// Persist each game into its own JSON file under a run folder
@@ -271,22 +318,74 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 	if req.Games > 0 {
 		avg = float64(totalMoves) / float64(req.Games)
 	}
+	avgDuration := simulation.MeanMs(durations)
+	p95Duration := simulation.PercentileMs(durations, 95)
+
+	resp := simulateResponse{
+		Games:         req.Games,
+		GameType:      gameTypeRaw,
+		WhiteProfile:  whiteProfile,
+		BlackProfile:  blackProfile,
+		WhiteWins:     white,
+		BlackWins:     black,
+		Draws:         draws,
+		AvgMoves:      avg,
+		AvgDurationMs: avgDuration,
+		P95DurationMs: p95Duration,
+		Results:       results,
+	}
+	if whiteProfile == blackProfile {
+		resp.Profile = whiteProfile
+	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(simulateResponse{
-		Games:     req.Games,
-		WhiteWins: white,
-		BlackWins: black,
-		Draws:     draws,
-		AvgMoves:  avg,
-		Results:   results,
-	})
+	_ = json.NewEncoder(w).Encode(resp)
 
 	gameSocketHub.BroadcastGlobal(socketEventSimulationDone, map[string]interface{}{
-		"games":      req.Games,
-		"white_wins": white,
-		"black_wins": black,
-		"draws":      draws,
-		"avg_moves":  avg,
+		"games":            req.Games,
+		"game_type":        gameTypeRaw,
+		"white_profile":    whiteProfile,
+		"black_profile":    blackProfile,
+		"white_wins":       white,
+		"black_wins":       black,
+		"draws":            draws,
+		"avg_moves":        avg,
+		"avg_duration_ms":  avgDuration,
+		"p95_duration_ms":  p95Duration,
 	})
+}
+
+// resolveSimulateProfiles applies profile shorthand + per-side overrides.
+// Unknown names are rejected (eval boundary).
+func resolveSimulateProfiles(profile, whiteRaw, blackRaw string) (white, black string, err error) {
+	profile = strings.TrimSpace(profile)
+	whiteRaw = strings.TrimSpace(whiteRaw)
+	blackRaw = strings.TrimSpace(blackRaw)
+
+	fallback := "intermediate"
+	if profile != "" {
+		parsed, ok := session.ParseAIProfile(profile)
+		if !ok {
+			return "", "", fmt.Errorf("invalid profile %q", profile)
+		}
+		fallback = parsed
+	}
+
+	white = fallback
+	black = fallback
+	if whiteRaw != "" {
+		parsed, ok := session.ParseAIProfile(whiteRaw)
+		if !ok {
+			return "", "", fmt.Errorf("invalid white_profile %q", whiteRaw)
+		}
+		white = parsed
+	}
+	if blackRaw != "" {
+		parsed, ok := session.ParseAIProfile(blackRaw)
+		if !ok {
+			return "", "", fmt.Errorf("invalid black_profile %q", blackRaw)
+		}
+		black = parsed
+	}
+	return white, black, nil
 }
