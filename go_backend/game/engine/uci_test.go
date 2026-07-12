@@ -154,3 +154,16 @@ func TestFairyStockfish_TopKRespectsProfile(t *testing.T) {
 		}
 	}
 }
+
+func TestBuildGoCmd_PrefersMoveTime(t *testing.T) {
+	fs := &FairyStockfish{}
+	got := fs.buildGoCmd(Limit{Depth: 20, MoveTime: 1800 * time.Millisecond})
+	want := "go movetime 1800"
+	if got != want {
+		t.Fatalf("got %q want %q", got, want)
+	}
+	got = fs.buildGoCmd(Limit{Depth: 8})
+	if got != "go depth 8" {
+		t.Fatalf("got %q", got)
+	}
+}

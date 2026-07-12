@@ -70,11 +70,11 @@ func (fs *FairyStockfish) Start() error {
 
 	// Initialize UCI
 	if err := fs.send("uci"); err != nil {
-		fs.Close()
+		fs.closeLocked()
 		return err
 	}
 	if err := fs.waitFor("uciok", 5*time.Second); err != nil {
-		fs.Close()
+		fs.closeLocked()
 		return err
 	}
 	return nil
@@ -123,7 +123,9 @@ func (fs *FairyStockfish) SetStrengthProfile(profile string) error {
 	case "advanced":
 		skill, multipv = 15, 3
 	case "master":
-		skill, multipv = 20, 5
+		// MultiPV>1 is for suggestion UI; BestMove only needs one line and
+		// MultiPV 5 made long eval runs crash more often (EOF / broken pipe).
+		skill, multipv = 20, 1
 	default:
 		skill, multipv = 5, 3
 	}
@@ -153,8 +155,14 @@ func (fs *FairyStockfish) BestMove(fen string, limit Limit) (string, error) {
 		return "", err
 	}
 
-	move, err := fs.waitForBestMove(10 * time.Second)
+	wait := 10 * time.Second
+	if limit.MoveTime > 0 {
+		wait = limit.MoveTime + 5*time.Second
+	}
+	move, err := fs.waitForBestMove(wait)
 	if err != nil {
+		// Kill the process so a later Start/replace is clean (don't only flip the flag).
+		_ = fs.closeLocked()
 		return "", err
 	}
 	return move, nil
@@ -210,18 +218,32 @@ func (fs *FairyStockfish) TopKWithProfile(fen string, k int, profile string, lim
 func (fs *FairyStockfish) Close() error {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
-	if !fs.running {
-		return nil
-	}
-	_ = fs.send("quit")
+	return fs.closeLocked()
+}
+
+// closeLocked assumes fs.mu is already held.
+// Always tears down pipes/process if present, even when running was already false
+// (e.g. after an EOF where BestMove cleared the flag).
+func (fs *FairyStockfish) closeLocked() error {
 	fs.running = false
 	if fs.stdin != nil {
-		fs.stdin.Close()
+		_ = fs.stdin.Close()
+		fs.stdin = nil
 	}
 	if fs.cmd != nil && fs.cmd.Process != nil {
-		fs.cmd.Process.Kill()
+		_ = fs.cmd.Process.Kill()
+		_, _ = fs.cmd.Process.Wait()
+		fs.cmd = nil
 	}
+	fs.stdout = nil
 	return nil
+}
+
+// IsRunning reports whether the wrapper thinks the process is alive.
+func (fs *FairyStockfish) IsRunning() bool {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+	return fs.running
 }
 
 // --- internal helpers ---
@@ -366,13 +388,14 @@ func parseInfoLine(line string) *UCIResult {
 }
 
 func (fs *FairyStockfish) buildGoCmd(limit Limit) string {
-	if limit.Depth > 0 {
-		return fmt.Sprintf("go depth %d", limit.Depth)
-	}
+	// Prefer movetime when set so searches finish before waitForBestMove's deadline.
+	// (Depth-only go depth 20 routinely exceeds the 10s bestmove wait on master.)
 	if limit.MoveTime > 0 {
 		return fmt.Sprintf("go movetime %d", limit.MoveTime.Milliseconds())
 	}
-	// default
+	if limit.Depth > 0 {
+		return fmt.Sprintf("go depth %d", limit.Depth)
+	}
 	return "go depth 8"
 }
 
