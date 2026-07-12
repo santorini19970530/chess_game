@@ -53,10 +53,12 @@ type GameSession struct {
 }
 
 type GameConfig struct {
-	HumanColor  string `json:"humanColor"`
-	AIGameCount int    `json:"aiGameCount"`
-	StartFEN    string `json:"startFen"`
-	AIProfile   string `json:"aiProfile"`
+	HumanColor     string `json:"humanColor"`
+	AIGameCount    int    `json:"aiGameCount"`
+	StartFEN       string `json:"startFen"`
+	AIProfile      string `json:"aiProfile"`
+	WhiteAIProfile string `json:"whiteAIProfile,omitempty"`
+	BlackAIProfile string `json:"blackAIProfile,omitempty"`
 }
 
 type ArchivedSession struct {
@@ -130,12 +132,42 @@ func newUniqueGameID() string {
 // normalizeAIProfile returns a known profile or defaults to "intermediate".
 // Allowed values: beginner, intermediate, advanced, master.
 func normalizeAIProfile(p string) string {
+	if parsed, ok := ParseAIProfile(p); ok {
+		return parsed
+	}
+	return "intermediate"
+}
+
+// ParseAIProfile accepts a known profile name. Empty is not ok (caller chooses default).
+func ParseAIProfile(p string) (string, bool) {
 	switch strings.ToLower(strings.TrimSpace(p)) {
 	case "beginner", "intermediate", "advanced", "master":
-		return strings.ToLower(strings.TrimSpace(p))
+		return strings.ToLower(strings.TrimSpace(p)), true
 	default:
-		return "intermediate"
+		return "", false
 	}
+}
+
+// ProfileForSide returns the strength for the side to move.
+// Prefers WhiteAIProfile / BlackAIProfile, then AIProfile, then intermediate.
+func ProfileForSide(cfg GameConfig, color string) string {
+	side := strings.ToLower(strings.TrimSpace(color))
+	switch side {
+	case "white", "w":
+		if cfg.WhiteAIProfile != "" {
+			return normalizeAIProfile(cfg.WhiteAIProfile)
+		}
+	case "black", "b":
+		if cfg.BlackAIProfile != "" {
+			return normalizeAIProfile(cfg.BlackAIProfile)
+		}
+	}
+	return normalizeAIProfile(cfg.AIProfile)
+}
+
+func profilesFromSingle(aiProfile string) (profile, white, black string) {
+	profile = normalizeAIProfile(aiProfile)
+	return profile, profile, profile
 }
 
 func newGameSession(mode GameMode, gameType GameType) GameSession {
@@ -145,10 +177,12 @@ func newGameSession(mode GameMode, gameType GameType) GameSession {
 		Mode: mode,
 		Type: gameType,
 		Config: GameConfig{
-			HumanColor:  "white",
-			AIGameCount: 1,
-			StartFEN:    "",
-			AIProfile:   "intermediate",
+			HumanColor:     "white",
+			AIGameCount:    1,
+			StartFEN:       "",
+			AIProfile:      "intermediate",
+			WhiteAIProfile: "intermediate",
+			BlackAIProfile: "intermediate",
 		},
 		Result:    GameResultInProgress,
 		Outcome:   GameOutcome{Status: "in_progress"},

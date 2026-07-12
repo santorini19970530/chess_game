@@ -6,6 +6,7 @@ package session
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"go_backend/game/command"
 	"go_backend/game/engine"
@@ -160,7 +161,7 @@ func ApplyMove(fromFile, fromRank, toFile, toRank int) error {
 	}
 
 	sourcePiece.Move(toFile, toRank)
-	log.Printf("move applied: %s", toUCI(fromFile, fromRank, toFile, toRank))
+	log.Printf("move applied: %s %s", strings.ToLower(string(sourcePiece.Color)), toUCI(fromFile, fromRank, toFile, toRank))
 	return nil
 }
 
@@ -193,7 +194,7 @@ func ApplyEnPassantMove(fromFile, fromRank, toFile, toRank int) error {
 	}
 	sourcePiece = &pieces.ChessPieces[sourceIdx]
 	sourcePiece.Move(toFile, toRank)
-	log.Printf("move applied: %s", toUCI(fromFile, fromRank, toFile, toRank))
+	log.Printf("move applied: %s %s", strings.ToLower(string(sourcePiece.Color)), toUCI(fromFile, fromRank, toFile, toRank))
 	return nil
 }
 
@@ -225,7 +226,7 @@ func ApplyCastlingMove(fromFile, fromRank, toFile, toRank int) error {
 
 	pieces.ChessPieces[kingIdx].Move(toFile, toRank)
 	pieces.ChessPieces[rookIdx].Move(rookToFile, fromRank)
-	log.Printf("move applied: %s (castle)", toUCI(fromFile, fromRank, toFile, toRank))
+	log.Printf("move applied: %s %s (castle)", strings.ToLower(string(pieces.ChessPieces[kingIdx].Color)), toUCI(fromFile, fromRank, toFile, toRank))
 	return nil
 }
 

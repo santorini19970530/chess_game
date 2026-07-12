@@ -1,6 +1,9 @@
 package session
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type GameSnapshot struct {
 	CurrentTurn     string
@@ -17,13 +20,15 @@ func CreateGame(mode GameMode, gameType GameType, humanColor string, aiGameCount
 	if err != nil {
 		return GameSession{}, err
 	}
-	profile := normalizeAIProfile(aiProfile)
+	profile, white, black := profilesFromSingle(aiProfile)
 	session := newGameSession(mode, gameType)
 	session.Config = GameConfig{
-		HumanColor:  humanColor,
-		AIGameCount: normalizedCount,
-		StartFEN:    startFEN,
-		AIProfile:   profile,
+		HumanColor:     humanColor,
+		AIGameCount:    normalizedCount,
+		StartFEN:       startFEN,
+		AIProfile:      profile,
+		WhiteAIProfile: white,
+		BlackAIProfile: black,
 	}
 	session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 
@@ -62,7 +67,7 @@ func UpdateGameConfigByID(gameID string, mode GameMode, gameType GameType, human
 	if err != nil {
 		return GameSession{}, err
 	}
-	profile := normalizeAIProfile(aiProfile)
+	profile, white, black := profilesFromSingle(aiProfile)
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
 		return GameSession{}, err
@@ -71,11 +76,36 @@ func UpdateGameConfigByID(gameID string, mode GameMode, gameType GameType, human
 	game.Session.Mode = mode
 	game.Session.Type = gameType
 	game.Session.Config = GameConfig{
-		HumanColor:  humanColor,
-		AIGameCount: normalizedCount,
-		StartFEN:    startFEN,
-		AIProfile:   profile,
+		HumanColor:     humanColor,
+		AIGameCount:    normalizedCount,
+		StartFEN:       startFEN,
+		AIProfile:      profile,
+		WhiteAIProfile: white,
+		BlackAIProfile: black,
 	}
+	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	return game.Session, nil
+}
+
+// SetAISideProfilesByID sets White/Black strengths for AI-vs-AI evaluation.
+// When white==black, AIProfile is set to that value; otherwise AIProfile is left as the white value for compat.
+func SetAISideProfilesByID(gameID, whiteProfile, blackProfile string) (GameSession, error) {
+	white, okW := ParseAIProfile(whiteProfile)
+	if !okW {
+		return GameSession{}, fmt.Errorf("invalid white_profile %q", whiteProfile)
+	}
+	black, okB := ParseAIProfile(blackProfile)
+	if !okB {
+		return GameSession{}, fmt.Errorf("invalid black_profile %q", blackProfile)
+	}
+	game, err := lockRuntimeStateByID(gameID)
+	if err != nil {
+		return GameSession{}, err
+	}
+	defer unlockRuntimeStateByID(game)
+	game.Session.Config.WhiteAIProfile = white
+	game.Session.Config.BlackAIProfile = black
+	game.Session.Config.AIProfile = white
 	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 	return game.Session, nil
 }

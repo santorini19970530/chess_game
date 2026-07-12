@@ -57,15 +57,35 @@ func ArchiveSimulationRun(results []ResultWithGameID) error {
 	for _, r := range results {
 		filename := filepath.Join(runDir, r.GameID+".json")
 
+		gameType := strings.TrimSpace(r.GameType)
+		if gameType == "" {
+			gameType = "chess"
+		}
+		white := strings.TrimSpace(r.WhiteProfile)
+		black := strings.TrimSpace(r.BlackProfile)
+		if white == "" {
+			white = strings.TrimSpace(r.Profile)
+		}
+		if black == "" {
+			black = strings.TrimSpace(r.Profile)
+		}
+
 		payload := map[string]interface{}{
 			"game_id":          r.GameID,
+			"game_type":        gameType,
 			"mode":             "ai_vs_ai",
-			"profile":          r.Profile,
+			"white_profile":    white,
+			"black_profile":    black,
 			"result":           r.Result,
 			"winner":           r.Winner,
 			"move_count":       r.MoveCount,
+			"duration_ms":      r.DurationMs,
+			"avg_move_ms":      r.AvgMoveMs,
 			"history_detailed": r.HistoryDetailed,
 			"archived_at":      time.Now().UTC().Format(time.RFC3339),
+		}
+		if white != "" && white == black {
+			payload["profile"] = white
 		}
 
 		data, err := json.MarshalIndent(payload, "", "  ")
@@ -82,9 +102,22 @@ func ArchiveSimulationRun(results []ResultWithGameID) error {
 // ResultWithGameID augments the normal Result with identifiers needed for archiving.
 type ResultWithGameID struct {
 	GameID          string
-	Profile         string
+	GameType        string
+	Profile         string // set when white==black (compat)
+	WhiteProfile    string
+	BlackProfile    string
 	Result          session.GameResult
 	Winner          string
 	MoveCount       int
+	DurationMs      int64
+	AvgMoveMs       int64
 	HistoryDetailed []session.MoveHistoryEntry
+}
+
+// AvgMoveMs returns wall-clock ms per move (0 if no moves).
+func ComputeAvgMoveMs(durationMs int64, moveCount int) int64 {
+	if moveCount <= 0 || durationMs < 0 {
+		return 0
+	}
+	return durationMs / int64(moveCount)
 }

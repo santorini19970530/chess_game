@@ -44,11 +44,15 @@ func TestArchiveSimulationRun_WritesUnderModuleRoot(t *testing.T) {
 	t.Setenv("SIMULATION_ARCHIVE_DIR", archiveDir)
 
 	err := ArchiveSimulationRun([]ResultWithGameID{{
-		GameID:    "game-test-1",
-		Profile:   "beginner",
-		Result:    session.GameResultDraw,
-		Winner:    "",
-		MoveCount: 10,
+		GameID:       "game-test-1",
+		GameType:     "chess",
+		WhiteProfile: "beginner",
+		BlackProfile: "master",
+		Result:       session.GameResultDraw,
+		Winner:       "",
+		MoveCount:    10,
+		DurationMs:   1500,
+		AvgMoveMs:    150,
 	}})
 	if err != nil {
 		t.Fatalf("archive run failed: %v", err)
@@ -61,7 +65,23 @@ func TestArchiveSimulationRun_WritesUnderModuleRoot(t *testing.T) {
 	if len(matches) != 1 {
 		t.Fatalf("expected one archived game file, got %d (%v)", len(matches), matches)
 	}
-	if !strings.HasSuffix(matches[0], "game-test-1.json") {
-		t.Fatalf("unexpected archive path: %s", matches[0])
+	raw, err := os.ReadFile(matches[0])
+	if err != nil {
+		t.Fatalf("read archive: %v", err)
+	}
+	body := string(raw)
+	for _, want := range []string{
+		`"white_profile": "beginner"`,
+		`"black_profile": "master"`,
+		`"game_type": "chess"`,
+		`"duration_ms": 1500`,
+		`"avg_move_ms": 150`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("archive missing %s\n%s", want, body)
+		}
+	}
+	if strings.Contains(body, `"profile"`) {
+		t.Fatalf("expected profile omitted when white!=black\n%s", body)
 	}
 }
