@@ -46,8 +46,12 @@ func getFairyStockfish(side string) (*engine.FairyStockfish, error) {
 	fsEngineMu.Lock()
 	defer fsEngineMu.Unlock()
 
-	if fs, ok := fsEngines[key]; ok && fs != nil {
+	if fs, ok := fsEngines[key]; ok && fs != nil && fs.IsRunning() {
 		return fs, nil
+	}
+	if fs, ok := fsEngines[key]; ok && fs != nil {
+		_ = fs.Close()
+		delete(fsEngines, key)
 	}
 
 	bin := fairyStockfishBinary()
@@ -60,6 +64,21 @@ func getFairyStockfish(side string) (*engine.FairyStockfish, error) {
 	}
 	fsEngines[key] = fs
 	return fs, nil
+}
+
+// resetFairyStockfish drops a dead/broken engine for that side and starts a new one.
+func resetFairyStockfish(side string) (*engine.FairyStockfish, error) {
+	key := strings.ToLower(strings.TrimSpace(side))
+	if key != "black" {
+		key = "white"
+	}
+	fsEngineMu.Lock()
+	if fs, ok := fsEngines[key]; ok && fs != nil {
+		_ = fs.Close()
+		delete(fsEngines, key)
+	}
+	fsEngineMu.Unlock()
+	return getFairyStockfish(side)
 }
 
 // SelectAIMove picks one legal UCI move for the given game using AI endpoints.
@@ -103,12 +122,22 @@ func SelectAIMove(gameID string) (string, error) {
 	}
 
 	// Optional Go-side Fairy-Stockfish path (env-gated, backward compatible)
+	allowDegrade := snapshot.Game.Mode == sessionpkg.GameModeAIVsAI
 	if useFairyStockfish() {
-		if move, err := selectMoveWithFairyStockfish(fen, profile, color); err == nil && move != "" {
+		if move, err := selectMoveWithFairyStockfish(fen, profile, color, allowDegrade); err == nil && move != "" {
 			if _, ok := legalSet[normalizeUCI(move)]; ok {
 				return move, nil
 			}
 		} else if err != nil {
+			if !allowDegrade {
+				// Human vs AI: engine thinking budget exceeded / crash → AI flags (loss).
+				if _, ferr := sessionpkg.FlagCurrentTurnByID(gameID); ferr != nil {
+					log.Printf("warning: failed to flag AI after FS timeout %s: %v", gameIDLabel(gameID), ferr)
+				} else {
+					log.Printf("human_vs_ai: AI thinking timeout/failure — AI flagged (%v)", err)
+				}
+				return "", fmt.Errorf("ai thinking timeout: %w", err)
+			}
 			log.Printf("warning: fairy-stockfish unavailable for %s: %v (falling back to python)", gameIDLabel(gameID), err)
 		}
 	}
@@ -213,22 +242,68 @@ func normalizeUCI(raw string) string {
 }
 
 // selectMoveWithFairyStockfish uses the local UCI engine for one legal best move.
-// Strength is controlled via SetStrengthProfile (Skill Level + MultiPV).
-// side selects which engine process to use (white|black).
-func selectMoveWithFairyStockfish(fen, profile, side string) (string, error) {
-	fs, err := getFairyStockfish(side)
-	if err != nil {
-		return "", err
+// allowDegrade=true (AI vs AI): retry, then step down profiles before failing.
+// allowDegrade=false (Human vs AI): retry same profile only; caller treats failure as AI timeout/loss.
+func selectMoveWithFairyStockfish(fen, profile, side string, allowDegrade bool) (string, error) {
+	var lastErr error
+	chain := []string{strings.ToLower(strings.TrimSpace(profile))}
+	if chain[0] == "" {
+		chain[0] = "intermediate"
 	}
-	if err := fs.SetStrengthProfile(profile); err != nil {
-		return "", err
+	if allowDegrade {
+		chain = fsProfileFallbackChain(profile)
 	}
+	for _, p := range chain {
+		limit := fsLimitForProfile(p)
+		for attempt := 1; attempt <= 3; attempt++ {
+			fs, err := getFairyStockfish(side)
+			if err != nil {
+				lastErr = err
+				_, _ = resetFairyStockfish(side)
+				continue
+			}
+			if err := fs.SetStrengthProfile(p); err != nil {
+				lastErr = err
+				_, _ = resetFairyStockfish(side)
+				continue
+			}
+			move, err := fs.BestMove(fen, limit)
+			if err == nil && strings.TrimSpace(move) != "" {
+				if allowDegrade && (p != strings.ToLower(strings.TrimSpace(profile)) || attempt > 1) {
+					log.Printf("fairy-stockfish recovered side=%s profile=%s attempt=%d (requested=%s)",
+						side, p, attempt, profile)
+				}
+				return move, nil
+			}
+			lastErr = err
+			_, _ = resetFairyStockfish(side)
+		}
+		if allowDegrade {
+			log.Printf("fairy-stockfish giving up profile=%s for side=%s; trying weaker profile", p, side)
+		}
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("fairy-stockfish unavailable")
+	}
+	return "", lastErr
+}
 
-	// Strength is primarily controlled by SetStrengthProfile (Skill Level + MultiPV).
-	// We still apply a profile-specific time/depth cap for responsiveness.
-	limit := engine.Limit{Depth: 20, MoveTime: 1200 * time.Millisecond}
+func fsProfileFallbackChain(profile string) []string {
+	order := []string{"master", "advanced", "intermediate", "beginner"}
+	start := strings.ToLower(strings.TrimSpace(profile))
+	idx := 0
+	for i, p := range order {
+		if p == start {
+			idx = i
+			break
+		}
+	}
+	return order[idx:]
+}
 
-	switch strings.ToLower(profile) {
+func fsLimitForProfile(profile string) engine.Limit {
+	limit := engine.Limit{Depth: 8, MoveTime: 600 * time.Millisecond}
+	switch strings.ToLower(strings.TrimSpace(profile)) {
 	case "beginner":
 		limit.Depth = 3
 		limit.MoveTime = 250 * time.Millisecond
@@ -240,18 +315,9 @@ func selectMoveWithFairyStockfish(fen, profile, side string) (string, error) {
 		limit.MoveTime = 1000 * time.Millisecond
 	case "master":
 		limit.Depth = 20
-		limit.MoveTime = 1800 * time.Millisecond
+		limit.MoveTime = 1200 * time.Millisecond
 	}
-
-	move, err := fs.BestMove(fen, limit)
-	if err != nil {
-		// One retry after restart
-		if rerr := fs.Restart(); rerr == nil {
-			_ = fs.SetStrengthProfile(profile)
-			move, err = fs.BestMove(fen, limit)
-		}
-	}
-	return move, err
+	return limit
 }
 
 // RunAIGame is the step-1 entry point for a single AI vs AI game.

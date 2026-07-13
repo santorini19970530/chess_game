@@ -327,6 +327,13 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 				if aiErr != nil {
 					log.Printf("warning: background SelectAIMove failed for %s: %v", gameIDLabel(gameID), aiErr)
 				}
+				// AI may have flagged on thinking timeout — push outcome to the client.
+				if g, gerr := sessionpkg.GetGameSessionByID(gameID); gerr == nil && g.Result != sessionpkg.GameResultInProgress {
+					gameSocketHub.Broadcast(gameID, socketEventGameOutcome, map[string]interface{}{
+						"result":  g.Result,
+						"outcome": g.Outcome,
+					})
+				}
 				return
 			}
 			if _, applyErr := sessionpkg.ApplyMoveByCommandByID(gameID, aiMove); applyErr != nil {
