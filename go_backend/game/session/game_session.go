@@ -370,9 +370,18 @@ func StartConfiguredNewGame() (GameSession, error) {
 	defer unlockActiveRuntimeState(game)
 
 	resetGlobalsToInitialState()
-	// Chess FEN parser is 8×8 only. Xiangqi board materialization comes in later issue0034 steps.
+	// Chess FEN parser is 8×8 only. Xiangqi board materialization uses BoardFEN.
 	if currentType == GameTypeChess && currentConfig.StartFEN != "" {
 		if err := applyFENToCurrentGlobals(currentConfig.StartFEN); err != nil {
+			return GameSession{}, err
+		}
+	}
+	if currentType == GameTypeXiangqi {
+		fen := currentConfig.StartFEN
+		if fen == "" {
+			fen = DefaultXiangqiStartFEN
+		}
+		if err := applyXiangqiFENToCurrentGlobals(fen); err != nil {
 			return GameSession{}, err
 		}
 	}

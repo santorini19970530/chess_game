@@ -44,14 +44,22 @@ func CreateGame(mode GameMode, gameType GameType, humanColor string, aiGameCount
 	}
 	defer unlockRuntimeStateByID(locked)
 	resetGlobalsToInitialState()
-	// Chess FEN parser is 8×8 only. Xiangqi board materialization comes in later issue0034 steps.
+	// Chess FEN parser is 8×8 only. Xiangqi uses BoardFEN + FS rules.
 	if gameType == GameTypeChess && startFEN != "" {
 		if err := applyFENToCurrentGlobals(startFEN); err != nil {
 			return GameSession{}, err
 		}
 	}
-	game.Session.Outcome = EvaluateGameOutcome()
-	game.Session.Result = gameResultFromOutcome(game.Session.Outcome)
+	if gameType == GameTypeXiangqi {
+		if err := applyXiangqiFENToCurrentGlobals(startFEN); err != nil {
+			return GameSession{}, err
+		}
+		game.Session.Outcome = GameOutcome{Status: "in_progress", Message: "in progress"}
+		game.Session.Result = GameResultInProgress
+	} else {
+		game.Session.Outcome = EvaluateGameOutcome()
+		game.Session.Result = gameResultFromOutcome(game.Session.Outcome)
+	}
 	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 	return game.Session, nil
 }
@@ -135,6 +143,17 @@ func ApplyMoveByCommandByID(gameID, commandText string) (string, error) {
 		return "", err
 	}
 	defer unlockRuntimeStateByID(game)
+	if game.Session.Type == GameTypeXiangqi {
+		normalized, err := applyXiangqiUCIMove(commandText)
+		if err != nil {
+			return "", err
+		}
+		// Chess checkmate evaluator does not apply; terminal detection comes later via FS.
+		game.Session.Outcome = GameOutcome{Status: "in_progress", Message: "in progress"}
+		game.Session.Result = GameResultInProgress
+		game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+		return normalized, nil
+	}
 	return applyMoveByCommandCurrentLoaded(commandText)
 }
 
@@ -267,5 +286,42 @@ func LegalMovesForSquareByID(gameID string, file, rank int) ([]LegalDestination,
 		return nil, err
 	}
 	defer unlockRuntimeStateByID(game)
+	if game.Session.Type == GameTypeXiangqi {
+		return xiangqiLegalDestinationsForSquare(file, rank)
+	}
 	return LegalMovesForSquare(file, rank), nil
+}
+
+// AllLegalUCIMovesByID returns every legal UCI move for the side to move.
+// Xiangqi: Fairy-Stockfish. Chess: Go rules via per-square scan.
+func AllLegalUCIMovesByID(gameID string) ([]string, error) {
+	game, err := lockRuntimeStateByID(gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer unlockRuntimeStateByID(game)
+	if game.Session.Type == GameTypeXiangqi {
+		return xiangqiAllLegalUCIMoves()
+	}
+	side := string(CurrentTurnColor())
+	state := GetBoardState()
+	seen := make(map[string]struct{}, 128)
+	for _, p := range state {
+		if p.Color != side {
+			continue
+		}
+		dests := LegalMovesForSquare(p.File, p.Rank)
+		for _, d := range dests {
+			uci := fmt.Sprintf("%c%d%c%d", byte('a'+p.File-1), p.Rank, byte('a'+d.File-1), d.Rank)
+			if d.RequiresPromotion {
+				uci += "q"
+			}
+			seen[uci] = struct{}{}
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for mv := range seen {
+		out = append(out, mv)
+	}
+	return out, nil
 }

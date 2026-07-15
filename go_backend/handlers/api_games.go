@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -211,15 +210,9 @@ func (h *Handler) getAPIGameTopMoves(w http.ResponseWriter, r *http.Request, gam
 
 	// Build set of legal UCI moves for the current position
 	legalSet := make(map[string]struct{})
-	snap, _ := sessionpkg.BuildSnapshotByID(gameID)
-	for _, p := range snap.State {
-		dests, _ := sessionpkg.LegalMovesForSquareByID(gameID, p.File, p.Rank)
-		for _, d := range dests {
-			uci := fmt.Sprintf("%c%d%c%d", 'a'+byte(p.File-1), p.Rank, 'a'+byte(d.File-1), d.Rank)
-			if d.RequiresPromotion {
-				uci += "q"
-			}
-			legalSet[strings.ToLower(uci)] = struct{}{}
+	if legalMoves, err := sessionpkg.AllLegalUCIMovesByID(gameID); err == nil {
+		for _, mv := range legalMoves {
+			legalSet[strings.ToLower(mv)] = struct{}{}
 		}
 	}
 
@@ -643,13 +636,22 @@ func (h *Handler) getAPIGameLegalMoves(w http.ResponseWriter, r *http.Request, g
 		writeJSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
+	game, err := sessionpkg.GetGameSessionByID(gameID)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "Game session not found")
+		return
+	}
+	maxFile, maxRank := 8, 8
+	if game.Type == sessionpkg.GameTypeXiangqi {
+		maxFile, maxRank = 9, 10
+	}
 	file, err := strconv.Atoi(r.URL.Query().Get("file"))
-	if err != nil || file < 1 || file > 8 {
+	if err != nil || file < 1 || file > maxFile {
 		writeJSONError(w, http.StatusBadRequest, "invalid file")
 		return
 	}
 	rank, err := strconv.Atoi(r.URL.Query().Get("rank"))
-	if err != nil || rank < 1 || rank > 8 {
+	if err != nil || rank < 1 || rank > maxRank {
 		writeJSONError(w, http.StatusBadRequest, "invalid rank")
 		return
 	}

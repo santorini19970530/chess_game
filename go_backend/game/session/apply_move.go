@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"go_backend/game/command"
 	"go_backend/game/engine"
@@ -19,6 +20,16 @@ func ApplyMoveByCommand(commandText string) (string, error) {
 		return "", err
 	}
 	defer unlockActiveRuntimeState(game)
+	if game.Session.Type == GameTypeXiangqi {
+		normalized, err := applyXiangqiUCIMove(commandText)
+		if err != nil {
+			return "", err
+		}
+		game.Session.Outcome = GameOutcome{Status: "in_progress", Message: "in progress"}
+		game.Session.Result = GameResultInProgress
+		game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+		return normalized, nil
+	}
 	return applyMoveByCommandCurrentLoaded(commandText)
 }
 

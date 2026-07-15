@@ -214,6 +214,43 @@ func (fs *FairyStockfish) BestMove(fen string, limit Limit) (string, error) {
 	return move, nil
 }
 
+// LegalMoves lists legal UCI moves for fen via `go perft 1` (variant must already be set).
+func (fs *FairyStockfish) LegalMoves(fen string) ([]string, error) {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+	if !fs.running {
+		return nil, errors.New("engine not running")
+	}
+	if err := fs.send(fmt.Sprintf("position fen %s", fen)); err != nil {
+		return nil, err
+	}
+	if err := fs.send("go perft 1"); err != nil {
+		return nil, err
+	}
+	return fs.readPerftMoves(5 * time.Second)
+}
+
+// FENAfterMove applies a UCI move to fen and returns the resulting FEN from engine debug.
+// Caller must ensure move is legal (e.g. via LegalMoves). Variant must already be set.
+func (fs *FairyStockfish) FENAfterMove(fen, move string) (string, error) {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+	if !fs.running {
+		return "", errors.New("engine not running")
+	}
+	move = strings.TrimSpace(move)
+	if move == "" {
+		return "", errors.New("empty move")
+	}
+	if err := fs.send(fmt.Sprintf("position fen %s moves %s", fen, move)); err != nil {
+		return "", err
+	}
+	if err := fs.send("d"); err != nil {
+		return "", err
+	}
+	return fs.readDebugFEN(3 * time.Second)
+}
+
 // TopK returns up to k best moves (with centipawn scores and PV) using MultiPV.
 // It respects the current engine configuration (e.g. Skill Level set via SetStrengthProfile).
 func (fs *FairyStockfish) TopK(fen string, k int, limit Limit) ([]UCIResult, error) {
@@ -345,6 +382,89 @@ func (fs *FairyStockfish) waitForBestMove(timeout time.Duration) (string, error)
 			}
 		}
 	}
+}
+
+func (fs *FairyStockfish) readPerftMoves(timeout time.Duration) ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	moves := make([]string, 0, 64)
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, errors.New("timeout waiting for perft")
+		default:
+			line, err := fs.stdout.ReadString('\n')
+			if err != nil {
+				return nil, err
+			}
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "Nodes searched") {
+				return moves, nil
+			}
+			// e.g. "a4a5: 1" or "b3b10: 1"
+			if i := strings.IndexByte(line, ':'); i > 0 {
+				mv := strings.TrimSpace(line[:i])
+				if looksLikeUCIMove(mv) {
+					moves = append(moves, mv)
+				}
+			}
+		}
+	}
+}
+
+func (fs *FairyStockfish) readDebugFEN(timeout time.Duration) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	for {
+		select {
+		case <-ctx.Done():
+			return "", errors.New("timeout waiting for debug Fen")
+		default:
+			line, err := fs.stdout.ReadString('\n')
+			if err != nil {
+				return "", err
+			}
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "Fen:") {
+				fen := strings.TrimSpace(strings.TrimPrefix(line, "Fen:"))
+				if fen == "" {
+					return "", errors.New("empty Fen from engine")
+				}
+				return fen, nil
+			}
+		}
+	}
+}
+
+func looksLikeUCIMove(s string) bool {
+	if len(s) < 4 {
+		return false
+	}
+	if s[0] < 'a' || s[0] > 'i' {
+		return false
+	}
+	// file + rank(s) + file + rank(s); ranks may be 10
+	rest := s[1:]
+	i := 0
+	for i < len(rest) && rest[i] >= '0' && rest[i] <= '9' {
+		i++
+	}
+	if i == 0 || i >= len(rest) {
+		return false
+	}
+	if rest[i] < 'a' || rest[i] > 'i' {
+		return false
+	}
+	rest = rest[i+1:]
+	if len(rest) == 0 {
+		return false
+	}
+	for _, ch := range rest {
+		if ch < '0' || ch > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // collectTopKResults reads info lines until bestmove, parsing multipv results.

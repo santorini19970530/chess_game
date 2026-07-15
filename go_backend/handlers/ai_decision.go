@@ -101,7 +101,7 @@ func SelectAIMove(gameID string) (string, error) {
 		return "", err
 	}
 
-	legalMoves, err := legalUCIMovesByID(gameID, snapshot.State, color)
+	legalMoves, err := sessionpkg.AllLegalUCIMovesByID(gameID)
 	if err != nil {
 		return "", err
 	}

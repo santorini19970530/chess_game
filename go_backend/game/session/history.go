@@ -39,6 +39,9 @@ type MoveHistoryEntry struct {
 
 var lastAppliedMove *LastMove
 
+// boardFEN is set for Xiangqi (and later Shogi); when non-empty, CurrentFEN returns it.
+var boardFEN string
+
 var whiteKingMoved bool
 var blackKingMoved bool
 var whiteRookAMoved bool

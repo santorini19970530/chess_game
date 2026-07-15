@@ -23,6 +23,7 @@ func resetGlobalsToInitialState() {
 	moveHistory = nil
 	moveHistoryDetailed = nil
 	lastAppliedMove = nil
+	boardFEN = ""
 	resetCastlingState()
 	resetTurnOverride()
 	resetDrawTracking()
