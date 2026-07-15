@@ -81,3 +81,19 @@ One documentation update.
 Finish Chess first.
 Prefer fewer complete variants.
 Keep analyst output simple if needed.
+
+## Formal AI-vs-AI eval (`cmd/match`)
+
+From `go_backend` (Fairy-Stockfish required; Ollama not required):
+
+```bash
+cd go_backend
+OUT=data/evaluations/YYYY-MM-DD
+mkdir -p "$OUT"
+
+USE_FAIRY_STOCKFISH=true go run ./cmd/match -games 50 -profile intermediate -format json > "$OUT/eval_int_vs_int.json"
+USE_FAIRY_STOCKFISH=true go run ./cmd/match -games 50 -white-profile beginner -black-profile master -format json > "$OUT/eval_beg_vs_mas.json"
+```
+
+Profiles: `beginner` | `intermediate` | `advanced` | `master`.  
+Results write-up: FYP repo log sheet `123_chess_formal_ai_vs_ai_evaluation.md`.

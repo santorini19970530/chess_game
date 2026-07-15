@@ -20,6 +20,7 @@ func CreateGame(mode GameMode, gameType GameType, humanColor string, aiGameCount
 	if err != nil {
 		return GameSession{}, err
 	}
+	startFEN = normalizeStartFEN(gameType, startFEN)
 	profile, white, black := profilesFromSingle(aiProfile)
 	session := newGameSession(mode, gameType)
 	session.Config = GameConfig{
@@ -43,7 +44,8 @@ func CreateGame(mode GameMode, gameType GameType, humanColor string, aiGameCount
 	}
 	defer unlockRuntimeStateByID(locked)
 	resetGlobalsToInitialState()
-	if startFEN != "" {
+	// Chess FEN parser is 8×8 only. Xiangqi board materialization comes in later issue0034 steps.
+	if gameType == GameTypeChess && startFEN != "" {
 		if err := applyFENToCurrentGlobals(startFEN); err != nil {
 			return GameSession{}, err
 		}
@@ -67,6 +69,7 @@ func UpdateGameConfigByID(gameID string, mode GameMode, gameType GameType, human
 	if err != nil {
 		return GameSession{}, err
 	}
+	startFEN = normalizeStartFEN(gameType, startFEN)
 	profile, white, black := profilesFromSingle(aiProfile)
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
