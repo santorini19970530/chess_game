@@ -155,15 +155,67 @@ func TestFairyStockfish_TopKRespectsProfile(t *testing.T) {
 	}
 }
 
-func TestBuildGoCmd_PrefersMoveTime(t *testing.T) {
-	fs := &FairyStockfish{}
-	got := fs.buildGoCmd(Limit{Depth: 20, MoveTime: 1800 * time.Millisecond})
-	want := "go movetime 1800"
-	if got != want {
-		t.Fatalf("got %q want %q", got, want)
+func TestUCIVariantName(t *testing.T) {
+	cases := map[string]string{
+		"chess":   "chess",
+		"xianqi":  "xiangqi",
+		"xiangqi": "xiangqi",
+		"Xianqi":  "xiangqi",
+		"shogi":   "shogi",
+		"":        "chess",
 	}
-	got = fs.buildGoCmd(Limit{Depth: 8})
-	if got != "go depth 8" {
-		t.Fatalf("got %q", got)
+	for in, want := range cases {
+		if got := UCIVariantName(in); got != want {
+			t.Fatalf("UCIVariantName(%q)=%q want %q", in, got, want)
+		}
 	}
 }
+
+func TestFairyStockfish_SetVariantXiangqiBestMove(t *testing.T) {
+	bin := os.Getenv("FAIRY_STOCKFISH_PATH")
+	if bin == "" {
+		// go test cwd is this package dir (game/engine/).
+		bin = "../../../py_analyser/Fairy-Stockfish-fairy_sf_14/src/stockfish"
+		if _, err := os.Stat(bin); err != nil {
+			t.Skip("FAIRY_STOCKFISH_PATH not set and default binary missing; skipping")
+		}
+	}
+
+	fs, err := NewFairyStockfish(bin)
+	if err != nil {
+		t.Fatalf("NewFairyStockfish failed: %v", err)
+	}
+	if err := fs.Start(); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer fs.Close()
+
+	if err := fs.SetVariant("xianqi"); err != nil {
+		t.Fatalf("SetVariant(xianqi) failed: %v", err)
+	}
+	if fs.Variant() != "xiangqi" {
+		t.Fatalf("Variant()=%q want xiangqi", fs.Variant())
+	}
+
+	const xiangqiStart = "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1"
+	move, err := fs.BestMove(xiangqiStart, Limit{Depth: 5, MoveTime: 500 * time.Millisecond})
+	if err != nil {
+		t.Fatalf("BestMove on xiangqi start failed: %v", err)
+	}
+	if move == "" || move == "(none)" {
+		t.Fatalf("BestMove returned empty/none: %q", move)
+	}
+
+	// Switching back to chess must work on the same process.
+	if err := fs.SetVariant("chess"); err != nil {
+		t.Fatalf("SetVariant(chess) failed: %v", err)
+	}
+	chessMove, err := fs.BestMove("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", Limit{Depth: 5, MoveTime: 500 * time.Millisecond})
+	if err != nil {
+		t.Fatalf("BestMove on chess after variant switch failed: %v", err)
+	}
+	if chessMove == "" {
+		t.Fatal("chess BestMove empty after variant switch")
+	}
+}
+

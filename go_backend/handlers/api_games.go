@@ -197,6 +197,10 @@ func (h *Handler) getAPIGameTopMoves(w http.ResponseWriter, r *http.Request, gam
 		writeJSONError(w, http.StatusServiceUnavailable, "Fairy-Stockfish engine unavailable")
 		return
 	}
+	if err := fs.SetVariant(string(game.Type)); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Failed to set engine variant")
+		return
+	}
 
 	limit := engine.Limit{Depth: 12}
 	results, err := fs.TopKWithProfile(fen, k, profile, limit)

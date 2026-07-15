@@ -124,7 +124,7 @@ func SelectAIMove(gameID string) (string, error) {
 	// Optional Go-side Fairy-Stockfish path (env-gated, backward compatible)
 	allowDegrade := snapshot.Game.Mode == sessionpkg.GameModeAIVsAI
 	if useFairyStockfish() {
-		if move, err := selectMoveWithFairyStockfish(fen, profile, color, allowDegrade); err == nil && move != "" {
+		if move, err := selectMoveWithFairyStockfish(fen, profile, color, allowDegrade, gameType); err == nil && move != "" {
 			if _, ok := legalSet[normalizeUCI(move)]; ok {
 				return move, nil
 			}
@@ -244,7 +244,8 @@ func normalizeUCI(raw string) string {
 // selectMoveWithFairyStockfish uses the local UCI engine for one legal best move.
 // allowDegrade=true (AI vs AI): retry, then step down profiles before failing.
 // allowDegrade=false (Human vs AI): retry same profile only; caller treats failure as AI timeout/loss.
-func selectMoveWithFairyStockfish(fen, profile, side string, allowDegrade bool) (string, error) {
+// gameType is the session type (chess / xianqi / shogi); mapped to UCI_Variant before search.
+func selectMoveWithFairyStockfish(fen, profile, side string, allowDegrade bool, gameType string) (string, error) {
 	var lastErr error
 	chain := []string{strings.ToLower(strings.TrimSpace(profile))}
 	if chain[0] == "" {
@@ -258,6 +259,11 @@ func selectMoveWithFairyStockfish(fen, profile, side string, allowDegrade bool) 
 		for attempt := 1; attempt <= 3; attempt++ {
 			fs, err := getFairyStockfish(side)
 			if err != nil {
+				lastErr = err
+				_, _ = resetFairyStockfish(side)
+				continue
+			}
+			if err := fs.SetVariant(gameType); err != nil {
 				lastErr = err
 				_, _ = resetFairyStockfish(side)
 				continue
