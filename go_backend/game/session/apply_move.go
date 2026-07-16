@@ -25,8 +25,9 @@ func ApplyMoveByCommand(commandText string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		game.Session.Outcome = GameOutcome{Status: "in_progress", Message: "in progress"}
-		game.Session.Result = GameResultInProgress
+		outcome := EvaluateXiangqiGameOutcome()
+		game.Session.Outcome = outcome
+		game.Session.Result = gameResultFromOutcome(outcome)
 		game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 		return normalized, nil
 	}

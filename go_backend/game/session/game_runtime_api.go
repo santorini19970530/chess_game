@@ -55,8 +55,9 @@ func CreateGame(mode GameMode, gameType GameType, humanColor string, aiGameCount
 		if err := applyXiangqiFENToCurrentGlobals(startFEN); err != nil {
 			return GameSession{}, err
 		}
-		game.Session.Outcome = GameOutcome{Status: "in_progress", Message: "in progress"}
-		game.Session.Result = GameResultInProgress
+		outcome := EvaluateXiangqiGameOutcome()
+		game.Session.Outcome = outcome
+		game.Session.Result = gameResultFromOutcome(outcome)
 	} else {
 		game.Session.Outcome = EvaluateGameOutcome()
 		game.Session.Result = gameResultFromOutcome(game.Session.Outcome)
@@ -131,7 +132,7 @@ func RefreshGameSessionOutcomeByID(gameID string) (GameSession, error) {
 	if game.Session.Outcome.Status == "resigned" && game.Session.Result != GameResultInProgress {
 		return game.Session, nil
 	}
-	outcome := EvaluateGameOutcome()
+	outcome := evaluateOutcomeForGameType(game.Session.Type)
 	game.Session.Outcome = outcome
 	game.Session.Result = gameResultFromOutcome(outcome)
 	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
@@ -149,9 +150,9 @@ func ApplyMoveByCommandByID(gameID, commandText string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		// Chess checkmate evaluator does not apply; terminal detection comes later via FS.
-		game.Session.Outcome = GameOutcome{Status: "in_progress", Message: "in progress"}
-		game.Session.Result = GameResultInProgress
+		outcome := EvaluateXiangqiGameOutcome()
+		game.Session.Outcome = outcome
+		game.Session.Result = gameResultFromOutcome(outcome)
 		game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 		return normalized, nil
 	}

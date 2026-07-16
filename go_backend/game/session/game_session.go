@@ -385,8 +385,9 @@ func StartConfiguredNewGame() (GameSession, error) {
 			return GameSession{}, err
 		}
 	}
-	game.Session.Outcome = EvaluateGameOutcome()
-	game.Session.Result = gameResultFromOutcome(game.Session.Outcome)
+	outcome := evaluateOutcomeForGameType(currentType)
+	game.Session.Outcome = outcome
+	game.Session.Result = gameResultFromOutcome(outcome)
 	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 	return game.Session, nil
 }
