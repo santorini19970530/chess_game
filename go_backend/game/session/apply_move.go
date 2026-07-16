@@ -339,10 +339,14 @@ func castlingViolatesCheckRules(color pieces.PieceColor, rank, toFile int) bool 
 	return false
 }
 
-// toUCI converts internal file/rank (1-8) to UCI square notation (e2e4).
+// toUCI converts internal file/rank to UCI square notation (chess a-h/1-8, xiangqi a-i/1-10).
 func toUCI(fromFile, fromRank, toFile, toRank int) string {
-	if fromFile < 1 || fromFile > 8 || toFile < 1 || toFile > 8 ||
-		fromRank < 1 || fromRank > 8 || toRank < 1 || toRank > 8 {
+	maxFile, maxRank := 8, 8
+	if fromFile > 8 || toFile > 8 || fromRank > 8 || toRank > 8 {
+		maxFile, maxRank = 9, 10
+	}
+	if fromFile < 1 || fromFile > maxFile || toFile < 1 || toFile > maxFile ||
+		fromRank < 1 || fromRank > maxRank || toRank < 1 || toRank > maxRank {
 		return fmt.Sprintf("%d%d->%d%d", fromFile, fromRank, toFile, toRank)
 	}
 	return fmt.Sprintf("%c%d%c%d",

@@ -3,6 +3,8 @@ package session
 import (
 	"fmt"
 	"time"
+
+	"go_backend/game/movement"
 )
 
 type GameSnapshot struct {
@@ -44,7 +46,6 @@ func CreateGame(mode GameMode, gameType GameType, humanColor string, aiGameCount
 	}
 	defer unlockRuntimeStateByID(locked)
 	resetGlobalsToInitialState()
-	// Chess FEN parser is 8×8 only. Xiangqi uses BoardFEN + FS rules.
 	if gameType == GameTypeChess && startFEN != "" {
 		if err := applyFENToCurrentGlobals(startFEN); err != nil {
 			return GameSession{}, err
@@ -242,9 +243,13 @@ func BuildSnapshotByID(gameID string) (GameSnapshot, error) {
 		return GameSnapshot{}, err
 	}
 	defer unlockRuntimeStateByID(game)
+	checked := CheckedSideLabel()
+	if game.Session.Type == GameTypeXiangqi {
+		checked = string(movement.XiangqiCheckedColor())
+	}
 	return GameSnapshot{
 		CurrentTurn:     CurrentTurnLabel(),
-		CheckedSide:     CheckedSideLabel(),
+		CheckedSide:     checked,
 		Game:            game.Session,
 		Captured:        GetCapturedSummary(),
 		History:         GetMoveHistory(),
@@ -293,7 +298,7 @@ func LegalMovesForSquareByID(gameID string, file, rank int) ([]LegalDestination,
 }
 
 // AllLegalUCIMovesByID returns every legal UCI move for the side to move.
-// Xiangqi: Fairy-Stockfish. Chess: Go rules via per-square scan.
+// Chess and Xiangqi both use Go movement strategies (FS is advice-only).
 func AllLegalUCIMovesByID(gameID string) ([]string, error) {
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {

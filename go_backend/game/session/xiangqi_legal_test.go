@@ -5,7 +5,6 @@ import (
 )
 
 func TestXiangqiLegalMoves_AllAndPerSquare(t *testing.T) {
-	xiangqiFSAvailable(t)
 	resetGameSessionForTest()
 	ResetGame()
 
@@ -32,7 +31,6 @@ func TestXiangqiLegalMoves_AllAndPerSquare(t *testing.T) {
 		t.Fatalf("a4a5 missing from all legal moves: %v", all)
 	}
 
-	// file 1 = a, rank 4 = white pawn
 	dests, err := LegalMovesForSquareByID(game.ID, 1, 4)
 	if err != nil {
 		t.Fatalf("LegalMovesForSquareByID: %v", err)

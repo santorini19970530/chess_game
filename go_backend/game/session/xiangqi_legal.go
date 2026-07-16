@@ -3,26 +3,11 @@ package session
 import (
 	"fmt"
 
-	"go_backend/game/engine"
+	"go_backend/game/movement"
+	pieces "go_backend/game/piece"
 )
 
-// xiangqiAllLegalUCIMoves asks Fairy-Stockfish for every legal move in the current BoardFEN.
-func xiangqiAllLegalUCIMoves() ([]string, error) {
-	fen := boardFEN
-	if fen == "" {
-		fen = DefaultXiangqiStartFEN
-	}
-	fs, err := engine.RulesEngine()
-	if err != nil {
-		return nil, fmt.Errorf("fairy-stockfish unavailable: %w", err)
-	}
-	if err := fs.SetVariant(string(GameTypeXiangqi)); err != nil {
-		return nil, fmt.Errorf("set xiangqi variant: %w", err)
-	}
-	return fs.LegalMoves(fen)
-}
-
-// xiangqiLegalDestinationsForSquare filters FS legal moves that start on (file, rank).
+// xiangqiLegalDestinationsForSquare uses Go Xiangqi strategies (not Fairy-Stockfish).
 func xiangqiLegalDestinationsForSquare(file, rank int) ([]LegalDestination, error) {
 	sourcePiece, found := getPieceAt(file, rank)
 	if !found {
@@ -31,30 +16,41 @@ func xiangqiLegalDestinationsForSquare(file, rank int) ([]LegalDestination, erro
 	if sourcePiece.Color != CurrentTurnColor() {
 		return []LegalDestination{}, nil
 	}
-	all, err := xiangqiAllLegalUCIMoves()
-	if err != nil {
-		return nil, err
-	}
-	out := make([]LegalDestination, 0, 8)
-	for _, mv := range all {
-		fromFile, fromRank, toFile, toRank, err := parseXiangqiUCISquares(mv)
-		if err != nil {
+	squares := movement.XiangqiLegalSquares(sourcePiece.Kind, sourcePiece.Color, file, rank)
+	out := make([]LegalDestination, 0, len(squares))
+	for _, sq := range squares {
+		if movement.XiangqiWouldLeaveGeneralInCheck(sourcePiece, file, rank, sq.File, sq.Rank) {
 			continue
 		}
-		if fromFile != file || fromRank != rank {
-			continue
-		}
-		_, isCapture := getPieceAt(toFile, toRank)
+		_, isCapture := getPieceAt(sq.File, sq.Rank)
 		out = append(out, LegalDestination{
-			File:      toFile,
-			Rank:      toRank,
+			File:      sq.File,
+			Rank:      sq.Rank,
 			IsCapture: isCapture,
 		})
 	}
 	return out, nil
 }
 
-// formatXiangqiUCI builds an FS UCI string (ranks 1–10, no zero-padding).
+// xiangqiAllLegalUCIMoves lists legal UCI moves for the side to move via Go rules.
+func xiangqiAllLegalUCIMoves() ([]string, error) {
+	side := CurrentTurnColor()
+	out := make([]string, 0, 64)
+	for _, p := range pieces.ChessPieces {
+		if p.Color != side {
+			continue
+		}
+		dests, err := xiangqiLegalDestinationsForSquare(p.File, p.Rank)
+		if err != nil {
+			return nil, err
+		}
+		for _, d := range dests {
+			out = append(out, formatXiangqiUCI(p.File, p.Rank, d.File, d.Rank))
+		}
+	}
+	return out, nil
+}
+
 func formatXiangqiUCI(fromFile, fromRank, toFile, toRank int) string {
 	return fmt.Sprintf("%c%d%c%d", byte('a'+fromFile-1), fromRank, byte('a'+toFile-1), toRank)
 }

@@ -17,19 +17,29 @@ func (h *Handler) GetLegalMoves(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	gameID := strings.TrimSpace(r.URL.Query().Get("gameId"))
+	if gameID == "" {
+		gameID = sessionpkg.GetGameSession().ID
+	}
+	game, err := sessionpkg.GetGameSessionByID(gameID)
+	if err != nil {
+		http.Error(w, "game session not found", http.StatusNotFound)
+		return
+	}
+	maxFile, maxRank := 8, 8
+	if game.Type == sessionpkg.GameTypeXiangqi {
+		maxFile, maxRank = 9, 10
+	}
+
 	file, err := strconv.Atoi(r.URL.Query().Get("file"))
-	if err != nil || file < 1 || file > 8 {
+	if err != nil || file < 1 || file > maxFile {
 		http.Error(w, "invalid file", http.StatusBadRequest)
 		return
 	}
 	rank, err := strconv.Atoi(r.URL.Query().Get("rank"))
-	if err != nil || rank < 1 || rank > 8 {
+	if err != nil || rank < 1 || rank > maxRank {
 		http.Error(w, "invalid rank", http.StatusBadRequest)
 		return
-	}
-	gameID := strings.TrimSpace(r.URL.Query().Get("gameId"))
-	if gameID == "" {
-		gameID = sessionpkg.GetGameSession().ID
 	}
 
 	moves, err := sessionpkg.LegalMovesForSquareByID(gameID, file, rank)

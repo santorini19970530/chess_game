@@ -93,3 +93,80 @@ func xiangqiPieceFromChar(ch rune) (pieces.PieceKind, pieces.PieceColor, bool) {
 		return "", "", false
 	}
 }
+
+func xiangqiCharFromPiece(kind pieces.PieceKind, color pieces.PieceColor) (byte, bool) {
+	var ch byte
+	switch kind {
+	case pieces.Rook:
+		ch = 'r'
+	case pieces.Knight:
+		ch = 'n'
+	case pieces.Elephant:
+		ch = 'b'
+	case pieces.Advisor:
+		ch = 'a'
+	case pieces.King:
+		ch = 'k'
+	case pieces.Cannon:
+		ch = 'c'
+	case pieces.Pawn:
+		ch = 'p'
+	default:
+		return 0, false
+	}
+	if color == pieces.White {
+		ch = byte(unicode.ToUpper(rune(ch)))
+	}
+	return ch, true
+}
+
+// exportXiangqiFEN builds FEN from current pieces + side to move.
+func exportXiangqiFEN() string {
+	type cell struct {
+		kind  pieces.PieceKind
+		color pieces.PieceColor
+		ok    bool
+	}
+	grid := [11][10]cell{} // 1-indexed ranks/files
+	for _, p := range pieces.ChessPieces {
+		if p.File < 1 || p.File > 9 || p.Rank < 1 || p.Rank > 10 {
+			continue
+		}
+		grid[p.Rank][p.File] = cell{kind: p.Kind, color: p.Color, ok: true}
+	}
+	var placement strings.Builder
+	for rank := 10; rank >= 1; rank-- {
+		if rank < 10 {
+			placement.WriteByte('/')
+		}
+		empty := 0
+		for file := 1; file <= 9; file++ {
+			c := grid[rank][file]
+			if !c.ok {
+				empty++
+				continue
+			}
+			if empty > 0 {
+				placement.WriteByte(byte('0' + empty))
+				empty = 0
+			}
+			ch, ok := xiangqiCharFromPiece(c.kind, c.color)
+			if ok {
+				placement.WriteByte(ch)
+			}
+		}
+		if empty > 0 {
+			placement.WriteByte(byte('0' + empty))
+		}
+	}
+	active := "w"
+	if CurrentTurnColor() == pieces.Black {
+		active = "b"
+	}
+	fullmove := len(moveHistory)/2 + 1
+	return fmt.Sprintf("%s %s - - 0 %d", placement.String(), active, fullmove)
+}
+
+func syncXiangqiBoardFEN() {
+	boardFEN = exportXiangqiFEN()
+}

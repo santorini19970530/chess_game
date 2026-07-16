@@ -1,31 +1,11 @@
 package session
 
 import (
-	"os"
 	"strings"
 	"testing"
 )
 
-func xiangqiFSAvailable(t *testing.T) {
-	t.Helper()
-	if os.Getenv("FAIRY_STOCKFISH_PATH") != "" {
-		return
-	}
-	candidates := []string{
-		"../../py_analyser/Fairy-Stockfish-fairy_sf_14/src/stockfish",
-		"../../../py_analyser/Fairy-Stockfish-fairy_sf_14/src/stockfish",
-	}
-	for _, c := range candidates {
-		if st, err := os.Stat(c); err == nil && !st.IsDir() {
-			_ = os.Setenv("FAIRY_STOCKFISH_PATH", c)
-			return
-		}
-	}
-	t.Skip("Fairy-Stockfish binary not found; set FAIRY_STOCKFISH_PATH")
-}
-
 func TestXiangqiHumanMove_LegalUpdatesFENAndHistory(t *testing.T) {
-	xiangqiFSAvailable(t)
 	resetGameSessionForTest()
 	ResetGame()
 
@@ -63,7 +43,6 @@ func TestXiangqiHumanMove_LegalUpdatesFENAndHistory(t *testing.T) {
 	if snap.CurrentTurn != "Black" {
 		t.Fatalf("turn=%q want Black", snap.CurrentTurn)
 	}
-	// Pawn moved from a4 to a5
 	foundA5 := false
 	for _, p := range snap.State {
 		if p.File == 1 && p.Rank == 5 && p.Kind == "pawn" && p.Color == "white" {
@@ -76,7 +55,6 @@ func TestXiangqiHumanMove_LegalUpdatesFENAndHistory(t *testing.T) {
 }
 
 func TestXiangqiHumanMove_IllegalRejected(t *testing.T) {
-	xiangqiFSAvailable(t)
 	resetGameSessionForTest()
 	ResetGame()
 
@@ -85,7 +63,7 @@ func TestXiangqiHumanMove_IllegalRejected(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 
-	_, err = ApplyMoveByCommandByID(game.ID, "a4a6") // pawn cannot jump two
+	_, err = ApplyMoveByCommandByID(game.ID, "a4a6") // soldier cannot jump two
 	if err == nil {
 		t.Fatal("expected illegal move to be rejected")
 	}
@@ -99,7 +77,6 @@ func TestXiangqiHumanMove_IllegalRejected(t *testing.T) {
 }
 
 func TestXiangqiHumanMove_Rank10Notation(t *testing.T) {
-	xiangqiFSAvailable(t)
 	resetGameSessionForTest()
 	ResetGame()
 
@@ -107,7 +84,9 @@ func TestXiangqiHumanMove_Rank10Notation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	// White cannon capture path along file h to rank 10 is legal from start (h3h10).
+	// White cannon on h3 can capture along file to black rook? h3h10 captures through screen.
+	// From start: h3 cannon, screen at h7? Board: black pawns on rank 7, empty rank 9, rook on h10.
+	// Cannon needs exactly one screen — pawn on h7 is the screen, so h3h10 is a capture of rook.
 	if _, err := ApplyMoveByCommandByID(game.ID, "h3h10"); err != nil {
 		t.Fatalf("h3h10 should be legal: %v", err)
 	}

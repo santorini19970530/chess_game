@@ -5,73 +5,64 @@ import (
 	"regexp"
 	"strings"
 
-	"go_backend/game/engine"
+	"go_backend/game/movement"
 	pieces "go_backend/game/piece"
 )
 
-// Fairy-Stockfish Xiangqi UCI: files a-i, ranks 1-10 (e.g. a4a5, b3b10, a10a9).
+// Fairy-Stockfish / API UCI for Xiangqi: files a-i, ranks 1-10 (e.g. a4a5, b3b10, a10a9).
+// Move legality is enforced by Go strategies, not Fairy-Stockfish.
 var xiangqiUCIMovePattern = regexp.MustCompile(`^[a-i](?:10|[1-9])[a-i](?:10|[1-9])$`)
 
 func applyXiangqiUCIMove(commandText string) (string, error) {
 	move := strings.ToLower(strings.TrimSpace(commandText))
 	if !xiangqiUCIMovePattern.MatchString(move) {
-		return "", fmt.Errorf("invalid xiangqi move %q (expected FS UCI, e.g. a4a5 or h3h10)", commandText)
+		return "", fmt.Errorf("invalid xiangqi move %q (expected UCI, e.g. a4a5 or h3h10)", commandText)
 	}
-	fen := boardFEN
-	if fen == "" {
-		fen = DefaultXiangqiStartFEN
-	}
-
-	legal, err := xiangqiAllLegalUCIMoves()
-	if err != nil {
-		return "", fmt.Errorf("list legal moves: %w", err)
-	}
-	ok := false
-	for _, mv := range legal {
-		if mv == move {
-			ok = true
-			break
-		}
-	}
-	if !ok {
-		return "", fmt.Errorf("illegal move: %s", move)
-	}
-
-	fs, err := engine.RulesEngine()
-	if err != nil {
-		return "", fmt.Errorf("fairy-stockfish unavailable: %w", err)
-	}
-	newFEN, err := fs.FENAfterMove(fen, move)
-	if err != nil {
-		return "", fmt.Errorf("apply move on engine: %w", err)
-	}
-
 	fromFile, fromRank, toFile, toRank, err := parseXiangqiUCISquares(move)
 	if err != nil {
 		return "", err
 	}
+
+	expectedColor := CurrentTurnColor()
 	sourcePiece, found := getPieceAt(fromFile, fromRank)
 	if !found {
 		return "", fmt.Errorf("There is no piece at source square")
 	}
-	_, destOccupied := getPieceAt(toFile, toRank)
-	capturedKind := pieces.PieceKind("")
-	if destOccupied {
-		if target, ok := getPieceAt(toFile, toRank); ok {
-			capturedKind = target.Kind
-		}
+	if sourcePiece.Color != expectedColor {
+		return "", fmt.Errorf("It is not %s's turn", expectedColor)
+	}
+	targetPiece, destinationOccupied := getPieceAt(toFile, toRank)
+	if destinationOccupied && targetPiece.Color == sourcePiece.Color {
+		return "", fmt.Errorf("Cannot capture own piece")
+	}
+	if destinationOccupied && targetPiece.Kind == pieces.King {
+		return "", fmt.Errorf("Cannot capture the king")
 	}
 
-	if err := applyXiangqiFENToCurrentGlobals(newFEN); err != nil {
+	if err := movement.ValidateXiangqiMoveByStrategy(
+		sourcePiece.Kind, fromFile, fromRank, toFile, toRank, sourcePiece.Color,
+	); err != nil {
 		return "", err
 	}
-	AppendMoveHistory(move, sourcePiece.Color, sourcePiece.Kind, toFile, toRank, destOccupied, capturedKind)
+	if movement.XiangqiWouldLeaveGeneralInCheck(sourcePiece, fromFile, fromRank, toFile, toRank) {
+		return "", fmt.Errorf("illegal move: general would be in check")
+	}
+
+	capturedKind := pieces.PieceKind("")
+	if destinationOccupied {
+		capturedKind = targetPiece.Kind
+	}
+	if err := ApplyMove(fromFile, fromRank, toFile, toRank); err != nil {
+		return "", err
+	}
+	AppendMoveHistory(move, sourcePiece.Color, sourcePiece.Kind, toFile, toRank, destinationOccupied, capturedKind)
 	RecordLastMove(fromFile, fromRank, toFile, toRank, sourcePiece.Kind, sourcePiece.Color)
+	SetCurrentTurnColor(OpponentColor(sourcePiece.Color))
+	syncXiangqiBoardFEN()
 	return move, nil
 }
 
 func parseXiangqiUCISquares(move string) (fromFile, fromRank, toFile, toRank int, err error) {
-	// [file][rank][file][rank] with ranks 1-10
 	if len(move) < 4 {
 		return 0, 0, 0, 0, fmt.Errorf("invalid move")
 	}
