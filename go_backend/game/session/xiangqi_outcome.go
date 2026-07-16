@@ -79,8 +79,13 @@ func EvaluateXiangqiGameOutcome() GameOutcome {
 }
 
 func evaluateOutcomeForGameType(gameType GameType) GameOutcome {
-	if gameType == GameTypeXiangqi {
+	switch gameType {
+	case GameTypeXiangqi:
 		return EvaluateXiangqiGameOutcome()
+	case GameTypeShogi:
+		// Terminal detection lands with strategies + legal list (later step).
+		return GameOutcome{Status: "in_progress", Message: "in progress"}
+	default:
+		return EvaluateGameOutcome()
 	}
-	return EvaluateGameOutcome()
 }

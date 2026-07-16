@@ -46,24 +46,39 @@ func CreateGame(mode GameMode, gameType GameType, humanColor string, aiGameCount
 	}
 	defer unlockRuntimeStateByID(locked)
 	resetGlobalsToInitialState()
-	if gameType == GameTypeChess && startFEN != "" {
-		if err := applyFENToCurrentGlobals(startFEN); err != nil {
-			return GameSession{}, err
-		}
+	if err := materializeStartPosition(gameType, startFEN); err != nil {
+		return GameSession{}, err
 	}
-	if gameType == GameTypeXiangqi {
-		if err := applyXiangqiFENToCurrentGlobals(startFEN); err != nil {
-			return GameSession{}, err
-		}
-		outcome := EvaluateXiangqiGameOutcome()
-		game.Session.Outcome = outcome
-		game.Session.Result = gameResultFromOutcome(outcome)
-	} else {
-		game.Session.Outcome = EvaluateGameOutcome()
-		game.Session.Result = gameResultFromOutcome(game.Session.Outcome)
-	}
+	outcome := evaluateOutcomeForGameType(gameType)
+	game.Session.Outcome = outcome
+	game.Session.Result = gameResultFromOutcome(outcome)
 	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 	return game.Session, nil
+}
+
+// materializeStartPosition loads board state for the given game type.
+func materializeStartPosition(gameType GameType, startFEN string) error {
+	switch gameType {
+	case GameTypeChess:
+		if startFEN != "" {
+			return applyFENToCurrentGlobals(startFEN)
+		}
+		return nil
+	case GameTypeXiangqi:
+		fen := startFEN
+		if fen == "" {
+			fen = DefaultXiangqiStartFEN
+		}
+		return applyXiangqiFENToCurrentGlobals(fen)
+	case GameTypeShogi:
+		fen := startFEN
+		if fen == "" {
+			fen = DefaultShogiStartFEN
+		}
+		return applyShogiFENToCurrentGlobals(fen)
+	default:
+		return fmt.Errorf("unsupported game type")
+	}
 }
 
 func GetGameSessionByID(gameID string) (GameSession, error) {
