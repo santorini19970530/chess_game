@@ -30,6 +30,19 @@ type FairyStockfish struct {
 	mu         sync.Mutex
 	running    bool
 	binaryPath string
+	variant    string // last UCI_Variant successfully applied (FS name, e.g. "xiangqi")
+}
+
+// UCIVariantName maps session game type ("xianqi") to Fairy-Stockfish UCI_Variant ("xiangqi").
+func UCIVariantName(gameType string) string {
+	switch strings.ToLower(strings.TrimSpace(gameType)) {
+	case "xianqi", "xiangqi":
+		return "xiangqi"
+	case "shogi":
+		return "shogi"
+	default:
+		return "chess"
+	}
 }
 
 // NewFairyStockfish creates a new wrapper but does not start the process.
@@ -77,6 +90,7 @@ func (fs *FairyStockfish) Start() error {
 		fs.closeLocked()
 		return err
 	}
+	fs.variant = "chess" // Fairy-Stockfish default after uci
 	return nil
 }
 
@@ -108,6 +122,38 @@ func (fs *FairyStockfish) SetOption(name, value string) error {
 	}
 	cmd := fmt.Sprintf("setoption name %s value %s", name, value)
 	return fs.send(cmd)
+}
+
+// SetVariant sets UCI_Variant (Fairy-Stockfish name: chess, xiangqi, shogi, ...).
+// No-op when already on that variant. Call before BestMove/TopK for non-chess games.
+func (fs *FairyStockfish) SetVariant(gameTypeOrVariant string) error {
+	variant := UCIVariantName(gameTypeOrVariant)
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+	if !fs.running {
+		return errors.New("engine not running")
+	}
+	if fs.variant == variant {
+		return nil
+	}
+	if err := fs.send(fmt.Sprintf("setoption name UCI_Variant value %s", variant)); err != nil {
+		return err
+	}
+	if err := fs.send("isready"); err != nil {
+		return err
+	}
+	if err := fs.waitFor("readyok", 3*time.Second); err != nil {
+		return err
+	}
+	fs.variant = variant
+	return nil
+}
+
+// Variant returns the last applied UCI_Variant name.
+func (fs *FairyStockfish) Variant() string {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+	return fs.variant
 }
 
 // SetStrengthProfile maps profile to UCI options (Skill Level + MultiPV).
@@ -226,6 +272,7 @@ func (fs *FairyStockfish) Close() error {
 // (e.g. after an EOF where BestMove cleared the flag).
 func (fs *FairyStockfish) closeLocked() error {
 	fs.running = false
+	fs.variant = ""
 	if fs.stdin != nil {
 		_ = fs.stdin.Close()
 		fs.stdin = nil

@@ -31,6 +31,9 @@ const (
 	GameTypeShogi   GameType = "shogi"
 )
 
+// DefaultXiangqiStartFEN is the standard Xiangqi start position (FS-compatible FEN text).
+const DefaultXiangqiStartFEN = "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1"
+
 type GameResult string
 
 const (
@@ -324,6 +327,7 @@ func UpdateGameConfig(mode GameMode, gameType GameType, humanColor string, aiGam
 	if err != nil {
 		return GameSession{}, err
 	}
+	startFEN = normalizeStartFEN(gameType, startFEN)
 
 	game, err := lockActiveRuntimeState()
 	if err != nil {
@@ -366,13 +370,24 @@ func StartConfiguredNewGame() (GameSession, error) {
 	defer unlockActiveRuntimeState(game)
 
 	resetGlobalsToInitialState()
-	if currentConfig.StartFEN != "" {
+	// Chess FEN parser is 8×8 only. Xiangqi board materialization uses BoardFEN.
+	if currentType == GameTypeChess && currentConfig.StartFEN != "" {
 		if err := applyFENToCurrentGlobals(currentConfig.StartFEN); err != nil {
 			return GameSession{}, err
 		}
 	}
-	game.Session.Outcome = EvaluateGameOutcome()
-	game.Session.Result = gameResultFromOutcome(game.Session.Outcome)
+	if currentType == GameTypeXiangqi {
+		fen := currentConfig.StartFEN
+		if fen == "" {
+			fen = DefaultXiangqiStartFEN
+		}
+		if err := applyXiangqiFENToCurrentGlobals(fen); err != nil {
+			return GameSession{}, err
+		}
+	}
+	outcome := evaluateOutcomeForGameType(currentType)
+	game.Session.Outcome = outcome
+	game.Session.Result = gameResultFromOutcome(outcome)
 	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 	return game.Session, nil
 }
@@ -549,8 +564,32 @@ func validateGameConfig(mode GameMode, gameType GameType, humanColor string, aiG
 	if startFEN != "" {
 		aiGameCount = 1
 	}
-	if gameType != GameTypeChess {
-		return 0, fmt.Errorf("only chess is currently supported")
+	switch gameType {
+	case GameTypeChess:
+		// ok
+	case GameTypeXiangqi:
+		if startFEN != "" && !looksLikeXiangqiFEN(startFEN) {
+			return 0, fmt.Errorf("chess FEN is not valid for xianqi")
+		}
+	default:
+		return 0, fmt.Errorf("only chess and xianqi are currently supported")
 	}
 	return aiGameCount, nil
+}
+
+// looksLikeXiangqiFEN: Xiangqi boards have 10 ranks (9 '/' separators in the placement field).
+func looksLikeXiangqiFEN(fen string) bool {
+	parts := strings.Fields(strings.TrimSpace(fen))
+	if len(parts) == 0 {
+		return false
+	}
+	return strings.Count(parts[0], "/") == 9
+}
+
+func normalizeStartFEN(gameType GameType, startFEN string) string {
+	startFEN = strings.TrimSpace(startFEN)
+	if gameType == GameTypeXiangqi && startFEN == "" {
+		return DefaultXiangqiStartFEN
+	}
+	return startFEN
 }

@@ -166,11 +166,12 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 	if gameTypeRaw == "" {
 		gameTypeRaw = "chess"
 	}
-	if gameTypeRaw != "chess" {
-		// Xiangqi/Shogi adapters land in Step 6; reject early so eval logs stay honest.
-		writeJSONError(w, http.StatusBadRequest, "game must be chess for now")
+	gameType, err := parseSupportedGameType(gameTypeRaw)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	gameTypeRaw = string(gameType)
 
 	var white, black, draws, totalMoves int
 	results := make([]gameResult, 0, req.Games)
@@ -179,9 +180,9 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 
 	for i := 0; i < req.Games; i++ {
 		gameNum := i + 1
-		log.Printf("=== simulate game %d/%d started (white=%s black=%s) ===", gameNum, req.Games, whiteProfile, blackProfile)
+		log.Printf("=== simulate game %d/%d started (game=%s white=%s black=%s) ===", gameNum, req.Games, gameTypeRaw, whiteProfile, blackProfile)
 
-		game, err := session.CreateGame(session.GameModeAIVsAI, session.GameTypeChess, "white", 1, "", whiteProfile)
+		game, err := session.CreateGame(session.GameModeAIVsAI, gameType, "white", 1, "", whiteProfile)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "failed to create game")
 			return
@@ -388,4 +389,15 @@ func resolveSimulateProfiles(profile, whiteRaw, blackRaw string) (white, black s
 		black = parsed
 	}
 	return white, black, nil
+}
+
+func parseSupportedGameType(raw string) (session.GameType, error) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "", "chess":
+		return session.GameTypeChess, nil
+	case "xianqi", "xiangqi":
+		return session.GameTypeXiangqi, nil
+	default:
+		return "", fmt.Errorf("game must be chess or xianqi")
+	}
 }

@@ -19,7 +19,7 @@ func main() {
 	profile := flag.String("profile", "", "AI strength for both sides: beginner|intermediate|advanced|master")
 	whiteProfile := flag.String("white-profile", "", "White AI strength (overrides -profile for White)")
 	blackProfile := flag.String("black-profile", "", "Black AI strength (overrides -profile for Black)")
-	gameType := flag.String("game", "chess", "game type (chess only for now)")
+	gameType := flag.String("game", "chess", "game type: chess|xianqi")
 	format := flag.String("format", "text", "output format: text|json|csv")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: match [flags]\n\n")
@@ -29,6 +29,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "\nExamples:\n")
 		fmt.Fprintf(os.Stderr, "  match -games 5 -profile intermediate\n")
 		fmt.Fprintf(os.Stderr, "  match -games 10 -white-profile beginner -black-profile master -format json\n")
+		fmt.Fprintf(os.Stderr, "  match -games 5 -game xianqi -profile beginner -format json\n")
 		fmt.Fprintf(os.Stderr, "  match -games 20 -format csv > results.csv\n")
 	}
 	flag.Parse()
@@ -36,8 +37,9 @@ func main() {
 	if *games < 1 {
 		log.Fatal("error: --games must be >= 1")
 	}
-	if *gameType != "chess" {
-		log.Fatalf("error: unsupported game %q (chess only for now)", *gameType)
+	gt, err := parseMatchGameType(*gameType)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	white, black, err := resolveMatchProfiles(*profile, *whiteProfile, *blackProfile)
@@ -60,9 +62,9 @@ func main() {
 
 	for i := 0; i < *games; i++ {
 		gameNum := i + 1
-		log.Printf("=== Game %d/%d started (white=%s black=%s) ===", gameNum, *games, white, black)
+		log.Printf("=== Game %d/%d started (game=%s white=%s black=%s) ===", gameNum, *games, gt, white, black)
 
-		game, err := session.CreateGame(session.GameModeAIVsAI, session.GameTypeChess, "white", 1, "", white)
+		game, err := session.CreateGame(session.GameModeAIVsAI, gt, "white", 1, "", white)
 		if err != nil {
 			log.Fatalf("failed to create game: %v", err)
 		}
@@ -205,4 +207,15 @@ func resolveMatchProfiles(profile, whiteRaw, blackRaw string) (white, black stri
 		black = parsed
 	}
 	return white, black, nil
+}
+
+func parseMatchGameType(raw string) (session.GameType, error) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "", "chess":
+		return session.GameTypeChess, nil
+	case "xianqi", "xiangqi":
+		return session.GameTypeXiangqi, nil
+	default:
+		return "", fmt.Errorf("error: unsupported game %q (chess or xianqi)", raw)
+	}
 }

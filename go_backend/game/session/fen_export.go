@@ -4,6 +4,9 @@ import "fmt"
 
 // CurrentFEN exports the current board/session state as a FEN string.
 func CurrentFEN() string {
+	if boardFEN != "" {
+		return boardFEN
+	}
 	activeColor := "w"
 	if CurrentTurnColor() == "black" {
 		activeColor = "b"

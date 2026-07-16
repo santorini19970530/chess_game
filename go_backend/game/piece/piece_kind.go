@@ -6,10 +6,13 @@ package pieces
 type PieceKind string
 
 const (
-	Pawn   PieceKind = "pawn"
-	Rook   PieceKind = "rook"
-	Knight PieceKind = "knight"
-	Bishop PieceKind = "bishop"
-	Queen  PieceKind = "queen"
-	King   PieceKind = "king"
+	Pawn     PieceKind = "pawn"
+	Rook     PieceKind = "rook"
+	Knight   PieceKind = "knight"
+	Bishop   PieceKind = "bishop"
+	Queen    PieceKind = "queen"
+	King     PieceKind = "king"
+	Advisor  PieceKind = "advisor"
+	Cannon   PieceKind = "cannon"
+	Elephant PieceKind = "elephant"
 )

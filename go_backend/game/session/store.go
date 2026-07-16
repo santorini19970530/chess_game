@@ -8,8 +8,8 @@ import (
 )
 
 type RuntimeState struct {
-	Pieces             []pieces.ChessPiece
-	MoveHistory        []string
+	Pieces              []pieces.ChessPiece
+	MoveHistory         []string
 	MoveHistoryDetailed []MoveHistoryEntry
 	CurrentTurnOverride *pieces.PieceColor
 	CurrentTurnPinned   bool
@@ -22,6 +22,8 @@ type RuntimeState struct {
 	WhiteRookHMoved     bool
 	BlackRookAMoved     bool
 	BlackRookHMoved     bool
+	// BoardFEN is source of truth for non-chess variants (e.g. xiangqi). Empty for chess.
+	BoardFEN string
 }
 
 type RuntimeGame struct {
@@ -110,6 +112,7 @@ func (g *RuntimeGame) bindToGlobals() {
 	whiteRookHMoved = g.State.WhiteRookHMoved
 	blackRookAMoved = g.State.BlackRookAMoved
 	blackRookHMoved = g.State.BlackRookHMoved
+	boardFEN = g.State.BoardFEN
 }
 
 func (g *RuntimeGame) syncFromGlobals() {
@@ -137,6 +140,7 @@ func (g *RuntimeGame) syncFromGlobals() {
 	g.State.WhiteRookHMoved = whiteRookHMoved
 	g.State.BlackRookAMoved = blackRookAMoved
 	g.State.BlackRookHMoved = blackRookHMoved
+	g.State.BoardFEN = boardFEN
 }
 
 func copyStringIntMap(in map[string]int) map[string]int {
