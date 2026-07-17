@@ -30,6 +30,7 @@ from llm_providers import get_llm_provider
 app = Flask(__name__)
 
 
+# Chess-only advice agents. Go never sends xianqi/shogi here (variants use FS propose + Go legal filter).
 SUPPORTED_GAME_TYPES = {"chess"}
 
 

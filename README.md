@@ -91,11 +91,8 @@ cd go_backend
 OUT=data/evaluations/2026-07-17
 mkdir -p "$OUT"
 
-USE_FAIRY_STOCKFISH=true go run ./cmd/match -games 50 -profile intermediate -format json > "$OUT/eval_int_vs_int.json"
-USE_FAIRY_STOCKFISH=true go run ./cmd/match -games 50 -white-profile beginner -black-profile master -format json > "$OUT/eval_beg_vs_mas.json"
 USE_FAIRY_STOCKFISH=true go run ./cmd/match -games 5 -game xianqi -profile beginner -format json > "$OUT/eval_xianqi_smoke.json"
 USE_FAIRY_STOCKFISH=true go run ./cmd/match -games 5 -game shogi -profile beginner -format json > "$OUT/eval_shogi_smoke.json"
-pmset sleepnow
 ```
 
 Profiles: `beginner` | `intermediate` | `advanced` | `master`.  
