@@ -31,6 +31,17 @@ func ApplyMoveByCommand(commandText string) (string, error) {
 		game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 		return normalized, nil
 	}
+	if game.Session.Type == GameTypeShogi {
+		normalized, err := applyShogiUCIMove(commandText)
+		if err != nil {
+			return "", err
+		}
+		outcome := evaluateOutcomeForGameType(GameTypeShogi)
+		game.Session.Outcome = outcome
+		game.Session.Result = gameResultFromOutcome(outcome)
+		game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+		return normalized, nil
+	}
 	return applyMoveByCommandCurrentLoaded(commandText)
 }
 

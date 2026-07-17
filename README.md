@@ -88,28 +88,168 @@ From `go_backend` (Fairy-Stockfish required; Ollama not required):
 
 ```bash
 cd go_backend
-OUT=data/evaluations/YYYY-MM-DD
+OUT=data/evaluations/2026-07-17
 mkdir -p "$OUT"
 
 USE_FAIRY_STOCKFISH=true go run ./cmd/match -games 50 -profile intermediate -format json > "$OUT/eval_int_vs_int.json"
 USE_FAIRY_STOCKFISH=true go run ./cmd/match -games 50 -white-profile beginner -black-profile master -format json > "$OUT/eval_beg_vs_mas.json"
 USE_FAIRY_STOCKFISH=true go run ./cmd/match -games 5 -game xianqi -profile beginner -format json > "$OUT/eval_xianqi_smoke.json"
+USE_FAIRY_STOCKFISH=true go run ./cmd/match -games 5 -game shogi -profile beginner -format json > "$OUT/eval_shogi_smoke.json"
+pmset sleepnow
 ```
 
 Profiles: `beginner` | `intermediate` | `advanced` | `master`.  
 Results write-up: FYP repo log sheet `123_chess_formal_ai_vs_ai_evaluation.md`.
 
-## Xiangqi (`game=xianqi`) — backend notes
+---
 
-Session type ID is `xianqi` (stable). Fairy-Stockfish UCI variant name is `xiangqi`.
+## How to read FEN / make moves (Xiangqi + Shogi)
 
-**Rules vs AI:** Go movement strategies own legality, apply-move, legal-move lists, and terminal detection (checkmate / stalemate-as-loss). Fairy-Stockfish is used only for AI search (`UCI_Variant=xiangqi` + strength profiles), same split as Chess.
+Both variants use the **same coordinate style as this API**:
 
-**Board coords:** files `a`–`i` (1–9), ranks `1`–`10` (Red/White at ranks 1–3).
+| Axis | Meaning |
+|------|---------|
+| **File** | column letter `a` … `i` (left → right) |
+| **Rank** | row number (bottom → top from **White/Red/Sente**) |
+| **API square** | `file` 1–9 = `a`–`i`, `rank` = number |
+| **Move string** | `fromSquare` + `toSquare`, e.g. `c3c4` = from c3 to c4 |
 
-**Move codec (API / history / FS):** UCI-like `fromto` with no promotion suffix, e.g. `a4a5`, `h3h10`. Rank `10` is two digits in the string (`h3h10`).
+**FEN placement rule (both games):** the text before the first space is the board. Ranks are separated by `/`.  
+**First segment = highest rank** (Black/Gote back rank). **Last segment = rank 1** (White/Red/Sente back rank).  
+Digits = empty squares in a row. Uppercase = White/Red/Sente; lowercase = Black/Gote.
 
-**Start FEN:** `rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1`  
-Chess FEN (8 ranks) is rejected when `game=xianqi`.
+---
 
-**Simulate / match:** `POST /api/simulate` and `cmd/match -game xianqi` accept Xiangqi (aliases `xiangqi` / `xianqi`).
+## Xiangqi (`game=xianqi`)
+
+Session ID: `xianqi`. Go owns rules; Fairy-Stockfish is AI search only (`UCI_Variant=xiangqi`).
+
+**Start FEN:**
+
+```text
+rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1
+```
+
+### Board map (start) — ranks 10 → 1
+
+```text
+rank 10  r n b a k a b n r     ← Black back (FEN first segment)
+rank  9  . . . . . . . . .
+rank  8  . c . . . . . c .
+rank  7  p . p . p . p . p
+rank  6  . . . . . . . . .     ← river
+rank  5  . . . . . . . . .
+rank  4  P . P . P . P . P
+rank  3  . C . . . . . C .
+rank  2  . . . . . . . . .
+rank  1  R N B A K A B N R     ← Red/White back (FEN last segment)
+         a b c d e f g h i
+```
+
+(`.` = empty; palace is files `d`–`f`, ranks 1–3 and 8–10.)
+
+### Piece letters
+
+| Letter | Piece |
+|--------|--------|
+| K/k | General |
+| A/a | Advisor |
+| B/b | Elephant |
+| N/n | Horse |
+| R/r | Chariot |
+| C/c | Cannon |
+| P/p | Soldier |
+
+### How to form a move
+
+1. Find the piece’s square: file letter + rank number (e.g. leftmost Red soldier is **a4**).
+2. Find destination the same way (one step forward → **a5**).
+3. Send **`a4a5`**. Rank 10 uses two digits: cannon on **h3** capturing up the file → **`h3h10`**.
+
+Examples from start:
+
+| Idea | Move |
+|------|------|
+| Red soldier a4 → a5 | `a4a5` |
+| Red cannon h3 → h7 (need screen) / h10 capture | `h3h10` (legal at start) |
+| Black to move after Red | FEN has ` b ` instead of ` w ` |
+
+**Simulate / match:** `POST /api/simulate` / `cmd/match -game xianqi` (alias `xiangqi`).
+
+---
+
+## Shogi (`game=shogi`)
+
+Session ID: `shogi`. Go owns rules (including hands/drops); Fairy-Stockfish is AI search only (`UCI_Variant=shogi`).
+
+**Start FEN** (hands in `[]` after the board; empty at start):
+
+```text
+lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL[] w - - 0 1
+```
+
+### Board map (start) — ranks 9 → 1
+
+```text
+rank 9  l n s g k g s n l     ← Gote/Black back
+rank 8  . r . . . . . b .
+rank 7  p p p p p p p p p
+rank 6  . . . . . . . . .
+rank 5  . . . . . . . . .
+rank 4  . . . . . . . . .
+rank 3  P P P P P P P P P
+rank 2  . B . . . . . R .
+rank 1  L N S G K G S N L     ← Sente/White back
+        a b c d e f g h i
+```
+
+Promotion zone: White ranks **7–9**, Black ranks **1–3**.
+
+### Piece letters
+
+| Letter | Piece | Promoted |
+|--------|--------|----------|
+| K/k | King | — |
+| G/g | Gold | — |
+| S/s | Silver | `+S` → gold-like |
+| N/n | Knight | `+N` |
+| L/l | Lance | `+L` |
+| P/p | Pawn | `+P` (tokin) |
+| B/b | Bishop | `+B` (horse) |
+| R/r | Rook | `+R` (dragon) |
+
+Hands field `[Ppg]` = White has Pawn; Black has Pawn and Gold (uppercase = White’s hand, lowercase = Black’s).
+
+### How to form a move
+
+**Board move:** same as Xiangqi — `from` + `to` on `a`–`i` / `1`–`9`.
+
+| Idea | Move |
+|------|------|
+| Sente pawn c3 → c4 | `c3c4` |
+| Promote (optional `+`, forced on last ranks for P/L/N) | `e8e9` becomes `e8e9+` |
+| Drop pawn from hand onto e5 | `P*e5` or `p*e5` (also `@` accepted) |
+
+**Relife:** capture → piece goes to your **hand** (unpromoted); later **drop** with `P*e5`.
+
+Snapshot field `captured` for shogi = **hands** (White/Black counts).
+
+Examples:
+
+1. Read FEN segment for rank 3: `PPPPPPPPP` → pawns on a3…i3.  
+2. Move the c-file pawn forward → **`c3c4`**.  
+3. After you capture a pawn, hand shows `pawn: 1`; drop with **`P*e5`**.
+
+**Simulate / match:** `POST /api/simulate` / `cmd/match -game shogi`.
+
+### Quick API create
+
+```json
+{ "mode": "human_vs_human", "game": "shogi", "humanColor": "white" }
+```
+
+```json
+{ "mode": "human_vs_human", "game": "xianqi", "humanColor": "white" }
+```
+
+Move body uses the same command string as above (`c3c4`, `a4a5`, `P*e5`, …).

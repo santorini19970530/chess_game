@@ -83,3 +83,10 @@ func shogiSquareAttackedOnBoard(board []pieces.ChessPiece, file, rank int, attac
 	}
 	return false
 }
+
+// ShogiWouldLeaveKingInCheckAfterDrop reports whether dropping kind at file/rank leaves mover in check.
+func ShogiWouldLeaveKingInCheckAfterDrop(kind pieces.PieceKind, color pieces.PieceColor, file, rank int) bool {
+	after := append([]pieces.ChessPiece(nil), pieces.ChessPieces...)
+	after = append(after, pieces.ChessPiece{Color: color, Kind: kind, File: file, Rank: rank})
+	return shogiKingInCheckOnBoard(after, color)
+}

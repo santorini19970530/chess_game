@@ -13,7 +13,6 @@ import (
 const DefaultShogiStartFEN = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL[] w - - 0 1"
 
 // shogiHands tracks captured pieces available to drop (relife inventory).
-// Step 1: parse/export only; drop apply comes later.
 var shogiHands = shogiHandState{
 	white: map[pieces.PieceKind]int{},
 	black: map[pieces.PieceKind]int{},

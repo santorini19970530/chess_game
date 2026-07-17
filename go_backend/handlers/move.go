@@ -27,8 +27,11 @@ func (h *Handler) GetLegalMoves(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	maxFile, maxRank := 8, 8
-	if game.Type == sessionpkg.GameTypeXiangqi {
+	switch game.Type {
+	case sessionpkg.GameTypeXiangqi:
 		maxFile, maxRank = 9, 10
+	case sessionpkg.GameTypeShogi:
+		maxFile, maxRank = 9, 9
 	}
 
 	file, err := strconv.Atoi(r.URL.Query().Get("file"))
