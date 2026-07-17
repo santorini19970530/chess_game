@@ -24,6 +24,7 @@ func resetGlobalsToInitialState() {
 	moveHistoryDetailed = nil
 	lastAppliedMove = nil
 	boardFEN = ""
+	resetShogiHands()
 	resetCastlingState()
 	resetTurnOverride()
 	resetDrawTracking()

@@ -5,9 +5,9 @@ import (
 	pieces "go_backend/game/piece"
 )
 
-// EvaluateXiangqiGameOutcome uses Go legal-move generation.
-// No legal moves → loss for the side to move (checkmate or stalemate; both are losses in Xiangqi).
-func EvaluateXiangqiGameOutcome() GameOutcome {
+// EvaluateShogiGameOutcome uses Go legal-move generation (board + drops).
+// No legal moves → loss for the side to move (tsume / no-move loss).
+func EvaluateShogiGameOutcome() GameOutcome {
 	whiteOK, blackOK := false, false
 	for _, p := range pieces.ChessPieces {
 		if p.Kind != pieces.King {
@@ -26,7 +26,7 @@ func EvaluateXiangqiGameOutcome() GameOutcome {
 			Loser:       "white",
 			CheckedSide: "white",
 			LegalMoves:  0,
-			Message:     "Black wins (white general missing).",
+			Message:     "Black wins (white king missing).",
 		}
 	}
 	if !blackOK {
@@ -36,17 +36,17 @@ func EvaluateXiangqiGameOutcome() GameOutcome {
 			Loser:       "black",
 			CheckedSide: "black",
 			LegalMoves:  0,
-			Message:     "White wins (black general missing).",
+			Message:     "White wins (black king missing).",
 		}
 	}
 
 	sideToMove := CurrentTurnColor()
-	legal, err := xiangqiAllLegalUCIMoves()
+	legal, err := shogiAllLegalUCIMoves()
 	if err != nil {
 		return GameOutcome{Status: "in_progress", Message: "in progress"}
 	}
 	legalCount := len(legal)
-	inCheck := movement.XiangqiCheckedColor() == sideToMove
+	inCheck := movement.ShogiCheckedColor() == sideToMove
 
 	if legalCount > 0 {
 		if inCheck {
@@ -66,25 +66,14 @@ func EvaluateXiangqiGameOutcome() GameOutcome {
 	winner := opponentOf(sideToMove)
 	msg := "Checkmate! " + sideLabel(winner) + " wins."
 	if !inCheck {
-		msg = "Stalemate! " + sideLabel(winner) + " wins (Xiangqi rule)."
+		msg = "No legal moves! " + sideLabel(winner) + " wins."
 	}
 	return GameOutcome{
-		Status:      "checkmate", // maps to a decisive win (not chess draw)
+		Status:      "checkmate",
 		Winner:      string(winner),
 		Loser:       string(sideToMove),
 		CheckedSide: string(sideToMove),
 		LegalMoves:  0,
 		Message:     msg,
-	}
-}
-
-func evaluateOutcomeForGameType(gameType GameType) GameOutcome {
-	switch gameType {
-	case GameTypeXiangqi:
-		return EvaluateXiangqiGameOutcome()
-	case GameTypeShogi:
-		return EvaluateShogiGameOutcome()
-	default:
-		return EvaluateGameOutcome()
 	}
 }

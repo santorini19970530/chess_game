@@ -29,16 +29,6 @@ func TestCreateGame_RejectsChessFENForXiangqi(t *testing.T) {
 	}
 }
 
-func TestCreateGame_StillRejectsShogi(t *testing.T) {
-	resetGameSessionForTest()
-	ResetGame()
-
-	_, err := CreateGame(GameModeHumanVsHuman, GameTypeShogi, "white", 1, "", "")
-	if err == nil {
-		t.Fatal("expected shogi create to remain rejected")
-	}
-}
-
 func TestUpdateGameConfigByID_AllowsXiangqi(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()

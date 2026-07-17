@@ -370,20 +370,8 @@ func StartConfiguredNewGame() (GameSession, error) {
 	defer unlockActiveRuntimeState(game)
 
 	resetGlobalsToInitialState()
-	// Chess FEN parser is 8×8 only. Xiangqi board materialization uses BoardFEN.
-	if currentType == GameTypeChess && currentConfig.StartFEN != "" {
-		if err := applyFENToCurrentGlobals(currentConfig.StartFEN); err != nil {
-			return GameSession{}, err
-		}
-	}
-	if currentType == GameTypeXiangqi {
-		fen := currentConfig.StartFEN
-		if fen == "" {
-			fen = DefaultXiangqiStartFEN
-		}
-		if err := applyXiangqiFENToCurrentGlobals(fen); err != nil {
-			return GameSession{}, err
-		}
+	if err := materializeStartPosition(currentType, currentConfig.StartFEN); err != nil {
+		return GameSession{}, err
 	}
 	outcome := evaluateOutcomeForGameType(currentType)
 	game.Session.Outcome = outcome
@@ -571,8 +559,12 @@ func validateGameConfig(mode GameMode, gameType GameType, humanColor string, aiG
 		if startFEN != "" && !looksLikeXiangqiFEN(startFEN) {
 			return 0, fmt.Errorf("chess FEN is not valid for xianqi")
 		}
+	case GameTypeShogi:
+		if startFEN != "" && !looksLikeShogiFEN(startFEN) {
+			return 0, fmt.Errorf("start FEN is not valid for shogi")
+		}
 	default:
-		return 0, fmt.Errorf("only chess and xianqi are currently supported")
+		return 0, fmt.Errorf("unsupported game type")
 	}
 	return aiGameCount, nil
 }
@@ -588,8 +580,15 @@ func looksLikeXiangqiFEN(fen string) bool {
 
 func normalizeStartFEN(gameType GameType, startFEN string) string {
 	startFEN = strings.TrimSpace(startFEN)
-	if gameType == GameTypeXiangqi && startFEN == "" {
-		return DefaultXiangqiStartFEN
+	if startFEN != "" {
+		return startFEN
 	}
-	return startFEN
+	switch gameType {
+	case GameTypeXiangqi:
+		return DefaultXiangqiStartFEN
+	case GameTypeShogi:
+		return DefaultShogiStartFEN
+	default:
+		return startFEN
+	}
 }

@@ -19,7 +19,7 @@ func main() {
 	profile := flag.String("profile", "", "AI strength for both sides: beginner|intermediate|advanced|master")
 	whiteProfile := flag.String("white-profile", "", "White AI strength (overrides -profile for White)")
 	blackProfile := flag.String("black-profile", "", "Black AI strength (overrides -profile for Black)")
-	gameType := flag.String("game", "chess", "game type: chess|xianqi")
+	gameType := flag.String("game", "chess", "game type: chess|xianqi|shogi")
 	format := flag.String("format", "text", "output format: text|json|csv")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: match [flags]\n\n")
@@ -30,6 +30,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "  match -games 5 -profile intermediate\n")
 		fmt.Fprintf(os.Stderr, "  match -games 10 -white-profile beginner -black-profile master -format json\n")
 		fmt.Fprintf(os.Stderr, "  match -games 5 -game xianqi -profile beginner -format json\n")
+		fmt.Fprintf(os.Stderr, "  match -games 5 -game shogi -profile beginner -format json\n")
 		fmt.Fprintf(os.Stderr, "  match -games 20 -format csv > results.csv\n")
 	}
 	flag.Parse()
@@ -215,7 +216,9 @@ func parseMatchGameType(raw string) (session.GameType, error) {
 		return session.GameTypeChess, nil
 	case "xianqi", "xiangqi":
 		return session.GameTypeXiangqi, nil
+	case "shogi":
+		return session.GameTypeShogi, nil
 	default:
-		return "", fmt.Errorf("error: unsupported game %q (chess or xianqi)", raw)
+		return "", fmt.Errorf("error: unsupported game %q (chess, xianqi, or shogi)", raw)
 	}
 }

@@ -48,6 +48,34 @@ func getXiangqiStrategy(kind pieces.PieceKind) PieceMovementStrategy {
 	}
 }
 
+// getShogiStrategy returns Shogi piece movement strategies (9×9 board rules).
+func getShogiStrategy(kind pieces.PieceKind) PieceMovementStrategy {
+	switch kind {
+	case pieces.Pawn:
+		return ShogiPawnStrategy{}
+	case pieces.Lance:
+		return ShogiLanceStrategy{}
+	case pieces.Knight:
+		return ShogiKnightStrategy{}
+	case pieces.Silver:
+		return ShogiSilverStrategy{}
+	case pieces.Gold, pieces.PromotedPawn, pieces.PromotedLance, pieces.PromotedKnight, pieces.PromotedSilver:
+		return ShogiGoldStrategy{}
+	case pieces.Bishop:
+		return ShogiBishopStrategy{}
+	case pieces.Rook:
+		return ShogiRookStrategy{}
+	case pieces.King:
+		return ShogiKingStrategy{}
+	case pieces.Horse:
+		return ShogiHorseStrategy{}
+	case pieces.Dragon:
+		return ShogiDragonStrategy{}
+	default:
+		return nil
+	}
+}
+
 // ValidateMoveByStrategy validates movement by PieceMovementStrategy
 func ValidateMoveByStrategy(kind pieces.PieceKind, fromFile, fromRank, toFile, toRank int, color pieces.PieceColor) error {
 	strategy := getStrategy(kind)
@@ -97,6 +125,47 @@ func ValidateXiangqiMoveByStrategy(kind pieces.PieceKind, fromFile, fromRank, to
 // XiangqiLegalSquares returns pseudo-legal destinations for a Xiangqi piece on the current board.
 func XiangqiLegalSquares(kind pieces.PieceKind, color pieces.PieceColor, fromFile, fromRank int) []Square {
 	strategy := getXiangqiStrategy(kind)
+	if strategy == nil {
+		return nil
+	}
+	raw := strategy.LegalMoves(
+		MovementBoard{Color: color},
+		Square{File: fromFile, Rank: fromRank},
+	)
+	out := make([]Square, 0, len(raw))
+	for _, mv := range raw {
+		if sq, ok := mv.(Square); ok {
+			out = append(out, sq)
+		}
+	}
+	return out
+}
+
+// ValidateShogiMoveByStrategy validates a Shogi geometry move (no check filter).
+func ValidateShogiMoveByStrategy(kind pieces.PieceKind, fromFile, fromRank, toFile, toRank int, color pieces.PieceColor) error {
+	strategy := getShogiStrategy(kind)
+	if strategy == nil {
+		return fmt.Errorf("unsupported shogi piece kind %q", kind)
+	}
+	legal := strategy.LegalMoves(
+		MovementBoard{Color: color},
+		Square{File: fromFile, Rank: fromRank},
+	)
+	for _, mv := range legal {
+		sq, ok := mv.(Square)
+		if !ok {
+			continue
+		}
+		if sq.File == toFile && sq.Rank == toRank {
+			return nil
+		}
+	}
+	return fmt.Errorf("Invalid %s movement", strategy.Name())
+}
+
+// ShogiLegalSquares returns pseudo-legal destinations for a Shogi piece on the current board.
+func ShogiLegalSquares(kind pieces.PieceKind, color pieces.PieceColor, fromFile, fromRank int) []Square {
+	strategy := getShogiStrategy(kind)
 	if strategy == nil {
 		return nil
 	}

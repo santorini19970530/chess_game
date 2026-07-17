@@ -397,7 +397,9 @@ func parseSupportedGameType(raw string) (session.GameType, error) {
 		return session.GameTypeChess, nil
 	case "xianqi", "xiangqi":
 		return session.GameTypeXiangqi, nil
+	case "shogi":
+		return session.GameTypeShogi, nil
 	default:
-		return "", fmt.Errorf("game must be chess or xianqi")
+		return "", fmt.Errorf("game must be chess, xianqi, or shogi")
 	}
 }

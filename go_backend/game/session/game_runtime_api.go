@@ -46,24 +46,39 @@ func CreateGame(mode GameMode, gameType GameType, humanColor string, aiGameCount
 	}
 	defer unlockRuntimeStateByID(locked)
 	resetGlobalsToInitialState()
-	if gameType == GameTypeChess && startFEN != "" {
-		if err := applyFENToCurrentGlobals(startFEN); err != nil {
-			return GameSession{}, err
-		}
+	if err := materializeStartPosition(gameType, startFEN); err != nil {
+		return GameSession{}, err
 	}
-	if gameType == GameTypeXiangqi {
-		if err := applyXiangqiFENToCurrentGlobals(startFEN); err != nil {
-			return GameSession{}, err
-		}
-		outcome := EvaluateXiangqiGameOutcome()
-		game.Session.Outcome = outcome
-		game.Session.Result = gameResultFromOutcome(outcome)
-	} else {
-		game.Session.Outcome = EvaluateGameOutcome()
-		game.Session.Result = gameResultFromOutcome(game.Session.Outcome)
-	}
+	outcome := evaluateOutcomeForGameType(gameType)
+	game.Session.Outcome = outcome
+	game.Session.Result = gameResultFromOutcome(outcome)
 	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 	return game.Session, nil
+}
+
+// materializeStartPosition loads board state for the given game type.
+func materializeStartPosition(gameType GameType, startFEN string) error {
+	switch gameType {
+	case GameTypeChess:
+		if startFEN != "" {
+			return applyFENToCurrentGlobals(startFEN)
+		}
+		return nil
+	case GameTypeXiangqi:
+		fen := startFEN
+		if fen == "" {
+			fen = DefaultXiangqiStartFEN
+		}
+		return applyXiangqiFENToCurrentGlobals(fen)
+	case GameTypeShogi:
+		fen := startFEN
+		if fen == "" {
+			fen = DefaultShogiStartFEN
+		}
+		return applyShogiFENToCurrentGlobals(fen)
+	default:
+		return fmt.Errorf("unsupported game type")
+	}
 }
 
 func GetGameSessionByID(gameID string) (GameSession, error) {
@@ -151,6 +166,17 @@ func ApplyMoveByCommandByID(gameID, commandText string) (string, error) {
 			return "", err
 		}
 		outcome := EvaluateXiangqiGameOutcome()
+		game.Session.Outcome = outcome
+		game.Session.Result = gameResultFromOutcome(outcome)
+		game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+		return normalized, nil
+	}
+	if game.Session.Type == GameTypeShogi {
+		normalized, err := applyShogiUCIMove(commandText)
+		if err != nil {
+			return "", err
+		}
+		outcome := evaluateOutcomeForGameType(GameTypeShogi)
 		game.Session.Outcome = outcome
 		game.Session.Result = gameResultFromOutcome(outcome)
 		game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
@@ -245,14 +271,19 @@ func BuildSnapshotByID(gameID string) (GameSnapshot, error) {
 	}
 	defer unlockRuntimeStateByID(game)
 	checked := CheckedSideLabel()
-	if game.Session.Type == GameTypeXiangqi {
+	captured := GetCapturedSummary()
+	switch game.Session.Type {
+	case GameTypeXiangqi:
 		checked = string(movement.XiangqiCheckedColor())
+	case GameTypeShogi:
+		checked = string(movement.ShogiCheckedColor())
+		captured = shogiHandsSummary() // captives live in hand (relife)
 	}
 	return GameSnapshot{
 		CurrentTurn:     CurrentTurnLabel(),
 		CheckedSide:     checked,
 		Game:            game.Session,
-		Captured:        GetCapturedSummary(),
+		Captured:        captured,
 		History:         GetMoveHistory(),
 		HistoryDetailed: GetMoveHistoryDetailed(),
 		State:           GetBoardState(),
@@ -292,14 +323,17 @@ func LegalMovesForSquareByID(gameID string, file, rank int) ([]LegalDestination,
 		return nil, err
 	}
 	defer unlockRuntimeStateByID(game)
-	if game.Session.Type == GameTypeXiangqi {
+	switch game.Session.Type {
+	case GameTypeXiangqi:
 		return xiangqiLegalDestinationsForSquare(file, rank)
+	case GameTypeShogi:
+		return shogiLegalDestinationsForSquare(file, rank)
 	}
 	return LegalMovesForSquare(file, rank), nil
 }
 
 // AllLegalUCIMovesByID returns every legal UCI move for the side to move.
-// Chess and Xiangqi both use Go movement strategies (FS is advice-only).
+// Chess / Xiangqi / Shogi use Go movement strategies (engine is advice-only).
 func AllLegalUCIMovesByID(gameID string) ([]string, error) {
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
@@ -308,6 +342,9 @@ func AllLegalUCIMovesByID(gameID string) ([]string, error) {
 	defer unlockRuntimeStateByID(game)
 	if game.Session.Type == GameTypeXiangqi {
 		return xiangqiAllLegalUCIMoves()
+	}
+	if game.Session.Type == GameTypeShogi {
+		return shogiAllLegalUCIMoves()
 	}
 	side := string(CurrentTurnColor())
 	state := GetBoardState()
