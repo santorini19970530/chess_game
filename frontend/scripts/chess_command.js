@@ -58,6 +58,7 @@
   let currentTurn = "white";
   let humanColor = "white";           // human's chosen color in Human vs AI mode
   let selectedSquareSequence = null;
+  let selectedDropKind = null; // shogi hand: { side, kind } or null
   let dragSourceSequence = null;
   let legalMovesRequestVersion = 0;
   let selectedLegalMoves = [];
@@ -332,12 +333,12 @@
       if (!response.ok) return;
       const result = await response.json();
       syncGameIdFromResult(result);
-      renderBoardFromState(result.state);
+      renderGameConfig(result.game);
+      renderBoardFromState(result.state, result.game?.type);
       renderMoveHistory(result.history, result.historyDetailed);
       renderCurrentTurn(result.currentTurn);
       renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
       renderGameOutcome(result.game);
-      renderGameConfig(result.game);
       renderGameInfo(result.captured, result.analysis);
       clearSelectedSquare();
       void refreshSuggestedMoves();
@@ -825,23 +826,47 @@
     return true;
   };
 
+  /** Preview start layout for the selected game type (does not create a session). */
+  const previewBoardForGameType = (type) => {
+    const t = String(type || gameTypeSelect?.value || boardGameType || "chess").toLowerCase();
+    ensureBoardGeometry(t);
+    if (t === "xianqi") {
+      renderBoardFromState(initialXiangqiState(), "xianqi");
+      return;
+    }
+    if (t === "shogi") {
+      renderBoardFromState(initialShogiState(), "shogi");
+      return;
+    }
+    renderBoardFromState(initialChessState(), "chess");
+  };
+
   const renderGameConfig = (game) => {
-    const cfg = game?.config;
-    if (!cfg) return;
+    if (!game) return;
+    // Always sync board geometry from game type (config may be sparse).
     if (gameTypeSelect) gameTypeSelect.value = String(game.type || "chess");
     ensureBoardGeometry(game.type || gameTypeSelect?.value || "chess");
+    const cfg = game.config;
+    if (!cfg) {
+      updateSetupControlState();
+      return;
+    }
     if (gameModeSelect) gameModeSelect.value = String(game.mode || "human_vs_human");
     if (humanSideSelect) humanSideSelect.value = String(cfg.humanColor || "white");
     if (aiGameCountInput) aiGameCountInput.value = String(cfg.aiGameCount || 1);
     if (fenInput) fenInput.value = String(cfg.startFen || "");
     if (aiStrengthSelect) aiStrengthSelect.value = String(cfg.aiProfile || cfg.aiStrength || "intermediate");
-    // Update the internal humanColor variable used for move validation
     humanColor = String(cfg.humanColor || "white").toLowerCase();
     updateSetupControlState();
   };
 
   const CHESS_PIECE_ORDER = ["queen", "rook", "bishop", "knight", "pawn", "king"];
   const XIANQI_PIECE_ORDER = ["cannon", "rook", "knight", "elephant", "advisor", "pawn", "king"];
+  // Unpromoted hand kinds only (promoted captives demote before entering hand).
+  const SHOGI_PIECE_ORDER = ["rook", "bishop", "gold", "silver", "knight", "lance", "pawn"];
+  const SHOGI_DROP_CHAR = {
+    pawn: "P", lance: "L", knight: "N", silver: "S", gold: "G", bishop: "B", rook: "R",
+  };
   const PIECE_SYMBOL = {
     queen: "♛",
     rook: "♜",
@@ -852,10 +877,16 @@
     cannon: "砲",
     elephant: "相",
     advisor: "仕",
+    lance: "L",
+    silver: "S",
+    gold: "G",
   };
 
-  const capturedPieceOrder = () =>
-    boardGameType === "xianqi" ? XIANQI_PIECE_ORDER : CHESS_PIECE_ORDER;
+  const capturedPieceOrder = () => {
+    if (boardGameType === "xianqi") return XIANQI_PIECE_ORDER;
+    if (boardGameType === "shogi") return SHOGI_PIECE_ORDER;
+    return CHESS_PIECE_ORDER;
+  };
 
   const capturedMapToText = (captured) => {
     const parts = [];
@@ -865,6 +896,59 @@
       parts.push(`${PIECE_SYMBOL[kind] || kind}×${count}`);
     }
     return parts.length ? parts.join("  ") : "";
+  };
+
+  const isHandSidePlayable = (side) => {
+    const s = String(side || "").toLowerCase();
+    if (s !== currentTurn) return false;
+    const mode = String(gameModeSelect?.value || "");
+    if (mode === "human_vs_ai" && s !== humanColor) return false;
+    return true;
+  };
+
+  const renderShogiHand = (el, side, captured) => {
+    if (!el) return;
+    el.replaceChildren();
+    el.classList.add("shogi_hand");
+    let any = false;
+    for (const kind of SHOGI_PIECE_ORDER) {
+      const count = captured[kind] || 0;
+      if (count <= 0) continue;
+      any = true;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "shogi_hand_piece";
+      btn.setAttribute("data-side", side);
+      btn.setAttribute("data-kind", kind);
+      btn.title = `${kind} ×${count}`;
+      if (
+        selectedDropKind &&
+        selectedDropKind.side === side &&
+        selectedDropKind.kind === kind
+      ) {
+        btn.classList.add("shogi_hand_piece_selected");
+      }
+      const img = document.createElement("img");
+      img.src = `/pic/shogi_pic/${kind}.svg`;
+      img.alt = kind;
+      img.setAttribute("data-color", side);
+      img.draggable = false;
+      const badge = document.createElement("span");
+      badge.className = "shogi_hand_count";
+      badge.textContent = String(count);
+      btn.appendChild(img);
+      btn.appendChild(badge);
+      btn.disabled = !isHandSidePlayable(side);
+      btn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        void selectShogiHandPiece(side, kind);
+      });
+      el.appendChild(btn);
+    }
+    if (!any) {
+      el.classList.remove("shogi_hand");
+    }
   };
 
   const emptyCapturedSide = () => {
@@ -927,8 +1011,19 @@
     const whiteTiny = whiteProb < 12;
     const blackTiny = blackProb < 12;
 
-    if (capturedWhiteValue) capturedWhiteValue.textContent = capturedMapToText(whiteCaptured);
-    if (capturedBlackValue) capturedBlackValue.textContent = capturedMapToText(blackCaptured);
+    if (boardGameType === "shogi") {
+      renderShogiHand(capturedWhiteValue, "white", whiteCaptured);
+      renderShogiHand(capturedBlackValue, "black", blackCaptured);
+    } else {
+      if (capturedWhiteValue) {
+        capturedWhiteValue.classList.remove("shogi_hand");
+        capturedWhiteValue.textContent = capturedMapToText(whiteCaptured);
+      }
+      if (capturedBlackValue) {
+        capturedBlackValue.classList.remove("shogi_hand");
+        capturedBlackValue.textContent = capturedMapToText(blackCaptured);
+      }
+    }
     if (winProbWhiteValue) {
       winProbWhiteValue.textContent = formatPercentage(whiteProb);
       winProbWhiteValue.style.color = winProbLabelColor(whiteProb, true);
@@ -1026,12 +1121,13 @@
   const fillHistoryPieceIcon = (el, side, pieceKind) => {
     el.className = "chess_move_history_piece_icon";
     el.replaceChildren();
-    if (boardGameType === "xianqi") {
+    if (boardGameType === "xianqi" || boardGameType === "shogi") {
       const path = imagePathFromPiece({ kind: pieceKind, color: side });
       if (path) {
         const img = document.createElement("img");
         img.src = path;
         img.alt = String(pieceKind || "");
+        img.setAttribute("data-color", String(side || "").toLowerCase());
         el.appendChild(img);
         return;
       }
@@ -1232,16 +1328,28 @@
     return pieceColor === currentTurn;
   };
 
+  const legalMoveAt = (toSequence) => {
+    const target = fileRankFromSequence(toSequence);
+    if (!target) return null;
+    return (
+      selectedLegalMoves.find(
+        (move) => Number(move?.file) === target.file && Number(move?.rank) === target.rank
+      ) || null
+    );
+  };
+
   const requiresPromotion = (toSequence) => {
     if (boardGameType !== "chess") return false;
-    const target = fileRankFromSequence(toSequence);
-    if (!target) return false;
-    return selectedLegalMoves.some(
-      (move) =>
-        Number(move?.file) === target.file &&
-        Number(move?.rank) === target.rank &&
-        Boolean(move?.requiresPromotion)
-    );
+    return Boolean(legalMoveAt(toSequence)?.requiresPromotion);
+  };
+
+  const shogiPromotionFlags = (toSequence) => {
+    const move = legalMoveAt(toSequence);
+    if (!move) return { must: false, can: false };
+    return {
+      must: Boolean(move.requiresPromotion),
+      can: Boolean(move.canPromote),
+    };
   };
 
   const closePromotionPicker = () => {
@@ -1258,12 +1366,34 @@
     promotionPicker.setAttribute("aria-hidden", "false");
   };
 
-  const requestPromotionChoice = () =>
+  const configurePromotionPicker = (mode) => {
+    if (!promotionPicker) return;
+    const title = promotionPicker.querySelector("#promotion_picker_title");
+    const choices = promotionPicker.querySelector(".promotion_picker_choices");
+    if (!title || !choices) return;
+    if (mode === "shogi") {
+      title.textContent = "Promote this piece?";
+      choices.innerHTML =
+        `<button type="button" class="promotion_choice_btn" data-promotion="+">Promote</button>` +
+        `<button type="button" class="promotion_choice_btn" data-promotion="-">Do not promote</button>`;
+      return;
+    }
+    title.textContent = "Choose promotion piece";
+    choices.innerHTML =
+      `<button type="button" class="promotion_choice_btn" data-promotion="q">Queen</button>` +
+      `<button type="button" class="promotion_choice_btn" data-promotion="r">Rook</button>` +
+      `<button type="button" class="promotion_choice_btn" data-promotion="b">Bishop</button>` +
+      `<button type="button" class="promotion_choice_btn" data-promotion="n">Knight</button>`;
+  };
+
+  // mode: "chess" | "shogi". Cancel → ""; chess piece letter; shogi "+" or "-".
+  const requestPromotionChoice = (mode = "chess") =>
     new Promise((resolve) => {
       if (!promotionPicker) {
-        resolve("q");
+        resolve(mode === "shogi" ? "+" : "q");
         return;
       }
+      configurePromotionPicker(mode);
       pendingPromotionResolve = resolve;
       openPromotionPicker();
     });
@@ -1278,6 +1408,7 @@
 
   const clearSelectedSquare = () => {
     selectedSquareSequence = null;
+    selectedDropKind = null;
     selectedLegalMoves = [];
     legalMovesRequestVersion += 1;
     boardElement
@@ -1290,7 +1421,61 @@
         square.classList.remove(LEGAL_PROMOTION_DESTINATION_CLASS);
         square.classList.remove(LEGAL_CAPTURE_DESTINATION_CLASS);
       });
+    document.querySelectorAll(".shogi_hand_piece_selected").forEach((el) => {
+      el.classList.remove("shogi_hand_piece_selected");
+    });
     // Do not clear FS suggestion highlights here; they are independent of piece selection.
+  };
+
+  const selectShogiHandPiece = async (side, kind) => {
+    if (boardGameType !== "shogi" || gameOver || isSubmitting) return;
+    if (!isHandSidePlayable(side)) return;
+    if (
+      selectedDropKind &&
+      selectedDropKind.side === side &&
+      selectedDropKind.kind === kind
+    ) {
+      clearSelectedSquare();
+      return;
+    }
+    clearSelectedSquare();
+    selectedDropKind = { side, kind };
+    document
+      .querySelectorAll(`.shogi_hand_piece[data-side="${side}"][data-kind="${kind}"]`)
+      .forEach((el) => el.classList.add("shogi_hand_piece_selected"));
+    const requestVersion = ++legalMovesRequestVersion;
+    try {
+      if (!currentGameId) return;
+      const response = await fetch(
+        `/api/games/${encodeURIComponent(currentGameId)}/legal-moves?dropKind=${encodeURIComponent(kind)}`
+      );
+      if (!response.ok) {
+        if (requestVersion === legalMovesRequestVersion) highlightLegalDestinations([]);
+        return;
+      }
+      const result = await response.json();
+      if (requestVersion !== legalMovesRequestVersion) return;
+      if (!selectedDropKind || selectedDropKind.kind !== kind) return;
+      const moves = Array.isArray(result?.legalMoves) ? result.legalMoves : [];
+      selectedLegalMoves = moves;
+      highlightLegalDestinations(moves);
+    } catch (_error) {
+      if (requestVersion === legalMovesRequestVersion) highlightLegalDestinations([]);
+    }
+  };
+
+  const submitShogiDrop = async (toSequence) => {
+    if (!selectedDropKind) return false;
+    const target = fileRankFromSequence(toSequence);
+    if (!target) return false;
+    const legal = selectedLegalMoves.some(
+      (move) => Number(move?.file) === target.file && Number(move?.rank) === target.rank
+    );
+    if (!legal) return false;
+    const ch = SHOGI_DROP_CHAR[selectedDropKind.kind];
+    if (!ch) return false;
+    const fileLetter = String.fromCharCode("a".charCodeAt(0) + target.file - 1);
+    return submitCommand(`${ch}*${fileLetter}${target.rank}`);
   };
 
   const highlightLegalDestinations = (moves) => {
@@ -1340,7 +1525,7 @@
       } else {
         destinationSquare.classList.add(LEGAL_DESTINATION_CLASS);
       }
-      if (Boolean(move?.requiresPromotion)) {
+      if (Boolean(move?.requiresPromotion) || Boolean(move?.canPromote)) {
         destinationSquare.classList.add(LEGAL_PROMOTION_DESTINATION_CLASS);
       }
     }
@@ -1509,6 +1694,7 @@
   };
 
   const setSelectedSquare = (sequence) => {
+    // clearSelectedSquare also clears drop selection
     clearSelectedSquare();
     selectedSquareSequence = Number(sequence);
     if (Number.isNaN(selectedSquareSequence)) {
@@ -1541,6 +1727,13 @@
     pawn: "soldier",
   };
 
+  // API kinds → shogi_pic/*.svg (filenames match kinds; black via CSS rotate).
+  const SHOGI_KINDS = new Set([
+    "pawn", "lance", "knight", "silver", "gold", "bishop", "rook", "king",
+    "promoted_pawn", "promoted_lance", "promoted_knight", "promoted_silver",
+    "horse", "dragon",
+  ]);
+
   const imagePathFromPiece = (piece) => {
     const kind = String(piece?.kind || "").toLowerCase();
     const color = String(piece?.color || "").toLowerCase();
@@ -1551,14 +1744,18 @@
       const side = color === "black" ? "black" : "white";
       return `/pic/xianqi_pic/${file}_${side}.png`;
     }
+    if (boardGameType === "shogi") {
+      if (!SHOGI_KINDS.has(kind)) return "";
+      return `/pic/shogi_pic/${kind}.svg`;
+    }
     const tone = color === "black" ? "dark" : "light";
     return `/pic/chess_pic/${kind}_${tone}.png`;
   };
 
   // Full board sync from backend state (handles en passant, castling, promotion)
-  const renderBoardFromState = (state) => {
+  const renderBoardFromState = (state, typeHint) => {
     if (!Array.isArray(state)) return false;
-    ensureBoardGeometry(gameTypeSelect?.value || boardGameType);
+    ensureBoardGeometry(typeHint || gameTypeSelect?.value || boardGameType);
 
     const boardSquares = boardElement
       ? boardElement.querySelectorAll(".chess_board_square[data-sequence]")
@@ -1672,8 +1869,20 @@
   const submitBoardMove = async (fromSequence, toSequence) => {
     let command = moveCommandFromSequence(fromSequence, toSequence);
     if (!command) return false;
+    if (boardGameType === "shogi") {
+      // Policy: must-promote → auto "+"; optional zone → Promote / Do not promote.
+      const { must, can } = shogiPromotionFlags(toSequence);
+      if (must) {
+        command += "+";
+      } else if (can) {
+        const choice = await requestPromotionChoice("shogi");
+        if (!choice) return false; // cancelled
+        if (choice === "+") command += "+";
+      }
+      return submitCommand(command);
+    }
     if (requiresPromotion(toSequence)) {
-      const promotionChoice = await requestPromotionChoice();
+      const promotionChoice = await requestPromotionChoice("chess");
       if (!promotionChoice) return false;
       command += promotionChoice;
     }
@@ -1707,12 +1916,12 @@
       }
       const result = await response.json();
       syncGameIdFromResult(result);
-      renderBoardFromState(result.state);
+      renderGameConfig(result.game);
+      renderBoardFromState(result.state, result.game?.type);
       renderMoveHistory(result.history, result.historyDetailed);
       renderCurrentTurn(result.currentTurn);
       renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
       renderGameOutcome(result.game);
-      renderGameConfig(result.game);
       cachedAnalysis = null;
       renderGameInfo(result.captured, result.analysis);
       stopAnalysisPolling();
@@ -1737,6 +1946,13 @@
 
       const targetSequence = getSquareSequence(targetSquare);
       if (Number.isNaN(targetSequence)) return;
+
+      if (selectedDropKind) {
+        const dropped = await submitShogiDrop(targetSequence);
+        if (dropped) clearSelectedSquare();
+        return;
+      }
+
       const targetHasCurrentTurnPiece = isCurrentTurnPiece(targetSquare);
 
       if (selectedSquareSequence == null) {
@@ -1822,16 +2038,18 @@
   const initPromotionPicker = () => {
     if (!promotionPicker) return;
     closePromotionPicker();
-    promotionPicker
-      .querySelectorAll(".promotion_choice_btn[data-promotion]")
-      .forEach((buttonEl) => {
-        buttonEl.addEventListener("click", () => {
-          const choice = String(buttonEl.getAttribute("data-promotion") || "").toLowerCase();
-          if (!choice) return;
-          resolvePromotionChoice(choice);
-        });
-      });
+    // Delegate so chess/shogi button sets can be swapped per open.
     promotionPicker.addEventListener("click", (event) => {
+      const buttonEl =
+        event.target instanceof Element
+          ? event.target.closest(".promotion_choice_btn[data-promotion]")
+          : null;
+      if (buttonEl) {
+        const choice = String(buttonEl.getAttribute("data-promotion") || "");
+        if (!choice) return;
+        resolvePromotionChoice(choice);
+        return;
+      }
       if (event.target === promotionPicker && pendingPromotionResolve) {
         resolvePromotionChoice("");
       }
@@ -1847,6 +2065,12 @@
   if (gameModeSelect) gameModeSelect.addEventListener("change", updateSetupControlState);
   if (fenInput) fenInput.addEventListener("input", updateSetupControlState);
   if (aiStrengthSelect) aiStrengthSelect.addEventListener("change", updateSetupControlState);
+  if (gameTypeSelect) {
+    gameTypeSelect.addEventListener("change", () => {
+      previewBoardForGameType(gameTypeSelect.value);
+      updateSetupControlState();
+    });
+  }
 
   // --- Top-3 move hints (Shift + hover) ---
   let hintsVisible = false;
@@ -1910,6 +2134,7 @@
         const result = await response.json();
         syncGameIdFromResult(result);
         renderGameConfig(result.game);
+        previewBoardForGameType(result.game?.type || gameTypeSelect?.value);
 
         // Immediately store the human color from the applied config
         if (result.game?.config?.humanColor) {
@@ -2083,12 +2308,13 @@
         }
         const result = await response.json();
         syncGameIdFromResult(result);
-        renderBoardFromState(result.state);
+        // Config first so geometry / data-game-type match server type before placing pieces.
+        renderGameConfig(result.game);
+        renderBoardFromState(result.state, result.game?.type);
         renderMoveHistory(result.history, result.historyDetailed);
         renderCurrentTurn(result.currentTurn);
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
         renderGameOutcome(result.game);
-        renderGameConfig(result.game);
 
         // Store the human color from the game config for Human vs AI mode
         if (result.game?.config?.humanColor) {
@@ -2159,13 +2385,25 @@
     return state;
   }
 
-  function resetBoardToInitialState() {
-    ensureBoardGeometry(gameTypeSelect?.value || boardGameType);
-    if (boardGameType === "xianqi") {
-      renderBoardFromState(initialXiangqiState());
-      return;
+  // Matches DefaultShogiStartFEN board (empty hands).
+  function initialShogiState() {
+    const state = [];
+    const back = ["lance", "knight", "silver", "gold", "king", "gold", "silver", "knight", "lance"];
+    for (let file = 1; file <= 9; file++) {
+      state.push({ file, rank: 1, kind: back[file - 1], color: "white" });
+      state.push({ file, rank: 9, kind: back[file - 1], color: "black" });
+      state.push({ file, rank: 3, kind: "pawn", color: "white" });
+      state.push({ file, rank: 7, kind: "pawn", color: "black" });
     }
-    renderBoardFromState(initialChessState());
+    state.push({ file: 2, rank: 2, kind: "bishop", color: "white" });
+    state.push({ file: 8, rank: 2, kind: "rook", color: "white" });
+    state.push({ file: 2, rank: 8, kind: "rook", color: "black" });
+    state.push({ file: 8, rank: 8, kind: "bishop", color: "black" });
+    return state;
+  }
+
+  function resetBoardToInitialState() {
+    previewBoardForGameType(gameTypeSelect?.value || boardGameType);
   }
 
   function clearResultLabelClasses() {

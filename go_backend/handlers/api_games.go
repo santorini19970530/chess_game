@@ -655,6 +655,28 @@ func (h *Handler) getAPIGameLegalMoves(w http.ResponseWriter, r *http.Request, g
 		writeJSONError(w, http.StatusNotFound, "Game session not found")
 		return
 	}
+
+	// Shogi hand drop: ?dropKind=pawn (no file/rank).
+	if dropKind := strings.TrimSpace(r.URL.Query().Get("dropKind")); dropKind != "" {
+		if game.Type != sessionpkg.GameTypeShogi {
+			writeJSONError(w, http.StatusBadRequest, "dropKind only for shogi")
+			return
+		}
+		moves, err := sessionpkg.LegalDropsForKindByID(gameID, dropKind)
+		if err != nil {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(struct {
+			DropKind   string                         `json:"dropKind"`
+			LegalMoves []sessionpkg.LegalDestination `json:"legalMoves"`
+		}{DropKind: strings.ToLower(dropKind), LegalMoves: moves}); err != nil {
+			writeJSONError(w, http.StatusInternalServerError, "Response encode error")
+		}
+		return
+	}
+
 	maxFile, maxRank := 8, 8
 	switch game.Type {
 	case sessionpkg.GameTypeXiangqi:

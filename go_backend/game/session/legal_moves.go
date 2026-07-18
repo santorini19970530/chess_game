@@ -9,6 +9,7 @@ type LegalDestination struct {
 	File              int  `json:"file"`
 	Rank              int  `json:"rank"`
 	RequiresPromotion bool `json:"requiresPromotion"`
+	CanPromote        bool `json:"canPromote,omitempty"` // shogi optional zone (must also sets requiresPromotion)
 	IsCapture         bool `json:"isCapture"`
 }
 

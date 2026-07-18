@@ -76,6 +76,13 @@ func TestShogiDrop_FromHand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
+	dests, err := LegalDropsForKindByID(game.ID, "pawn")
+	if err != nil {
+		t.Fatalf("legal drops: %v", err)
+	}
+	if len(dests) == 0 {
+		t.Fatal("expected pawn drop destinations")
+	}
 	if _, err := ApplyMoveByCommandByID(game.ID, "P*e5"); err != nil {
 		t.Fatalf("drop P*e5: %v", err)
 	}
@@ -144,6 +151,39 @@ func TestShogiPromotion_AutoOnLastRank(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("expected tokin on e9, state=%+v", snap.State)
+	}
+}
+
+func TestShogiPromotion_OptionalWithPlus(t *testing.T) {
+	resetGameSessionForTest()
+	ResetGame()
+
+	// White pawn e6 → e7 may promote (enters zone). SFEN rank order 9→1.
+	fen := "4k4/9/9/4P4/9/9/9/9/4K4[] w - - 0 1"
+	game, err := CreateGame(GameModeHumanVsHuman, GameTypeShogi, "white", 1, fen, "")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	dests, err := LegalMovesForSquareByID(game.ID, 5, 6)
+	if err != nil {
+		t.Fatalf("legal: %v", err)
+	}
+	var e7 *LegalDestination
+	for i := range dests {
+		if dests[i].File == 5 && dests[i].Rank == 7 {
+			e7 = &dests[i]
+			break
+		}
+	}
+	if e7 == nil || !e7.CanPromote || e7.RequiresPromotion {
+		t.Fatalf("e7 should be optional promote, got %+v", e7)
+	}
+	normalized, err := ApplyMoveByCommandByID(game.ID, "e6e7+")
+	if err != nil {
+		t.Fatalf("e6e7+: %v", err)
+	}
+	if normalized != "e6e7+" {
+		t.Fatalf("normalized=%q", normalized)
 	}
 }
 

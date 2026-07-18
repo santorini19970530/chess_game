@@ -3,6 +3,9 @@
 # macOS zip / Finder metadata (never commit)
 **/__MACOSX/
 **/._*
+# Finder "Keep Both" duplicates (break `go test` / pollute assets)
+**/* 2.*
+**/* 2/
 frontend/styles/tailwindcss
 go_backend/go_backend
 server.log
