@@ -22,12 +22,14 @@ func shogiLegalDestinationsForSquare(file, rank int) ([]LegalDestination, error)
 			continue
 		}
 		_, isCapture := getPieceAt(sq.File, sq.Rank)
-		requiresPromotion := movement.ShogiMustPromote(sourcePiece.Kind, sq.Rank, sourcePiece.Color)
+		must := movement.ShogiMustPromote(sourcePiece.Kind, sq.Rank, sourcePiece.Color)
+		can := movement.ShogiCanPromote(sourcePiece.Kind, rank, sq.Rank, sourcePiece.Color)
 		out = append(out, LegalDestination{
 			File:              sq.File,
 			Rank:              sq.Rank,
 			IsCapture:         isCapture,
-			RequiresPromotion: requiresPromotion,
+			RequiresPromotion: must,
+			CanPromote:        can,
 		})
 	}
 	return out, nil

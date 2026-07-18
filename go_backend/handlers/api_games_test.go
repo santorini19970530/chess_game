@@ -250,6 +250,66 @@ func TestAPIGameMove_XiangqiAcceptsRank10(t *testing.T) {
 	}
 }
 
+func TestAPIGameMove_ShogiAcceptsDrop(t *testing.T) {
+	h := NewHandler()
+	fen := "4k4/9/9/9/9/9/9/9/4K4[P] w - - 0 1"
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeShogi, "white", 1, fen, "intermediate")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/games/"+game.ID+"/move",
+		strings.NewReader("command=P*e5"),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	h.APIGameRoutes(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for P*e5, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	var payload struct {
+		To struct {
+			File string `json:"file"`
+			Rank int    `json:"rank"`
+		} `json:"to"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("json: %v", err)
+	}
+	if payload.To.File != "e" || payload.To.Rank != 5 {
+		t.Fatalf("to=%s%d", payload.To.File, payload.To.Rank)
+	}
+}
+
+func TestAPIGameLegalMoves_ShogiDropKind(t *testing.T) {
+	h := NewHandler()
+	fen := "4k4/9/9/9/9/9/9/9/4K4[P] w - - 0 1"
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeShogi, "white", 1, fen, "intermediate")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/games/"+game.ID+"/legal-moves?dropKind=pawn", nil)
+	rec := httptest.NewRecorder()
+	h.APIGameRoutes(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	var payload struct {
+		DropKind   string `json:"dropKind"`
+		LegalMoves []struct {
+			File int `json:"file"`
+			Rank int `json:"rank"`
+		} `json:"legalMoves"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("json: %v", err)
+	}
+	if payload.DropKind != "pawn" || len(payload.LegalMoves) == 0 {
+		t.Fatalf("dropKind=%q moves=%d", payload.DropKind, len(payload.LegalMoves))
+	}
+}
+
 func TestAPIGameLegalMovesRoute_ReturnsMovesForCurrentTurnPiece(t *testing.T) {
 	h := NewHandler()
 	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")

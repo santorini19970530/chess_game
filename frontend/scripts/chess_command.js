@@ -1327,16 +1327,28 @@
     return pieceColor === currentTurn;
   };
 
+  const legalMoveAt = (toSequence) => {
+    const target = fileRankFromSequence(toSequence);
+    if (!target) return null;
+    return (
+      selectedLegalMoves.find(
+        (move) => Number(move?.file) === target.file && Number(move?.rank) === target.rank
+      ) || null
+    );
+  };
+
   const requiresPromotion = (toSequence) => {
     if (boardGameType !== "chess") return false;
-    const target = fileRankFromSequence(toSequence);
-    if (!target) return false;
-    return selectedLegalMoves.some(
-      (move) =>
-        Number(move?.file) === target.file &&
-        Number(move?.rank) === target.rank &&
-        Boolean(move?.requiresPromotion)
-    );
+    return Boolean(legalMoveAt(toSequence)?.requiresPromotion);
+  };
+
+  const shogiPromotionFlags = (toSequence) => {
+    const move = legalMoveAt(toSequence);
+    if (!move) return { must: false, can: false };
+    return {
+      must: Boolean(move.requiresPromotion),
+      can: Boolean(move.canPromote),
+    };
   };
 
   const closePromotionPicker = () => {
@@ -1353,12 +1365,34 @@
     promotionPicker.setAttribute("aria-hidden", "false");
   };
 
-  const requestPromotionChoice = () =>
+  const configurePromotionPicker = (mode) => {
+    if (!promotionPicker) return;
+    const title = promotionPicker.querySelector("#promotion_picker_title");
+    const choices = promotionPicker.querySelector(".promotion_picker_choices");
+    if (!title || !choices) return;
+    if (mode === "shogi") {
+      title.textContent = "Promote this piece?";
+      choices.innerHTML =
+        `<button type="button" class="promotion_choice_btn" data-promotion="+">Promote</button>` +
+        `<button type="button" class="promotion_choice_btn" data-promotion="-">Do not promote</button>`;
+      return;
+    }
+    title.textContent = "Choose promotion piece";
+    choices.innerHTML =
+      `<button type="button" class="promotion_choice_btn" data-promotion="q">Queen</button>` +
+      `<button type="button" class="promotion_choice_btn" data-promotion="r">Rook</button>` +
+      `<button type="button" class="promotion_choice_btn" data-promotion="b">Bishop</button>` +
+      `<button type="button" class="promotion_choice_btn" data-promotion="n">Knight</button>`;
+  };
+
+  // mode: "chess" | "shogi". Cancel → ""; chess piece letter; shogi "+" or "-".
+  const requestPromotionChoice = (mode = "chess") =>
     new Promise((resolve) => {
       if (!promotionPicker) {
-        resolve("q");
+        resolve(mode === "shogi" ? "+" : "q");
         return;
       }
+      configurePromotionPicker(mode);
       pendingPromotionResolve = resolve;
       openPromotionPicker();
     });
@@ -1490,7 +1524,7 @@
       } else {
         destinationSquare.classList.add(LEGAL_DESTINATION_CLASS);
       }
-      if (Boolean(move?.requiresPromotion)) {
+      if (Boolean(move?.requiresPromotion) || Boolean(move?.canPromote)) {
         destinationSquare.classList.add(LEGAL_PROMOTION_DESTINATION_CLASS);
       }
     }
@@ -1834,8 +1868,20 @@
   const submitBoardMove = async (fromSequence, toSequence) => {
     let command = moveCommandFromSequence(fromSequence, toSequence);
     if (!command) return false;
+    if (boardGameType === "shogi") {
+      // Policy: must-promote → auto "+"; optional zone → Promote / Do not promote.
+      const { must, can } = shogiPromotionFlags(toSequence);
+      if (must) {
+        command += "+";
+      } else if (can) {
+        const choice = await requestPromotionChoice("shogi");
+        if (!choice) return false; // cancelled
+        if (choice === "+") command += "+";
+      }
+      return submitCommand(command);
+    }
     if (requiresPromotion(toSequence)) {
-      const promotionChoice = await requestPromotionChoice();
+      const promotionChoice = await requestPromotionChoice("chess");
       if (!promotionChoice) return false;
       command += promotionChoice;
     }
@@ -1991,16 +2037,18 @@
   const initPromotionPicker = () => {
     if (!promotionPicker) return;
     closePromotionPicker();
-    promotionPicker
-      .querySelectorAll(".promotion_choice_btn[data-promotion]")
-      .forEach((buttonEl) => {
-        buttonEl.addEventListener("click", () => {
-          const choice = String(buttonEl.getAttribute("data-promotion") || "").toLowerCase();
-          if (!choice) return;
-          resolvePromotionChoice(choice);
-        });
-      });
+    // Delegate so chess/shogi button sets can be swapped per open.
     promotionPicker.addEventListener("click", (event) => {
+      const buttonEl =
+        event.target instanceof Element
+          ? event.target.closest(".promotion_choice_btn[data-promotion]")
+          : null;
+      if (buttonEl) {
+        const choice = String(buttonEl.getAttribute("data-promotion") || "");
+        if (!choice) return;
+        resolvePromotionChoice(choice);
+        return;
+      }
       if (event.target === promotionPicker && pendingPromotionResolve) {
         resolvePromotionChoice("");
       }
