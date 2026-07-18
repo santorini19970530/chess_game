@@ -834,8 +834,7 @@
       return;
     }
     if (t === "shogi") {
-      // Pieces wired in issue0037 step 2; still rebuild the 9×9 wood grid now.
-      renderBoardFromState([], "shogi");
+      renderBoardFromState(initialShogiState(), "shogi");
       return;
     }
     renderBoardFromState(initialChessState(), "chess");
@@ -1046,7 +1045,7 @@
   const fillHistoryPieceIcon = (el, side, pieceKind) => {
     el.className = "chess_move_history_piece_icon";
     el.replaceChildren();
-    if (boardGameType === "xianqi") {
+    if (boardGameType === "xianqi" || boardGameType === "shogi") {
       const path = imagePathFromPiece({ kind: pieceKind, color: side });
       if (path) {
         const img = document.createElement("img");
@@ -1561,6 +1560,13 @@
     pawn: "soldier",
   };
 
+  // API kinds → shogi_pic/*.svg (filenames match kinds; black via CSS rotate).
+  const SHOGI_KINDS = new Set([
+    "pawn", "lance", "knight", "silver", "gold", "bishop", "rook", "king",
+    "promoted_pawn", "promoted_lance", "promoted_knight", "promoted_silver",
+    "horse", "dragon",
+  ]);
+
   const imagePathFromPiece = (piece) => {
     const kind = String(piece?.kind || "").toLowerCase();
     const color = String(piece?.color || "").toLowerCase();
@@ -1570,6 +1576,10 @@
       if (!file) return "";
       const side = color === "black" ? "black" : "white";
       return `/pic/xianqi_pic/${file}_${side}.png`;
+    }
+    if (boardGameType === "shogi") {
+      if (!SHOGI_KINDS.has(kind)) return "";
+      return `/pic/shogi_pic/${kind}.svg`;
     }
     const tone = color === "black" ? "dark" : "light";
     return `/pic/chess_pic/${kind}_${tone}.png`;
@@ -2184,6 +2194,23 @@
       state.push({ file, rank: 4, kind: "pawn", color: "white" });
       state.push({ file, rank: 7, kind: "pawn", color: "black" });
     }
+    return state;
+  }
+
+  // Matches DefaultShogiStartFEN board (empty hands).
+  function initialShogiState() {
+    const state = [];
+    const back = ["lance", "knight", "silver", "gold", "king", "gold", "silver", "knight", "lance"];
+    for (let file = 1; file <= 9; file++) {
+      state.push({ file, rank: 1, kind: back[file - 1], color: "white" });
+      state.push({ file, rank: 9, kind: back[file - 1], color: "black" });
+      state.push({ file, rank: 3, kind: "pawn", color: "white" });
+      state.push({ file, rank: 7, kind: "pawn", color: "black" });
+    }
+    state.push({ file: 2, rank: 2, kind: "bishop", color: "white" });
+    state.push({ file: 8, rank: 2, kind: "rook", color: "white" });
+    state.push({ file: 2, rank: 8, kind: "rook", color: "black" });
+    state.push({ file: 8, rank: 8, kind: "bishop", color: "black" });
     return state;
   }
 
