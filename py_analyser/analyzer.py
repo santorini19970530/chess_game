@@ -18,10 +18,12 @@ import json
 import math
 import os
 import random
+import subprocess
+import threading
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import chess
 import chess.engine
@@ -33,7 +35,17 @@ FS_BINARY_PATH: str = os.environ.get(
     os.path.join(os.path.dirname(__file__), "Fairy-Stockfish-fairy_sf_14", "src", "stockfish"),
 )
 
+# Session game_type → Fairy-Stockfish UCI_Variant name.
+_GAME_TYPE_TO_UCI_VARIANT = {
+    "chess": "chess",
+    "xianqi": "xiangqi",
+    "shogi": "shogi",
+}
+
 _engine: Optional[chess.engine.SimpleEngine] = None
+_raw_uci_lock = threading.Lock()
+_raw_uci_proc: Optional[subprocess.Popen] = None
+_raw_uci_variant: Optional[str] = None
 
 
 def _get_engine() -> chess.engine.SimpleEngine:
@@ -47,6 +59,151 @@ def _get_engine() -> chess.engine.SimpleEngine:
             )
         _engine = chess.engine.SimpleEngine.popen_uci(FS_BINARY_PATH)
     return _engine
+
+
+def uci_variant_name(game_type: str) -> str:
+    key = (game_type or "chess").strip().lower()
+    return _GAME_TYPE_TO_UCI_VARIANT.get(key, key)
+
+
+def _raw_uci_ensure(variant: str) -> subprocess.Popen:
+    """Singleton raw UCI process for variant FENs (python-chess Board is chess-only)."""
+    global _raw_uci_proc, _raw_uci_variant
+    if _raw_uci_proc is not None and _raw_uci_proc.poll() is None:
+        if _raw_uci_variant != variant:
+            _raw_uci_write(_raw_uci_proc, f"setoption name UCI_Variant value {variant}")
+            _raw_uci_write(_raw_uci_proc, "isready")
+            _raw_uci_wait_for(_raw_uci_proc, "readyok", timeout=5.0)
+            _raw_uci_variant = variant
+        return _raw_uci_proc
+
+    if not os.path.exists(FS_BINARY_PATH):
+        raise FileNotFoundError(
+            f"Fairy-Stockfish binary not found at {FS_BINARY_PATH}. "
+            "Set FAIRY_STOCKFISH_PATH environment variable to the correct path."
+        )
+    proc = subprocess.Popen(
+        [FS_BINARY_PATH],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        bufsize=1,
+    )
+    _raw_uci_write(proc, "uci")
+    _raw_uci_wait_for(proc, "uciok", timeout=5.0)
+    _raw_uci_write(proc, f"setoption name UCI_Variant value {variant}")
+    _raw_uci_write(proc, "isready")
+    _raw_uci_wait_for(proc, "readyok", timeout=5.0)
+    _raw_uci_proc = proc
+    _raw_uci_variant = variant
+    return proc
+
+
+def _raw_uci_write(proc: subprocess.Popen, line: str) -> None:
+    assert proc.stdin is not None
+    proc.stdin.write(line + "\n")
+    proc.stdin.flush()
+
+
+def _raw_uci_wait_for(proc: subprocess.Popen, token: str, timeout: float) -> None:
+    assert proc.stdout is not None
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        line = proc.stdout.readline()
+        if not line:
+            raise RuntimeError("Fairy-Stockfish exited while waiting for " + token)
+        if token in line:
+            return
+    raise TimeoutError(f"timeout waiting for {token}")
+
+
+def _parse_info_score_cp(fields: List[str]) -> Optional[int]:
+    for i, f in enumerate(fields):
+        if f == "score" and i + 2 < len(fields):
+            if fields[i + 1] == "cp":
+                try:
+                    return int(fields[i + 2])
+                except ValueError:
+                    return None
+            if fields[i + 1] == "mate":
+                try:
+                    mate = int(fields[i + 2])
+                except ValueError:
+                    return None
+                return 100_000 if mate > 0 else -100_000
+    return None
+
+
+def _parse_info_multipv_pv(fields: List[str]) -> Tuple[int, Optional[str]]:
+    multipv = 1
+    move: Optional[str] = None
+    for i, f in enumerate(fields):
+        if f == "multipv" and i + 1 < len(fields):
+            try:
+                multipv = int(fields[i + 1])
+            except ValueError:
+                multipv = 1
+        if f == "pv" and i + 1 < len(fields):
+            move = fields[i + 1]
+    return multipv, move
+
+
+def suggest_moves_fs_variant(
+    fen: str,
+    game_type: str,
+    top_k: int = 5,
+    profile: str = "intermediate",
+) -> Tuple[List[MoveSuggestion], Optional[int]]:
+    """MultiPV search for xianqi/shogi via raw UCI (no chess.Board).
+
+    Returns (suggestions, eval_cp_white from multipv 1 score, or None if unavailable).
+    """
+    variant = uci_variant_name(game_type)
+    options, limit = _profile_to_uci_options(profile)
+    skill = options.get("Skill Level", 5)
+    multipv = max(1, min(top_k, 10))
+    go_parts = []
+    if limit.time is not None:
+        go_parts.append(f"movetime {int(limit.time * 1000)}")
+    if limit.depth is not None:
+        go_parts.append(f"depth {int(limit.depth)}")
+    go_cmd = "go " + " ".join(go_parts) if go_parts else "go depth 8"
+
+    with _raw_uci_lock:
+        proc = _raw_uci_ensure(variant)
+        _raw_uci_write(proc, f"setoption name Skill Level value {skill}")
+        _raw_uci_write(proc, f"setoption name MultiPV value {multipv}")
+        _raw_uci_write(proc, f"position fen {fen}")
+        _raw_uci_write(proc, go_cmd)
+
+        assert proc.stdout is not None
+        seen: Dict[int, MoveSuggestion] = {}
+        eval_cp_white: Optional[int] = None
+        deadline = time.monotonic() + 12.0
+        while time.monotonic() < deadline:
+            line = proc.stdout.readline()
+            if not line:
+                break
+            line = line.strip()
+            if line.startswith("bestmove"):
+                break
+            if not line.startswith("info"):
+                continue
+            fields = line.split()
+            idx, move = _parse_info_multipv_pv(fields)
+            score = _parse_info_score_cp(fields)
+            if move is None:
+                continue
+            if score is not None and idx == 1:
+                eval_cp_white = score
+            if 1 <= idx <= multipv:
+                seen[idx] = MoveSuggestion(
+                    rank=idx, uci=move, san=move, score=score if score is not None else 0
+                )
+
+        suggestions = [seen[i] for i in range(1, multipv + 1) if i in seen]
+        return suggestions[:top_k], eval_cp_white
 
 
 def _profile_to_uci_options(profile: str) -> tuple[dict, chess.engine.Limit]:
@@ -262,9 +419,83 @@ def build_explanation_fallback(
     )
 
 
-def analyze_position(
-    fen: str, color: str, top_k: int = 5, request_id: str | None = None
+def _analyze_position_variant(
+    fen: str,
+    color: str,
+    top_k: int,
+    request_id: str | None,
+    game_type: str,
+    profile: str = "intermediate",
 ) -> Dict[str, object]:
+    """Analyze xianqi/shogi via Fairy-Stockfish UCI — never chess.Board(fen)."""
+    started_at = time.perf_counter()
+    requested_color = parse_color(color)
+    eval_cp_white = 0
+    suggestions: List[MoveSuggestion] = []
+    source = "fairy-stockfish"
+    threat = "Position evaluated with Fairy-Stockfish."
+
+    try:
+        suggestions, score = suggest_moves_fs_variant(fen, game_type, top_k, profile)
+        if score is not None:
+            eval_cp_white = score
+    except Exception:
+        # FS down / timeout: keep service up with empty suggestions.
+        source = "fallback"
+        threat = "Fairy-Stockfish unavailable; variant analysis fallback."
+        suggestions = []
+        eval_cp_white = 0
+
+    win_chance_white = cp_to_win_chance(eval_cp_white)
+    win_chance_black = 1.0 - win_chance_white
+    best_move_uci = suggestions[0].uci if suggestions else None
+    side_to_move = "white" if fen.split()[1:2] == ["w"] else (
+        "black" if fen.split()[1:2] == ["b"] else "white"
+    )
+    latency_ms = int((time.perf_counter() - started_at) * 1000)
+
+    return {
+        "request_id": request_id or str(uuid.uuid4()),
+        "status": "ok",
+        "source": source,
+        "fen": fen,
+        "evaluated_for_color": "white" if requested_color == chess.WHITE else "black",
+        "health_summary": {
+            "material_white": 0,
+            "material_black": 0,
+            "material_balance_white_minus_black": 0,
+            "side_to_move": side_to_move,
+            "white_in_check": False,
+            "black_in_check": False,
+        },
+        "is_check": False,
+        "is_checkmate": False,
+        "is_stalemate": False,
+        "eval_cp_white": eval_cp_white,
+        "win_chance_white": round(win_chance_white, 4),
+        "win_chance_black": round(win_chance_black, 4),
+        "threat_summary": threat,
+        "best_move_uci": best_move_uci,
+        "suggested_moves": [item.__dict__ for item in suggestions],
+        "latency_ms": latency_ms,
+        "game_type": game_type,
+    }
+
+
+def analyze_position(
+    fen: str,
+    color: str,
+    top_k: int = 5,
+    request_id: str | None = None,
+    game_type: str = "chess",
+    profile: str = "intermediate",
+) -> Dict[str, object]:
+    gt = (game_type or "chess").strip().lower()
+    if gt in {"xianqi", "shogi"}:
+        return _analyze_position_variant(
+            fen, color, top_k, request_id, gt, profile=profile
+        )
+
     started_at = time.perf_counter()
     board = chess.Board(fen)
     requested_color = parse_color(color)
@@ -293,6 +524,7 @@ def analyze_position(
         "best_move_uci": best_move_uci,
         "suggested_moves": [item.__dict__ for item in suggestions],
         "latency_ms": latency_ms,
+        "game_type": "chess",
     }
 
 

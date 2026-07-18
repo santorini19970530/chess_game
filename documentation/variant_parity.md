@@ -15,14 +15,14 @@ Game IDs: `"chess"`, `"xianqi"`, `"shogi"`.
 | AI vs AI (`POST /api/simulate`, `cmd/match`) | Yes | Yes | Yes |
 | Legal highlights (board click) | Yes | Yes | Yes (+ hand drop highlights) |
 | FS strength profiles | Yes | Yes (`UCI_Variant`) | Yes (`UCI_Variant`) |
-| Explain / LLM coach | Yes (enqueue `/analyze` + `/explain`) | No — notes fallback; enqueue skipped | No — notes fallback; enqueue skipped |
+| Explain / LLM coach | Yes (enqueue `/analyze` + `/explain`) | No — Go skips enqueue; Python `chess.Board` Chess-only → **issue0049** | No — same → **issue0049** |
 | Clock (live flag / increment) | Placeholder UI only (issue0039/0040 Planned) | Same | Same |
 | Captured / hands panel | Captured counts vs start set | Xiangqi start-set counts | **Hands** (relife inventory) |
 | Promotion UX | Chess picker Q/R/B/N | N/A | Must → auto `+`; optional → Promote / Do not |
 | Drops | N/A | N/A | Yes (`P*e5`, hand UI) |
 | Board UI | 8×8 squares | Point board (junctions) | 9×9 wood squares |
 | Automated tests present? | Yes (session / movement / handlers) | Yes | Yes |
-| Known gaps | — | Full coach pack → issue0049 | *Uchifuzume* MVP skip; coach → issue0049 |
+| Known gaps | — | Coach pipe → issue0049; terms/tone → issue0051 after | *Uchifuzume* MVP skip; coach → 0049 then 0051 |
 
 ---
 
@@ -86,4 +86,5 @@ Operator ticks. Prefer a hard refresh after switching variants.
 | issue0036 / 0037 | Shogi backend + UI |
 | issue0038 | This doc (parity + smoke) |
 | issue0039 / 0040 | Real shared clock (not claimed here) |
-| issue0049 | Variant coach / explain pack |
+| issue0049 | Variant Python `/analyze` + `/explain` pipe (before terms JSON) |
+| issue0051 | Variant terms/tone JSON (after issue0049) |

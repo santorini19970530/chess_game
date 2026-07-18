@@ -134,11 +134,15 @@ def analyze() -> tuple:
     fen = str(payload.get("fen", "")).strip()
     color = str(payload.get("color", "")).strip().lower()
     top_k = payload.get("top_k", 5)
+    game_type = str(payload.get("game_type", "chess")).strip().lower() or "chess"
+    profile = str(payload.get("profile", "intermediate")).strip().lower() or "intermediate"
 
     if not fen:
         return jsonify({"error": 'Missing required field: "fen"'}), 400
     if color not in {"white", "black", "w", "b"}:
         return jsonify({"error": 'Invalid "color". Use "white" or "black".'}), 400
+    if game_type not in {"chess", "xianqi", "shogi"}:
+        return jsonify({"error": f'Unsupported "game_type": {game_type}'}), 400
 
     try:
         top_k_value = int(top_k)
@@ -151,6 +155,8 @@ def analyze() -> tuple:
             color=color,
             top_k=top_k_value,
             request_id=str(request_id) if request_id else None,
+            game_type=game_type,
+            profile=profile,
         )
     except ValueError as exc:
         # Covers invalid FEN / color parser errors from analyzer.
