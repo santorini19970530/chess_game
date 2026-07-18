@@ -107,8 +107,6 @@
     } catch (_) {}
   };
 
-  // Future: pass isCapture / isCheckmate from snapshot or move result
-  // Example: playMoveSound(result.wasCapture, result.wasCheckmate);
   let gameSocketGameId = "";
   let gameSocketReconnectAttempts = 0;
   let gameSocketReconnectTimer = null;
@@ -380,8 +378,8 @@
       void refreshGameSnapshotFromAPI(gameId);
       // Also refresh FS suggestions directly (in case snapshot path is delayed)
       void refreshSuggestedMoves();
-      // Play sound at the same time the piece starts moving
-      playMoveSound(false);
+      // Play sound at the same time the piece starts moving (capture vs quiet from history)
+      playMoveSound(Boolean(data?.isCapture));
       return;
     }
     if (event === "turn_changed") {

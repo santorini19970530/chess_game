@@ -340,9 +340,7 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 			log.Printf("human_vs_ai: background AI move applied %s command=%s", gameIDLabel(gameID), aiMove)
 
 			// Broadcast the AI move via WebSocket so the frontend updates immediately
-			gameSocketHub.Broadcast(gameID, socketEventMoveApplied, map[string]interface{}{
-				"command": aiMove,
-			})
+			gameSocketHub.Broadcast(gameID, socketEventMoveApplied, moveAppliedPayload(gameID, aiMove))
 
 			// Enqueue analysis (for the analysis panel / win prob update)
 			enqueueCurrentPositionAnalysis(gameID, aiMove)
@@ -407,14 +405,13 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 	response.To.File = toFile
 	response.To.Rank = toRank
 
-	gameSocketHub.Broadcast(gameID, socketEventMoveApplied, map[string]interface{}{
-		"command":     normalizedMove,
-		"from_file":   response.From.File,
-		"from_rank":   response.From.Rank,
-		"to_file":     response.To.File,
-		"to_rank":     response.To.Rank,
-		"history_len": len(snapshot.History),
-	})
+	payload := moveAppliedPayload(gameID, normalizedMove)
+	payload["from_file"] = response.From.File
+	payload["from_rank"] = response.From.Rank
+	payload["to_file"] = response.To.File
+	payload["to_rank"] = response.To.Rank
+	payload["history_len"] = len(snapshot.History)
+	gameSocketHub.Broadcast(gameID, socketEventMoveApplied, payload)
 	gameSocketHub.Broadcast(gameID, socketEventTurnChanged, map[string]interface{}{
 		"current_turn": response.CurrentTurn,
 		"checked_side": response.CheckedSide,
@@ -597,9 +594,7 @@ func (h *Handler) postAPIGameNew(w http.ResponseWriter, r *http.Request, gameID 
 				}
 				log.Printf("human_vs_ai: initial background AI move applied %s command=%s", gameIDLabel(game.ID), aiMove)
 
-				gameSocketHub.Broadcast(game.ID, socketEventMoveApplied, map[string]interface{}{
-					"command": aiMove,
-				})
+				gameSocketHub.Broadcast(game.ID, socketEventMoveApplied, moveAppliedPayload(game.ID, aiMove))
 				enqueueCurrentPositionAnalysis(game.ID, aiMove)
 
 				if _, refreshErr := sessionpkg.RefreshGameSessionOutcomeByID(game.ID); refreshErr != nil {
