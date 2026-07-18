@@ -30,6 +30,10 @@
   const aiStrengthSelect = document.getElementById("ai_strength");
   const configApplyButton = document.getElementById("game_config_apply");
   const boardElement = document.querySelector(".chess_board");
+  const boardWrapper = document.querySelector(".chess_board_wrapper");
+  let boardFiles = 8;
+  let boardMaxRank = 8;
+  let boardGameType = "chess";
   const promotionPicker = document.getElementById("promotion_picker");
   const simulationSummaryPanel = document.getElementById("simulation_summary_panel");
   const simulationSummaryGames = document.getElementById("simulation_summary_games");
@@ -692,10 +696,140 @@
     }
   };
 
+  const geometryForGameType = (type) => {
+    switch (String(type || "chess").toLowerCase()) {
+      case "xianqi":
+        return { files: 9, maxRank: 10, type: "xianqi" };
+      case "shogi":
+        return { files: 9, maxRank: 9, type: "shogi" };
+      default:
+        return { files: 8, maxRank: 8, type: "chess" };
+    }
+  };
+
+  const rebuildBoardLabels = () => {
+    const ranksEl = boardWrapper.querySelector(".board_ranks");
+    if (ranksEl) {
+      ranksEl.replaceChildren(
+        ...Array.from({ length: boardMaxRank }, (_, i) => {
+          const span = document.createElement("span");
+          span.className = "board_label";
+          span.textContent = String(boardMaxRank - i);
+          return span;
+        })
+      );
+    }
+    const filesEl = boardWrapper.querySelector(".board_files");
+    if (filesEl) {
+      filesEl.replaceChildren(
+        ...Array.from({ length: boardFiles }, (_, i) => {
+          const span = document.createElement("span");
+          span.className = "board_label";
+          span.textContent = String.fromCharCode("a".charCodeAt(0) + i);
+          return span;
+        })
+      );
+    }
+  };
+
+  const rebuildXiangqiBoard = () => {
+    // Lines at x=i/8, y=j/9 inside .xianqi_field; board padding holds edge-piece overhang.
+    boardElement.classList.add("xianqi_board");
+    const field = document.createElement("div");
+    field.className = "xianqi_field";
+
+    const art = document.createElement("div");
+    art.className = "xianqi_artwork";
+    art.setAttribute("aria-hidden", "true");
+
+    for (let j = 0; j <= 9; j++) {
+      const h = document.createElement("div");
+      h.className = "xianqi_h_line";
+      h.style.top = `${(j / 9) * 100}%`;
+      art.appendChild(h);
+    }
+    for (let i = 0; i <= 8; i++) {
+      const v = document.createElement("div");
+      v.className = i === 0 || i === 8 ? "xianqi_v_line xianqi_v_outer" : "xianqi_v_line xianqi_v_inner";
+      v.style.left = `${(i / 8) * 100}%`;
+      art.appendChild(v);
+    }
+    for (const side of ["top", "bottom"]) {
+      const palace = document.createElement("div");
+      palace.className = `xianqi_palace xianqi_palace_${side}`;
+      art.appendChild(palace);
+    }
+
+    const points = document.createElement("div");
+    points.className = "xianqi_points";
+    for (let seq = 0; seq < 90; seq++) {
+      const file = (seq % 9) + 1;
+      const rank = 10 - Math.floor(seq / 9);
+      const sq = document.createElement("div");
+      sq.className = "chess_board_square chess_board_square_light";
+      sq.setAttribute("data-sequence", String(seq));
+      sq.setAttribute("data-file", String(file));
+      sq.setAttribute("data-rank", String(rank));
+      sq.style.left = `${((file - 1) / 8) * 100}%`;
+      sq.style.top = `${((10 - rank) / 9) * 100}%`;
+      points.appendChild(sq);
+    }
+
+    field.append(art, points);
+    boardElement.replaceChildren(field);
+  };
+
+  const rebuildSquareGridBoard = () => {
+    boardElement.classList.remove("xianqi_board");
+    const n = boardFiles * boardMaxRank;
+    const squares = [];
+    for (let seq = 0; seq < n; seq++) {
+      const file = (seq % boardFiles) + 1;
+      const rank = boardMaxRank - Math.floor(seq / boardFiles);
+      const row = Math.floor(seq / boardFiles);
+      const col = seq % boardFiles;
+      const isLight = (row + col) % 2 === 0;
+      const div = document.createElement("div");
+      div.className = [
+        "chess_board_square",
+        isLight ? "chess_board_square_light" : "chess_board_square_dark",
+      ].join(" ");
+      div.setAttribute("data-sequence", String(seq));
+      div.setAttribute("data-file", String(file));
+      div.setAttribute("data-rank", String(rank));
+      squares.push(div);
+    }
+    boardElement.replaceChildren(...squares);
+  };
+
+  const rebuildBoardGrid = () => {
+    if (!boardElement || !boardWrapper) return;
+    boardWrapper.dataset.gameType = boardGameType;
+    boardWrapper.style.setProperty("--board-files", String(boardFiles));
+    boardWrapper.style.setProperty("--board-ranks", String(boardMaxRank));
+    rebuildBoardLabels();
+    if (boardGameType === "xianqi") rebuildXiangqiBoard();
+    else rebuildSquareGridBoard();
+  };
+
+  const ensureBoardGeometry = (type) => {
+    const g = geometryForGameType(type);
+    if (g.files === boardFiles && g.maxRank === boardMaxRank && g.type === boardGameType) {
+      if (boardWrapper) boardWrapper.dataset.gameType = boardGameType;
+      return false;
+    }
+    boardFiles = g.files;
+    boardMaxRank = g.maxRank;
+    boardGameType = g.type;
+    rebuildBoardGrid();
+    return true;
+  };
+
   const renderGameConfig = (game) => {
     const cfg = game?.config;
     if (!cfg) return;
     if (gameTypeSelect) gameTypeSelect.value = String(game.type || "chess");
+    ensureBoardGeometry(game.type || gameTypeSelect?.value || "chess");
     if (gameModeSelect) gameModeSelect.value = String(game.mode || "human_vs_human");
     if (humanSideSelect) humanSideSelect.value = String(cfg.humanColor || "white");
     if (aiGameCountInput) aiGameCountInput.value = String(cfg.aiGameCount || 1);
@@ -706,7 +840,8 @@
     updateSetupControlState();
   };
 
-  const PIECE_ORDER = ["queen", "rook", "bishop", "knight", "pawn", "king"];
+  const CHESS_PIECE_ORDER = ["queen", "rook", "bishop", "knight", "pawn", "king"];
+  const XIANQI_PIECE_ORDER = ["cannon", "rook", "knight", "elephant", "advisor", "pawn", "king"];
   const PIECE_SYMBOL = {
     queen: "♛",
     rook: "♜",
@@ -714,32 +849,40 @@
     knight: "♞",
     pawn: "♟",
     king: "♚",
+    cannon: "砲",
+    elephant: "相",
+    advisor: "仕",
   };
+
+  const capturedPieceOrder = () =>
+    boardGameType === "xianqi" ? XIANQI_PIECE_ORDER : CHESS_PIECE_ORDER;
 
   const capturedMapToText = (captured) => {
     const parts = [];
-    for (const kind of PIECE_ORDER) {
+    for (const kind of capturedPieceOrder()) {
       const count = captured[kind] || 0;
       if (count <= 0) continue;
-      parts.push(`${PIECE_SYMBOL[kind]}×${count}`);
+      parts.push(`${PIECE_SYMBOL[kind] || kind}×${count}`);
     }
     return parts.length ? parts.join("  ") : "";
   };
 
+  const emptyCapturedSide = () => {
+    const side = {};
+    for (const kind of capturedPieceOrder()) side[kind] = 0;
+    return side;
+  };
+
   const normalizeCapturedSummary = (summary) => {
-    if (!summary || typeof summary !== "object")
-      return {
-        white: { pawn: 0, rook: 0, knight: 0, bishop: 0, queen: 0, king: 0 },
-        black: { pawn: 0, rook: 0, knight: 0, bishop: 0, queen: 0, king: 0 },
-      };
-    const normalized = {
-      white: { pawn: 0, rook: 0, knight: 0, bishop: 0, queen: 0, king: 0 },
-      black: { pawn: 0, rook: 0, knight: 0, bishop: 0, queen: 0, king: 0 },
-    };
+    const order = capturedPieceOrder();
+    if (!summary || typeof summary !== "object") {
+      return { white: emptyCapturedSide(), black: emptyCapturedSide() };
+    }
+    const normalized = { white: emptyCapturedSide(), black: emptyCapturedSide() };
     for (const side of ["white", "black"]) {
       const source = summary[side];
       if (!source || typeof source !== "object") continue;
-      for (const kind of PIECE_ORDER) {
+      for (const kind of order) {
         const value = Number(source[kind]);
         normalized[side][kind] = Number.isFinite(value) && value > 0 ? value : 0;
       }
@@ -813,6 +956,10 @@
 
   const startAnalysisPolling = (targetMoveNumber, capturedSnapshot) => {
     stopAnalysisPolling();
+    if (boardGameType === "xianqi" || boardGameType === "shogi") {
+      setNotesText("Coach analysis is Chess-only for now. Play is unaffected.");
+      return;
+    }
     setNotesText("Analyzing...");
     const target = Number(targetMoveNumber) || 0;
     pendingAnalysisTargetMove = target;
@@ -857,10 +1004,39 @@
     const color = String(side || "").toLowerCase() === "black" ? "black" : "white";
     const kind = String(pieceKind || "").toLowerCase();
     const iconMap = {
-      white: { pawn: "♙", rook: "♖", knight: "♘", bishop: "♗", queen: "♕", king: "♔" },
-      black: { pawn: "♟", rook: "♜", knight: "♞", bishop: "♝", queen: "♛", king: "♚" },
+      white: {
+        pawn: "♙", rook: "♖", knight: "♘", bishop: "♗", queen: "♕", king: "♔",
+        // Xiangqi API kinds (unicode fallback when not using piece PNGs)
+        cannon: "砲", advisor: "仕", elephant: "相",
+        lance: "L", silver: "S", gold: "G",
+        promoted_pawn: "+P", promoted_lance: "+L", promoted_knight: "+N",
+        promoted_silver: "+S", dragon: "D", horse: "H",
+      },
+      black: {
+        pawn: "♟", rook: "♜", knight: "♞", bishop: "♝", queen: "♛", king: "♚",
+        cannon: "炮", advisor: "士", elephant: "象",
+        lance: "l", silver: "s", gold: "g",
+        promoted_pawn: "+p", promoted_lance: "+l", promoted_knight: "+n",
+        promoted_silver: "+s", dragon: "d", horse: "h",
+      },
     };
-    return iconMap[color]?.[kind] || (color === "black" ? "♟" : "♙");
+    return iconMap[color]?.[kind] || kind.slice(0, 1).toUpperCase() || "?";
+  };
+
+  const fillHistoryPieceIcon = (el, side, pieceKind) => {
+    el.className = "chess_move_history_piece_icon";
+    el.replaceChildren();
+    if (boardGameType === "xianqi") {
+      const path = imagePathFromPiece({ kind: pieceKind, color: side });
+      if (path) {
+        const img = document.createElement("img");
+        img.src = path;
+        img.alt = String(pieceKind || "");
+        el.appendChild(img);
+        return;
+      }
+    }
+    el.textContent = movePieceIcon(side, pieceKind);
   };
 
   const opponentSide = (side) =>
@@ -869,15 +1045,15 @@
   const destinationFromCommand = (command) => {
     const text = String(command || "").trim().toLowerCase();
     if (!text) return "";
-    const match = text.match(/([a-h][1-8])[qrbn]?$/);
+    // Chess a-h/1-8 (+ promo); Xiangqi/Shogi a-i and ranks to 10 (+ optional '+')
+    const match = text.match(/([a-i]\d{1,2})(?:[qrbn]|\+)?$/i);
     return match ? match[1] : text;
   };
 
   const appendHistoryMove = (listEl, side, pieceKind, toSquare, fallbackText, isCapture, capturedPieceKind) => {
     const item = document.createElement("li");
     const iconSpan = document.createElement("span");
-    iconSpan.className = "chess_move_history_piece_icon";
-    iconSpan.textContent = movePieceIcon(side, pieceKind);
+    fillHistoryPieceIcon(iconSpan, side, pieceKind);
     const textSpan = document.createElement("span");
     textSpan.className = "chess_move_history_move_text";
     const moveText = toSquare || fallbackText || "";
@@ -885,8 +1061,7 @@
       textSpan.textContent = `${moveText} x `;
       if (capturedPieceKind) {
         const capturedIcon = document.createElement("span");
-        capturedIcon.className = "chess_move_history_piece_icon";
-        capturedIcon.textContent = movePieceIcon(opponentSide(side), capturedPieceKind);
+        fillHistoryPieceIcon(capturedIcon, opponentSide(side), capturedPieceKind);
         textSpan.appendChild(capturedIcon);
       }
     } else {
@@ -966,11 +1141,13 @@
     moveHistoryBlackList.scrollTop = moveHistoryBlackList.scrollHeight;
   };
 
+  const maxSequence = () => boardFiles * boardMaxRank - 1;
+
   const sequenceToSquare = (sequence) => {
     const seq = Number(sequence);
-    if (Number.isNaN(seq) || seq < 0 || seq > 63) return "";
-    const fileChar = String.fromCharCode("a".charCodeAt(0) + (seq % 8));
-    const rankNum = 8 - Math.floor(seq / 8);
+    if (Number.isNaN(seq) || seq < 0 || seq > maxSequence()) return "";
+    const fileChar = String.fromCharCode("a".charCodeAt(0) + (seq % boardFiles));
+    const rankNum = boardMaxRank - Math.floor(seq / boardFiles);
     return `${fileChar}${rankNum}`;
   };
 
@@ -983,38 +1160,36 @@
 
   const rankFromSequence = (sequence) => {
     const seq = Number(sequence);
-    if (Number.isNaN(seq) || seq < 0 || seq > 63) return NaN;
-    return 8 - Math.floor(seq / 8);
+    if (Number.isNaN(seq) || seq < 0 || seq > maxSequence()) return NaN;
+    return boardMaxRank - Math.floor(seq / boardFiles);
   };
 
   const fileRankFromSequence = (sequence) => {
     const seq = Number(sequence);
-    if (Number.isNaN(seq) || seq < 0 || seq > 63) return null;
+    if (Number.isNaN(seq) || seq < 0 || seq > maxSequence()) return null;
     return {
-      file: (seq % 8) + 1,
-      rank: 8 - Math.floor(seq / 8),
+      file: (seq % boardFiles) + 1,
+      rank: boardMaxRank - Math.floor(seq / boardFiles),
     };
   };
 
-  // Helper to apply a UCI move string (e.g. "e2e4") to the visual board DOM.
-  // Used for live AI simulation playback.
+  // Helper to apply a UCI move string (e.g. "e2e4", "h3h10") to the visual board DOM.
   const applyUciMoveToBoard = (uci) => {
     if (!uci || uci.length < 4) return;
-    const fromSq = uci.substring(0, 2);
-    const toSq = uci.substring(2, 4);
-
-    // Find squares by their algebraic notation (data-square or by calculating sequence)
-    // We use the existing sequence calculation logic.
-    const getSequenceFromAlgebraic = (alg) => {
-      if (!alg || alg.length !== 2) return -1;
-      const file = alg.charCodeAt(0) - 'a'.charCodeAt(0) + 1;
-      const rank = parseInt(alg[1], 10);
-      if (file < 1 || file > 8 || rank < 1 || rank > 8) return -1;
-      return (8 - rank) * 8 + (file - 1);
-    };
-
-    const fromSeq = getSequenceFromAlgebraic(fromSq);
-    const toSeq = getSequenceFromAlgebraic(toSq);
+    const match = String(uci).match(/^([a-i])(\d{1,2})([a-i])(\d{1,2})/i);
+    if (!match) return;
+    const fromFile = match[1].toLowerCase().charCodeAt(0) - "a".charCodeAt(0) + 1;
+    const fromRank = parseInt(match[2], 10);
+    const toFile = match[3].toLowerCase().charCodeAt(0) - "a".charCodeAt(0) + 1;
+    const toRank = parseInt(match[4], 10);
+    if (
+      fromFile < 1 || fromFile > boardFiles || fromRank < 1 || fromRank > boardMaxRank ||
+      toFile < 1 || toFile > boardFiles || toRank < 1 || toRank > boardMaxRank
+    ) {
+      return;
+    }
+    const fromSeq = sequenceByFileRank(fromFile, fromRank);
+    const toSeq = sequenceByFileRank(toFile, toRank);
 
     const fromEl = boardElement.querySelector(`.chess_board_square[data-sequence="${fromSeq}"]`);
     const toEl = boardElement.querySelector(`.chess_board_square[data-sequence="${toSeq}"]`);
@@ -1024,11 +1199,9 @@
     const piece = fromEl.querySelector(".piece_img");
     if (!piece) return;
 
-    // Capture logic: remove piece at destination if exists
     const captured = toEl.querySelector(".piece_img");
     if (captured) captured.remove();
 
-    // Move piece
     toEl.appendChild(piece);
   };
 
@@ -1060,6 +1233,7 @@
   };
 
   const requiresPromotion = (toSequence) => {
+    if (boardGameType !== "chess") return false;
     const target = fileRankFromSequence(toSequence);
     if (!target) return false;
     return selectedLegalMoves.some(
@@ -1207,6 +1381,10 @@
 
   const refreshSuggestedMoves = async (retry = true) => {
     if (isSimulationPlayback) return;
+    if (boardGameType === "xianqi" || boardGameType === "shogi") {
+      highlightSuggestedMoves([]);
+      return;
+    }
     if (!currentGameId || gameOver) {
       highlightSuggestedMoves([]);
       return;
@@ -1350,12 +1528,29 @@
   };
 
   const sequenceByFileRank = (fileNum, rankNum) =>
-    (8 - rankNum) * 8 + (fileNum - 1);
+    (boardMaxRank - rankNum) * boardFiles + (fileNum - 1);
+
+  // API kinds → xianqi_pic filenames (bear = elephant; unused: dragon_*, empress_*).
+  const XIANQI_KIND_FILE = {
+    king: "general",
+    advisor: "advisor",
+    elephant: "bear",
+    knight: "horse",
+    rook: "chariot",
+    cannon: "cannon",
+    pawn: "soldier",
+  };
 
   const imagePathFromPiece = (piece) => {
     const kind = String(piece?.kind || "").toLowerCase();
     const color = String(piece?.color || "").toLowerCase();
     if (!kind || !color) return "";
+    if (boardGameType === "xianqi") {
+      const file = XIANQI_KIND_FILE[kind];
+      if (!file) return "";
+      const side = color === "black" ? "black" : "white";
+      return `/pic/xianqi_pic/${file}_${side}.png`;
+    }
     const tone = color === "black" ? "dark" : "light";
     return `/pic/chess_pic/${kind}_${tone}.png`;
   };
@@ -1363,8 +1558,11 @@
   // Full board sync from backend state (handles en passant, castling, promotion)
   const renderBoardFromState = (state) => {
     if (!Array.isArray(state)) return false;
+    ensureBoardGeometry(gameTypeSelect?.value || boardGameType);
 
-    const boardSquares = document.querySelectorAll(".chess_board_square[data-sequence]");
+    const boardSquares = boardElement
+      ? boardElement.querySelectorAll(".chess_board_square[data-sequence]")
+      : document.querySelectorAll(".chess_board_square[data-sequence]");
     boardSquares.forEach((square) => {
       square.querySelectorAll(".piece_img").forEach((el) => el.remove());
     });
@@ -1372,9 +1570,9 @@
     for (const piece of state) {
       if (!piece || !piece.file || !piece.rank) continue;
       const sequence = sequenceByFileRank(piece.file, piece.rank);
-      const square = document.querySelector(
-        `.chess_board_square[data-sequence="${sequence}"]`
-      );
+      const square = boardElement
+        ? boardElement.querySelector(`.chess_board_square[data-sequence="${sequence}"]`)
+        : document.querySelector(`.chess_board_square[data-sequence="${sequence}"]`);
       if (!square) continue;
       const imagePath = imagePathFromPiece(piece);
       if (!imagePath) continue;
@@ -1764,7 +1962,11 @@
         const resp = await fetch("/api/simulate?details=true", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ games: n, profile }),
+          body: JSON.stringify({
+            games: n,
+            profile,
+            game: String(gameTypeSelect?.value || boardGameType || "chess"),
+          }),
         });
         simulationRequestInFlight = false;
         updateSetupControlState();
@@ -1859,10 +2061,11 @@
           setStatus("Missing game session. Start a new game first.", "error");
           return;
         }
-        // Send current dropdown values so the new game respects the selected mode/side/profile
+        // Send current dropdown values so the new game respects type/mode/side/profile
         const mode = String(gameModeSelect?.value || "human_vs_human");
         const humanColor = String(humanSideSelect?.value || "white");
         const body = new URLSearchParams({
+          type: String(gameTypeSelect?.value || "chess"),
           mode,
           humanColor,
           aiProfile: String(aiStrengthSelect?.value || "intermediate"),
@@ -1938,7 +2141,30 @@
     if (moveHistoryBlackList) moveHistoryBlackList.innerHTML = '<li class="chess_move_history_placeholder">No moves yet.</li>';
   }
 
+  function initialXiangqiState() {
+    const state = [];
+    const back = ["rook", "knight", "elephant", "advisor", "king", "advisor", "elephant", "knight", "rook"];
+    for (let file = 1; file <= 9; file++) {
+      state.push({ file, rank: 1, kind: back[file - 1], color: "white" });
+      state.push({ file, rank: 10, kind: back[file - 1], color: "black" });
+    }
+    for (const file of [2, 8]) {
+      state.push({ file, rank: 3, kind: "cannon", color: "white" });
+      state.push({ file, rank: 8, kind: "cannon", color: "black" });
+    }
+    for (const file of [1, 3, 5, 7, 9]) {
+      state.push({ file, rank: 4, kind: "pawn", color: "white" });
+      state.push({ file, rank: 7, kind: "pawn", color: "black" });
+    }
+    return state;
+  }
+
   function resetBoardToInitialState() {
+    ensureBoardGeometry(gameTypeSelect?.value || boardGameType);
+    if (boardGameType === "xianqi") {
+      renderBoardFromState(initialXiangqiState());
+      return;
+    }
     renderBoardFromState(initialChessState());
   }
 
@@ -2167,21 +2393,22 @@
   });
   void createSessionOnLoad();
 
-  // Helper for step 4 – apply AI move when the backend returns it together with the human move
+  // Apply AI move when the backend returns it together with the human move
   window.applyAIMoveFromResult = (result) => {
     if (!result || !result.aiMove) return false;
-    const uci = String(result.aiMove).toLowerCase();
-    if (uci.length < 4) return false;
-
-    const fromFile = uci.charCodeAt(0) - 97 + 1;
-    const fromRank = parseInt(uci[1], 10);
-    const toFile = uci.charCodeAt(2) - 97 + 1;
-    const toRank = parseInt(uci[3], 10);
-
-    if (fromFile && fromRank && toFile && toRank) {
-      applyMoveOnBoard(fromFile, fromRank, toFile, toRank);
-      return true;
+    const match = String(result.aiMove).match(/^([a-i])(\d{1,2})([a-i])(\d{1,2})/i);
+    if (!match) return false;
+    const fromFile = match[1].toLowerCase().charCodeAt(0) - 97 + 1;
+    const fromRank = parseInt(match[2], 10);
+    const toFile = match[3].toLowerCase().charCodeAt(0) - 97 + 1;
+    const toRank = parseInt(match[4], 10);
+    if (
+      fromFile < 1 || fromFile > boardFiles || fromRank < 1 || fromRank > boardMaxRank ||
+      toFile < 1 || toFile > boardFiles || toRank < 1 || toRank > boardMaxRank
+    ) {
+      return false;
     }
-    return false;
+    applyMoveOnBoard(fromFile, fromRank, toFile, toRank);
+    return true;
   };
 })();

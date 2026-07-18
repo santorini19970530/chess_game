@@ -1,0 +1,17 @@
+/* Shogi board — scoped by [data-game-type="shogi"]. Pieces sit inside squares. */
+
+/* Size comes from chessboard.css. */
+
+.chess_board_wrapper[data-game-type="shogi"] .chess_board {
+  aspect-ratio: 1 / 1;
+  border-color: #4a3828;
+  background: #c4a882;
+}
+
+.chess_board_wrapper[data-game-type="shogi"] .chess_board_square_light {
+  background-color: #e8d4b0;
+}
+
+.chess_board_wrapper[data-game-type="shogi"] .chess_board_square_dark {
+  background-color: #d9c49a;
+}

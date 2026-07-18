@@ -275,6 +275,7 @@ func BuildSnapshotByID(gameID string) (GameSnapshot, error) {
 	switch game.Session.Type {
 	case GameTypeXiangqi:
 		checked = string(movement.XiangqiCheckedColor())
+		captured = GetXiangqiCapturedSummary()
 	case GameTypeShogi:
 		checked = string(movement.ShogiCheckedColor())
 		captured = shogiHandsSummary() // captives live in hand (relife)

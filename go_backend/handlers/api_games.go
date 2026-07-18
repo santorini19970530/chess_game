@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	commandpkg "go_backend/game/command"
 	"go_backend/game/engine"
 	pieces "go_backend/game/piece"
 	sessionpkg "go_backend/game/session"
@@ -287,13 +286,10 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 		writeJSONError(w, http.StatusNotFound, "Game session not found")
 		return
 	}
-	expectedColor := pieces.PieceColor(turnColor)
-	parsed, err := commandpkg.ParseCommandForColor(commandText, expectedColor)
+	fromFile, fromRank, toFile, toRank, err := resolveMoveSquares(
+		currentGame.Type, commandText, pieces.PieceColor(turnColor),
+	)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	if err := commandpkg.ParseAndLogCommandForColor(commandText, expectedColor); err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -303,6 +299,10 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 		return
 	}
 	log.Printf("api move accepted %s command=%s", gameIDLabel(gameID), normalizedMove)
+	// Prefer squares from the accepted/normalized UCI (handles shogi "+").
+	if ff, fr, tf, tr, parseErr := parseVariantUCISquares(normalizedMove); parseErr == nil {
+		fromFile, fromRank, toFile, toRank = ff, fr, tf, tr
+	}
 
 	// Enqueue LLM explanation for the move just played (human move).
 	enqueueExplanation(gameID, normalizedMove, normalizedMove)
@@ -402,10 +402,10 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 		State:           snapshot.State,
 		AIMove:          aiMoveApplied,
 	}
-	response.From.File = string(parsed.FromFile)
-	response.From.Rank = parsed.FromRank
-	response.To.File = string(parsed.ToFile)
-	response.To.Rank = parsed.ToRank
+	response.From.File = fromFile
+	response.From.Rank = fromRank
+	response.To.File = toFile
+	response.To.Rank = toRank
 
 	gameSocketHub.Broadcast(gameID, socketEventMoveApplied, map[string]interface{}{
 		"command":     normalizedMove,
@@ -551,22 +551,36 @@ func (h *Handler) postAPIGameNew(w http.ResponseWriter, r *http.Request, gameID 
 		return
 	}
 	// Parse form to allow "New Game" to respect current dropdown selections
+	mode := currentGame.Mode
+	gameType := currentGame.Type
+	humanColor := currentGame.Config.HumanColor
+	aiProfile := currentGame.Config.AIProfile
 	if err := r.ParseForm(); err == nil {
 		if m := r.FormValue("mode"); m != "" {
-			currentGame.Mode = sessionpkg.GameMode(m)
+			mode = sessionpkg.GameMode(m)
+		}
+		if t := strings.TrimSpace(r.FormValue("type")); t != "" {
+			gameType = sessionpkg.GameType(t)
 		}
 		if h := r.FormValue("humanColor"); h != "" {
-			currentGame.Config.HumanColor = h
+			humanColor = h
+		}
+		if p := strings.TrimSpace(r.FormValue("aiProfile")); p != "" {
+			aiProfile = p
 		}
 	}
 
+	startFEN := currentGame.Config.StartFEN
+	if gameType != currentGame.Type {
+		startFEN = "" // prior FEN belongs to the old variant
+	}
 	game, err := sessionpkg.CreateGame(
-		currentGame.Mode,
-		currentGame.Type,
-		currentGame.Config.HumanColor,
+		mode,
+		gameType,
+		humanColor,
 		currentGame.Config.AIGameCount,
-		currentGame.Config.StartFEN,
-		currentGame.Config.AIProfile,
+		startFEN,
+		aiProfile,
 	)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())

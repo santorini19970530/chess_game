@@ -124,6 +124,35 @@ func TestAPIGameNewRoute_CreatesFreshGameSnapshot(t *testing.T) {
 	}
 }
 
+func TestAPIGameNewRoute_RespectsTypeDropdown(t *testing.T) {
+	h := NewHandler()
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")
+	if err != nil {
+		t.Fatalf("expected game create success, got %v", err)
+	}
+
+	body := strings.NewReader("type=xianqi&mode=human_vs_human&humanColor=white&aiProfile=beginner")
+	req := httptest.NewRequest(http.MethodPost, "/api/games/"+game.ID+"/new", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	h.APIGameRoutes(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Game struct {
+			Type string `json:"type"`
+		} `json:"game"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("expected valid json response, got %v", err)
+	}
+	if payload.Game.Type != string(sessionpkg.GameTypeXiangqi) {
+		t.Fatalf("expected type %q, got %q", sessionpkg.GameTypeXiangqi, payload.Game.Type)
+	}
+}
+
 func TestAPIGameFlagRoute_SetsTerminalResult(t *testing.T) {
 	h := NewHandler()
 	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")
@@ -159,6 +188,65 @@ func TestAPIGameFlagRoute_SetsTerminalResult(t *testing.T) {
 	}
 	if payload.Game.Result != "black_win" {
 		t.Fatalf("expected black_win result, got %q", payload.Game.Result)
+	}
+}
+
+func TestAPIGameMove_XiangqiAcceptsFileI(t *testing.T) {
+	// Chess UCI parser is a-h/1-8 only; i4i5 must still reach Xiangqi apply.
+	h := NewHandler()
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeXiangqi, "white", 1, "", "intermediate")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/games/"+game.ID+"/move",
+		strings.NewReader("command=i4i5"),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	h.APIGameRoutes(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for i4i5, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	var payload struct {
+		Command string `json:"command"`
+		From    struct {
+			File string `json:"file"`
+			Rank int    `json:"rank"`
+		} `json:"from"`
+		To struct {
+			File string `json:"file"`
+			Rank int    `json:"rank"`
+		} `json:"to"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("json: %v", err)
+	}
+	if payload.Command != "i4i5" {
+		t.Fatalf("command=%q", payload.Command)
+	}
+	if payload.From.File != "i" || payload.From.Rank != 4 || payload.To.File != "i" || payload.To.Rank != 5 {
+		t.Fatalf("squares from=%s%d to=%s%d", payload.From.File, payload.From.Rank, payload.To.File, payload.To.Rank)
+	}
+}
+
+func TestAPIGameMove_XiangqiAcceptsRank10(t *testing.T) {
+	h := NewHandler()
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeXiangqi, "white", 1, "", "intermediate")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/games/"+game.ID+"/move",
+		strings.NewReader("command=h3h10"),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	h.APIGameRoutes(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for h3h10, got %d body=%s", rec.Code, rec.Body.String())
 	}
 }
 

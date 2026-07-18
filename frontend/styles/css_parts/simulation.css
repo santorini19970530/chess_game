@@ -1,0 +1,79 @@
+/* Compact simulation summary UI (issue0030) */
+.simulation_summary_panel {
+  margin: 6px 0 8px;
+  border: 1px solid #2d2d2d;
+  background: #0f0f0f;
+  padding: 6px 8px;
+}
+
+.simulation_summary_hidden {
+  display: none;
+}
+
+.simulation_summary_table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.simulation_summary_table th,
+.simulation_summary_table td {
+  border: 1px solid #2d2d2d;
+  padding: 3px 4px;
+  text-align: center;
+  font-size: 0.78rem;
+}
+
+.simulation_summary_table th {
+  color: #b6c2d0;
+  font-weight: 600;
+}
+
+.simulation_summary_table td {
+  color: #f5f5f5;
+  font-weight: 700;
+}
+
+.simulation_result_details {
+  margin-top: 6px;
+}
+
+.simulation_result_details > summary {
+  cursor: pointer;
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  user-select: none;
+}
+
+.simulation_result_list {
+  margin-top: 4px;
+  max-height: 72px;
+  overflow-y: auto;
+  border-top: 1px solid #2d2d2d;
+  padding-top: 4px;
+}
+
+.simulation_result_list li {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.simulation_download_actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.simulation_download_btn {
+  margin-left: 0;
+  font-size: 0.78rem;
+  padding: 6px 12px;
+}
+
+#simulation_download_json_btn[disabled],
+#simulation_download_csv_btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

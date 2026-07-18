@@ -461,6 +461,11 @@ func analysisWorkerLoop() {
 }
 
 func enqueueCurrentPositionAnalysis(gameID, command string) {
+	if game, err := sessionpkg.GetGameSessionByID(gameID); err == nil {
+		if game.Type == sessionpkg.GameTypeXiangqi || game.Type == sessionpkg.GameTypeShogi {
+			return // Python analyser is Chess-only
+		}
+	}
 	history, err := sessionpkg.MoveHistoryByID(gameID)
 	if err != nil {
 		log.Printf("warning: enqueue analysis failed %s: %v", gameIDLabel(gameID), err)
@@ -560,6 +565,11 @@ func recordMoveAnalysis(command string, result analyzerResponse) {
 // On success it broadcasts a dedicated "explanation_ready" socket event.
 // Any failure (Ollama down, timeout, etc.) is silently ignored so the game is never affected.
 func enqueueExplanation(gameID, moveUCI, moveSAN string) {
+	if game, err := sessionpkg.GetGameSessionByID(gameID); err == nil {
+		if game.Type == sessionpkg.GameTypeXiangqi || game.Type == sessionpkg.GameTypeShogi {
+			return // Python analyser / explain is Chess-only
+		}
+	}
 	go func() {
 		history, err := sessionpkg.MoveHistoryByID(gameID)
 		if err != nil {
