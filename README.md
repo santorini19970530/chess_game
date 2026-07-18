@@ -100,6 +100,19 @@ Results write-up: FYP repo log sheet `123_chess_formal_ai_vs_ai_evaluation.md`.
 
 ---
 
+## UI board rendering (Chess / Xiangqi / Shogi)
+
+The playable board is a **CSS grid of div squares**, not a board image.
+
+- Server markup: `go_backend/game/board/board.go` builds `.chess_board_wrapper` → `.chess_board` → `.chess_board_square` with `data-sequence`.
+- Client: `frontend/scripts/chess_command.js` maps `file`/`rank` → sequence, paints pieces into those squares, and reuses legal/suggested square classes.
+- Style: `frontend/css/chess_board.css` (grid + light/dark). Variant size is a parameter (Chess 8×8, Xiangqi 9×10, Shogi 9×9).
+- Assets: **piece PNGs only** (`pic/chess_pic/`, `pic/xianqi_pic/`, `pic/shogi_pic/`). Do not use a full-board picture for layout.
+
+UI work for Xiangqi/Shogi (IMPLEMENTATION_ISSUES issue0035 / issue0037) extends this same path: change grid size + labels + piece image map (+ Shogi hands/drops). Rules stay in Go; the board divs only display state and collect moves.
+
+---
+
 ## How to read FEN / make moves (Xiangqi + Shogi)
 
 Both variants use the **same coordinate style as this API**:

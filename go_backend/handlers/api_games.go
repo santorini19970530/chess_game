@@ -551,22 +551,36 @@ func (h *Handler) postAPIGameNew(w http.ResponseWriter, r *http.Request, gameID 
 		return
 	}
 	// Parse form to allow "New Game" to respect current dropdown selections
+	mode := currentGame.Mode
+	gameType := currentGame.Type
+	humanColor := currentGame.Config.HumanColor
+	aiProfile := currentGame.Config.AIProfile
 	if err := r.ParseForm(); err == nil {
 		if m := r.FormValue("mode"); m != "" {
-			currentGame.Mode = sessionpkg.GameMode(m)
+			mode = sessionpkg.GameMode(m)
+		}
+		if t := strings.TrimSpace(r.FormValue("type")); t != "" {
+			gameType = sessionpkg.GameType(t)
 		}
 		if h := r.FormValue("humanColor"); h != "" {
-			currentGame.Config.HumanColor = h
+			humanColor = h
+		}
+		if p := strings.TrimSpace(r.FormValue("aiProfile")); p != "" {
+			aiProfile = p
 		}
 	}
 
+	startFEN := currentGame.Config.StartFEN
+	if gameType != currentGame.Type {
+		startFEN = "" // prior FEN belongs to the old variant
+	}
 	game, err := sessionpkg.CreateGame(
-		currentGame.Mode,
-		currentGame.Type,
-		currentGame.Config.HumanColor,
+		mode,
+		gameType,
+		humanColor,
 		currentGame.Config.AIGameCount,
-		currentGame.Config.StartFEN,
-		currentGame.Config.AIProfile,
+		startFEN,
+		aiProfile,
 	)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())

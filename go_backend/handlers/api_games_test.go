@@ -124,6 +124,35 @@ func TestAPIGameNewRoute_CreatesFreshGameSnapshot(t *testing.T) {
 	}
 }
 
+func TestAPIGameNewRoute_RespectsTypeDropdown(t *testing.T) {
+	h := NewHandler()
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")
+	if err != nil {
+		t.Fatalf("expected game create success, got %v", err)
+	}
+
+	body := strings.NewReader("type=xianqi&mode=human_vs_human&humanColor=white&aiProfile=beginner")
+	req := httptest.NewRequest(http.MethodPost, "/api/games/"+game.ID+"/new", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	h.APIGameRoutes(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Game struct {
+			Type string `json:"type"`
+		} `json:"game"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("expected valid json response, got %v", err)
+	}
+	if payload.Game.Type != string(sessionpkg.GameTypeXiangqi) {
+		t.Fatalf("expected type %q, got %q", sessionpkg.GameTypeXiangqi, payload.Game.Type)
+	}
+}
+
 func TestAPIGameFlagRoute_SetsTerminalResult(t *testing.T) {
 	h := NewHandler()
 	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")

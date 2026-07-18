@@ -1859,10 +1859,11 @@
           setStatus("Missing game session. Start a new game first.", "error");
           return;
         }
-        // Send current dropdown values so the new game respects the selected mode/side/profile
+        // Send current dropdown values so the new game respects type/mode/side/profile
         const mode = String(gameModeSelect?.value || "human_vs_human");
         const humanColor = String(humanSideSelect?.value || "white");
         const body = new URLSearchParams({
+          type: String(gameTypeSelect?.value || "chess"),
           mode,
           humanColor,
           aiProfile: String(aiStrengthSelect?.value || "intermediate"),
