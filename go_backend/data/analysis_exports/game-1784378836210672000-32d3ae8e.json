@@ -1,0 +1,3030 @@
+{
+  "game_id": "game-1784378836210672000-32d3ae8e",
+  "result": "white_win",
+  "game": {
+    "id": "game-1784378836210672000-32d3ae8e",
+    "mode": "human_vs_human",
+    "type": "shogi",
+    "config": {
+      "humanColor": "white",
+      "aiGameCount": 1,
+      "startFen": "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL[] w - - 0 1",
+      "aiProfile": "intermediate",
+      "whiteAIProfile": "intermediate",
+      "blackAIProfile": "intermediate"
+    },
+    "result": "white_win",
+    "outcome": {
+      "status": "checkmate",
+      "winner": "white",
+      "loser": "black",
+      "checkedSide": "black",
+      "legalMoves": 0,
+      "message": "Checkmate! White wins."
+    },
+    "createdAt": "2026-07-18T12:47:16Z",
+    "updatedAt": "2026-07-18T12:51:38Z"
+  },
+  "history": [
+    "White: h3h4",
+    "Black: f7f6",
+    "White: h4h5",
+    "Black: d7d6",
+    "White: h5h6",
+    "Black: g7g6",
+    "White: h6h7+",
+    "Black: h8g7",
+    "White: h7g7",
+    "Black: f9f8",
+    "White: g7f8",
+    "Black: e9d8",
+    "White: f8g9",
+    "Black: d8c8",
+    "White: g9h9",
+    "Black: c8d8",
+    "White: B*i5",
+    "Black: d8e8",
+    "White: G*g8",
+    "Black: e8d8",
+    "White: g8f8",
+    "Black: d8c8",
+    "White: i5h4",
+    "Black: c8d7",
+    "White: h4f6",
+    "Black: d7d8",
+    "White: f8f7",
+    "Black: d8c8",
+    "White: f7e7",
+    "Black: d6d5",
+    "White: e7d7",
+    "Black: c8d7",
+    "White: h2h7+",
+    "Black: d7e8",
+    "White: h7g6",
+    "Black: e8e9",
+    "White: h9i9",
+    "Black: G*c8",
+    "White: g6g8",
+    "Black: c8d8",
+    "White: S*e6",
+    "Black: d8e8",
+    "White: L*h6",
+    "Black: e8d8",
+    "White: e6d5",
+    "Black: d8c8",
+    "White: d5e6",
+    "Black: d9d8",
+    "White: N*f7",
+    "Black: e9d9",
+    "White: g8f9"
+  ],
+  "move_analysis": [
+    {
+      "move_number": 1,
+      "command": "h3h4",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-1",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgkgsnl/1r5b1/ppppppppp/9/9/7P1/PPPPPPP1P/1B5R1/LNSGKGSNL[] b - - 0 1",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 38,
+        "win_chance_white": 0.5316,
+        "win_chance_black": 0.4684,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "g7g6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "g7g6",
+            "san": "g7g6",
+            "score": 38
+          },
+          {
+            "rank": 2,
+            "uci": "f9f8",
+            "san": "f9f8",
+            "score": 38
+          },
+          {
+            "rank": 3,
+            "uci": "g9g8",
+            "san": "g9g8",
+            "score": 38
+          },
+          {
+            "rank": 4,
+            "uci": "f9g8",
+            "san": "f9g8",
+            "score": 7
+          },
+          {
+            "rank": 5,
+            "uci": "b8f8",
+            "san": "b8f8",
+            "score": 0
+          }
+        ],
+        "latency_ms": 92
+      }
+    },
+    {
+      "move_number": 2,
+      "command": "f7f6",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-2",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgkgsnl/1r5b1/ppppp1ppp/5p3/9/7P1/PPPPPPP1P/1B5R1/LNSGKGSNL[] w - - 0 2",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 92,
+        "win_chance_white": 0.5761,
+        "win_chance_black": 0.4239,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "h4h5",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h4h5",
+            "san": "h4h5",
+            "score": 92
+          },
+          {
+            "rank": 2,
+            "uci": "c3c4",
+            "san": "c3c4",
+            "score": 76
+          },
+          {
+            "rank": 3,
+            "uci": "c1d2",
+            "san": "c1d2",
+            "score": 46
+          },
+          {
+            "rank": 4,
+            "uci": "f1e2",
+            "san": "f1e2",
+            "score": 38
+          },
+          {
+            "rank": 5,
+            "uci": "d1c2",
+            "san": "d1c2",
+            "score": 0
+          }
+        ],
+        "latency_ms": 55
+      }
+    },
+    {
+      "move_number": 3,
+      "command": "h4h5",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-3",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgkgsnl/1r5b1/ppppp1ppp/5p3/7P1/9/PPPPPPP1P/1B5R1/LNSGKGSNL[] b - - 0 2",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -61,
+        "win_chance_white": 0.4493,
+        "win_chance_black": 0.5507,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "f9g8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "f9g8",
+            "san": "f9g8",
+            "score": -61
+          },
+          {
+            "rank": 2,
+            "uci": "g7g6",
+            "san": "g7g6",
+            "score": -76
+          },
+          {
+            "rank": 3,
+            "uci": "d9e8",
+            "san": "d9e8",
+            "score": -84
+          },
+          {
+            "rank": 4,
+            "uci": "g9g8",
+            "san": "g9g8",
+            "score": -100
+          },
+          {
+            "rank": 5,
+            "uci": "g9f8",
+            "san": "g9f8",
+            "score": -123
+          }
+        ],
+        "latency_ms": 49
+      }
+    },
+    {
+      "move_number": 4,
+      "command": "d7d6",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-4",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgkgsnl/1r5b1/ppp1p1ppp/3p1p3/7P1/9/PPPPPPP1P/1B5R1/LNSGKGSNL[] w - - 0 3",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 469,
+        "win_chance_white": 0.8268,
+        "win_chance_black": 0.1732,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "h5h6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h5h6",
+            "san": "h5h6",
+            "score": 469
+          },
+          {
+            "rank": 2,
+            "uci": "c3c4",
+            "san": "c3c4",
+            "score": 192
+          },
+          {
+            "rank": 3,
+            "uci": "c1c2",
+            "san": "c1c2",
+            "score": 153
+          },
+          {
+            "rank": 4,
+            "uci": "d1e2",
+            "san": "d1e2",
+            "score": 130
+          },
+          {
+            "rank": 5,
+            "uci": "h2h4",
+            "san": "h2h4",
+            "score": 107
+          }
+        ],
+        "latency_ms": 65
+      }
+    },
+    {
+      "move_number": 5,
+      "command": "h5h6",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-5",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgkgsnl/1r5b1/ppp1p1ppp/3p1p1P1/9/9/PPPPPPP1P/1B5R1/LNSGKGSNL[] b - - 0 3",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -292,
+        "win_chance_white": 0.2742,
+        "win_chance_black": 0.7258,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "h7h6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h7h6",
+            "san": "h7h6",
+            "score": -292
+          },
+          {
+            "rank": 2,
+            "uci": "c9c8",
+            "san": "c9c8",
+            "score": -530
+          },
+          {
+            "rank": 3,
+            "uci": "c9d8",
+            "san": "c9d8",
+            "score": -592
+          },
+          {
+            "rank": 4,
+            "uci": "b8f8",
+            "san": "b8f8",
+            "score": -600
+          },
+          {
+            "rank": 5,
+            "uci": "d9c8",
+            "san": "d9c8",
+            "score": -630
+          }
+        ],
+        "latency_ms": 65
+      }
+    },
+    {
+      "move_number": 6,
+      "command": "g7g6",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-6",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgkgsnl/1r5b1/ppp1p2pp/3p1ppP1/9/9/PPPPPPP1P/1B5R1/LNSGKGSNL[] w - - 0 4",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 623,
+        "win_chance_white": 0.8886,
+        "win_chance_black": 0.1114,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "h6h7+",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h6h7+",
+            "san": "h6h7+",
+            "score": 623
+          },
+          {
+            "rank": 2,
+            "uci": "h6h7",
+            "san": "h6h7",
+            "score": 215
+          },
+          {
+            "rank": 3,
+            "uci": "c1d2",
+            "san": "c1d2",
+            "score": 192
+          },
+          {
+            "rank": 4,
+            "uci": "d1e2",
+            "san": "d1e2",
+            "score": 138
+          },
+          {
+            "rank": 5,
+            "uci": "a3a4",
+            "san": "a3a4",
+            "score": 138
+          }
+        ],
+        "latency_ms": 47
+      }
+    },
+    {
+      "move_number": 7,
+      "command": "h6h7+",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-7",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgkgsnl/1r5b1/ppp1p2+Pp/3p1pp2/9/9/PPPPPPP1P/1B5R1/LNSGKGSNL[P] b - - 0 4",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -715,
+        "win_chance_white": 0.0845,
+        "win_chance_black": 0.9155,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "i7i6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "i7i6",
+            "san": "i7i6",
+            "score": -715
+          },
+          {
+            "rank": 2,
+            "uci": "b8f8",
+            "san": "b8f8",
+            "score": -730
+          },
+          {
+            "rank": 3,
+            "uci": "f9g8",
+            "san": "f9g8",
+            "score": -746
+          },
+          {
+            "rank": 4,
+            "uci": "h9g7",
+            "san": "h9g7",
+            "score": -769
+          },
+          {
+            "rank": 5,
+            "uci": "b8e8",
+            "san": "b8e8",
+            "score": -838
+          }
+        ],
+        "latency_ms": 98
+      }
+    },
+    {
+      "move_number": 8,
+      "command": "h8g7",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-8",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgkgsnl/1r7/ppp1p1b+Pp/3p1pp2/9/9/PPPPPPP1P/1B5R1/LNSGKGSNL[P] w - - 0 5",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 923,
+        "win_chance_white": 0.9559,
+        "win_chance_black": 0.0441,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "h7g7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h7g7",
+            "san": "h7g7",
+            "score": 923
+          },
+          {
+            "rank": 2,
+            "uci": "c1d2",
+            "san": "c1d2",
+            "score": 753
+          },
+          {
+            "rank": 3,
+            "uci": "c3c4",
+            "san": "c3c4",
+            "score": 638
+          },
+          {
+            "rank": 4,
+            "uci": "f1e2",
+            "san": "f1e2",
+            "score": 630
+          },
+          {
+            "rank": 5,
+            "uci": "c1c2",
+            "san": "c1c2",
+            "score": 615
+          }
+        ],
+        "latency_ms": 34
+      }
+    },
+    {
+      "move_number": 9,
+      "command": "h7g7",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-9",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgkgsnl/1r7/ppp1p1+P1p/3p1pp2/9/9/PPPPPPP1P/1B5R1/LNSGKGSNL[BP] b - - 0 5",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -884,
+        "win_chance_white": 0.0499,
+        "win_chance_black": 0.9501,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "h9g7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h9g7",
+            "san": "h9g7",
+            "score": -884
+          },
+          {
+            "rank": 2,
+            "uci": "c9c8",
+            "san": "c9c8",
+            "score": -1307
+          },
+          {
+            "rank": 3,
+            "uci": "b8g8",
+            "san": "b8g8",
+            "score": -1323
+          },
+          {
+            "rank": 4,
+            "uci": "d9e8",
+            "san": "d9e8",
+            "score": -1438
+          },
+          {
+            "rank": 5,
+            "uci": "a7a6",
+            "san": "a7a6",
+            "score": -1484
+          }
+        ],
+        "latency_ms": 74
+      }
+    },
+    {
+      "move_number": 10,
+      "command": "f9f8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-10",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgk1snl/1r3g3/ppp1p1+P1p/3p1pp2/9/9/PPPPPPP1P/1B5R1/LNSGKGSNL[BP] w - - 0 6",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 2423,
+        "win_chance_white": 0.9997,
+        "win_chance_black": 0.0003,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "g7f8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "g7f8",
+            "san": "g7f8",
+            "score": 2423
+          },
+          {
+            "rank": 2,
+            "uci": "h2h9",
+            "san": "h2h9",
+            "score": 1800
+          },
+          {
+            "rank": 3,
+            "uci": "h2h9+",
+            "san": "h2h9+",
+            "score": 1800
+          },
+          {
+            "rank": 4,
+            "uci": "g7g6",
+            "san": "g7g6",
+            "score": 1315
+          },
+          {
+            "rank": 5,
+            "uci": "g7h8",
+            "san": "g7h8",
+            "score": 1223
+          }
+        ],
+        "latency_ms": 42
+      }
+    },
+    {
+      "move_number": 11,
+      "command": "g7f8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-11",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgk1snl/1r3+P3/ppp1p3p/3p1pp2/9/9/PPPPPPP1P/1B5R1/LNSGKGSNL[BGP] b - - 0 6",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -1928,
+        "win_chance_white": 0.0016,
+        "win_chance_black": 0.9984,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "b8f8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "b8f8",
+            "san": "b8f8",
+            "score": -1928
+          },
+          {
+            "rank": 2,
+            "uci": "e9d8",
+            "san": "e9d8",
+            "score": -2592
+          },
+          {
+            "rank": 3,
+            "uci": "g9f8",
+            "san": "g9f8",
+            "score": -2776
+          },
+          {
+            "rank": 4,
+            "uci": "e9f8",
+            "san": "e9f8",
+            "score": -2930
+          }
+        ],
+        "latency_ms": 50
+      }
+    },
+    {
+      "move_number": 12,
+      "command": "e9d8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-12",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg2snl/1r1k1+P3/ppp1p3p/3p1pp2/9/9/PPPPPPP1P/1B5R1/LNSGKGSNL[BGP] w - - 0 7",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 2753,
+        "win_chance_white": 0.9999,
+        "win_chance_black": 0.0001,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "h2h9",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h2h9",
+            "san": "h2h9",
+            "score": 2753
+          },
+          {
+            "rank": 2,
+            "uci": "h2h9+",
+            "san": "h2h9+",
+            "score": 2753
+          },
+          {
+            "rank": 3,
+            "uci": "f8f7",
+            "san": "f8f7",
+            "score": 2553
+          },
+          {
+            "rank": 4,
+            "uci": "f8g9",
+            "san": "f8g9",
+            "score": 2376
+          },
+          {
+            "rank": 5,
+            "uci": "B@i2",
+            "san": "B@i2",
+            "score": 2038
+          }
+        ],
+        "latency_ms": 65
+      }
+    },
+    {
+      "move_number": 13,
+      "command": "f8g9",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-13",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg2+Pnl/1r1k5/ppp1p3p/3p1pp2/9/9/PPPPPPP1P/1B5R1/LNSGKGSNL[BGSP] b - - 0 7",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -2338,
+        "win_chance_white": 0.0004,
+        "win_chance_black": 0.9996,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "c9c8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "c9c8",
+            "san": "c9c8",
+            "score": -2338
+          },
+          {
+            "rank": 2,
+            "uci": "h9g7",
+            "san": "h9g7",
+            "score": -2384
+          },
+          {
+            "rank": 3,
+            "uci": "c7c6",
+            "san": "c7c6",
+            "score": -2384
+          },
+          {
+            "rank": 4,
+            "uci": "d9e8",
+            "san": "d9e8",
+            "score": -2676
+          },
+          {
+            "rank": 5,
+            "uci": "b7b6",
+            "san": "b7b6",
+            "score": -2700
+          }
+        ],
+        "latency_ms": 60
+      }
+    },
+    {
+      "move_number": 14,
+      "command": "d8c8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-14",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg2+Pnl/1rk6/ppp1p3p/3p1pp2/9/9/PPPPPPP1P/1B5R1/LNSGKGSNL[BGSP] w - - 0 8",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 5069,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "B@g4",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "B@g4",
+            "san": "B@g4",
+            "score": 5069
+          },
+          {
+            "rank": 2,
+            "uci": "B@i2",
+            "san": "B@i2",
+            "score": 5069
+          },
+          {
+            "rank": 3,
+            "uci": "B@h3",
+            "san": "B@h3",
+            "score": 4638
+          },
+          {
+            "rank": 4,
+            "uci": "h2h9+",
+            "san": "h2h9+",
+            "score": 2369
+          },
+          {
+            "rank": 5,
+            "uci": "h2h8+",
+            "san": "h2h8+",
+            "score": 2346
+          }
+        ],
+        "latency_ms": 138
+      }
+    },
+    {
+      "move_number": 15,
+      "command": "g9h9",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-15",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1rk6/ppp1p3p/3p1pp2/9/9/PPPPPPP1P/1B5R1/LNSGKGSNL[BGSNP] b - - 0 8",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -2643,
+        "win_chance_white": 0.0001,
+        "win_chance_black": 0.9999,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "b7b6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "b7b6",
+            "san": "b7b6",
+            "score": -2643
+          },
+          {
+            "rank": 2,
+            "uci": "d9e9",
+            "san": "d9e9",
+            "score": -2730
+          },
+          {
+            "rank": 3,
+            "uci": "b8a8",
+            "san": "b8a8",
+            "score": -2730
+          },
+          {
+            "rank": 4,
+            "uci": "d9e8",
+            "san": "d9e8",
+            "score": -2761
+          },
+          {
+            "rank": 5,
+            "uci": "e7e6",
+            "san": "e7e6",
+            "score": -2807
+          }
+        ],
+        "latency_ms": 106
+      }
+    },
+    {
+      "move_number": 16,
+      "command": "c8d8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-16",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1r1k5/ppp1p3p/3p1pp2/9/9/PPPPPPP1P/1B5R1/LNSGKGSNL[BGSNP] w - - 0 9",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 3138,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "h2h8+",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h2h8+",
+            "san": "h2h8+",
+            "score": 3138
+          },
+          {
+            "rank": 2,
+            "uci": "h2h8",
+            "san": "h2h8",
+            "score": 2931
+          },
+          {
+            "rank": 3,
+            "uci": "h9i9",
+            "san": "h9i9",
+            "score": 2876
+          },
+          {
+            "rank": 4,
+            "uci": "B@i2",
+            "san": "B@i2",
+            "score": 2830
+          },
+          {
+            "rank": 5,
+            "uci": "B@g4",
+            "san": "B@g4",
+            "score": 2830
+          }
+        ],
+        "latency_ms": 71
+      }
+    },
+    {
+      "move_number": 17,
+      "command": "B*i5",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-17",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1r1k5/ppp1p3p/3p1pp2/8B/9/PPPPPPP1P/1B5R1/LNSGKGSNL[GSNP] b - - 0 9",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -2292,
+        "win_chance_white": 0.0005,
+        "win_chance_black": 0.9995,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "d8d7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d8d7",
+            "san": "d8d7",
+            "score": -2292
+          },
+          {
+            "rank": 2,
+            "uci": "d8c8",
+            "san": "d8c8",
+            "score": -2384
+          },
+          {
+            "rank": 3,
+            "uci": "c7c6",
+            "san": "c7c6",
+            "score": -2423
+          },
+          {
+            "rank": 4,
+            "uci": "c9c8",
+            "san": "c9c8",
+            "score": -2476
+          },
+          {
+            "rank": 5,
+            "uci": "d9e8",
+            "san": "d9e8",
+            "score": -2630
+          }
+        ],
+        "latency_ms": 89
+      }
+    },
+    {
+      "move_number": 18,
+      "command": "d8e8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-18",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1r2k4/ppp1p3p/3p1pp2/8B/9/PPPPPPP1P/1B5R1/LNSGKGSNL[GSNP] w - - 0 10",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 3415,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "h2h8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h2h8",
+            "san": "h2h8",
+            "score": 3415
+          },
+          {
+            "rank": 2,
+            "uci": "h2h8+",
+            "san": "h2h8+",
+            "score": 3415
+          },
+          {
+            "rank": 3,
+            "uci": "h2h4",
+            "san": "h2h4",
+            "score": 3107
+          },
+          {
+            "rank": 4,
+            "uci": "b3b4",
+            "san": "b3b4",
+            "score": 3046
+          },
+          {
+            "rank": 5,
+            "uci": "h2h7",
+            "san": "h2h7",
+            "score": 3016
+          }
+        ],
+        "latency_ms": 109
+      }
+    },
+    {
+      "move_number": 19,
+      "command": "G*g8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-19",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1r2k1G2/ppp1p3p/3p1pp2/8B/9/PPPPPPP1P/1B5R1/LNSGKGSNL[SNP] b - - 0 10",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -2230,
+        "win_chance_white": 0.0006,
+        "win_chance_black": 0.9994,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "e8d7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e8d7",
+            "san": "e8d7",
+            "score": -2230
+          },
+          {
+            "rank": 2,
+            "uci": "e8d8",
+            "san": "e8d8",
+            "score": -2238
+          },
+          {
+            "rank": 3,
+            "uci": "b8d8",
+            "san": "b8d8",
+            "score": -2369
+          },
+          {
+            "rank": 4,
+            "uci": "i9i8",
+            "san": "i9i8",
+            "score": -2469
+          },
+          {
+            "rank": 5,
+            "uci": "c9d8",
+            "san": "c9d8",
+            "score": -2600
+          }
+        ],
+        "latency_ms": 39
+      }
+    },
+    {
+      "move_number": 20,
+      "command": "e8d8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-20",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1r1k2G2/ppp1p3p/3p1pp2/8B/9/PPPPPPP1P/1B5R1/LNSGKGSNL[SNP] w - - 0 11",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 2830,
+        "win_chance_white": 0.9999,
+        "win_chance_black": 0.0001,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "h2h7+",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h2h7+",
+            "san": "h2h7+",
+            "score": 2830
+          },
+          {
+            "rank": 2,
+            "uci": "i5f8+",
+            "san": "i5f8+",
+            "score": 2407
+          },
+          {
+            "rank": 3,
+            "uci": "i5f8",
+            "san": "i5f8",
+            "score": 2384
+          },
+          {
+            "rank": 4,
+            "uci": "i5g7",
+            "san": "i5g7",
+            "score": 2330
+          },
+          {
+            "rank": 5,
+            "uci": "h2h7",
+            "san": "h2h7",
+            "score": 2253
+          }
+        ],
+        "latency_ms": 64
+      }
+    },
+    {
+      "move_number": 21,
+      "command": "g8f8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-21",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1r1k1G3/ppp1p3p/3p1pp2/8B/9/PPPPPPP1P/1B5R1/LNSGKGSNL[SNP] b - - 0 11",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -2330,
+        "win_chance_white": 0.0004,
+        "win_chance_black": 0.9996,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "f6f5",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "f6f5",
+            "san": "f6f5",
+            "score": -2330
+          },
+          {
+            "rank": 2,
+            "uci": "i7i6",
+            "san": "i7i6",
+            "score": -2376
+          },
+          {
+            "rank": 3,
+            "uci": "i9i8",
+            "san": "i9i8",
+            "score": -2400
+          },
+          {
+            "rank": 4,
+            "uci": "c7c6",
+            "san": "c7c6",
+            "score": -2430
+          },
+          {
+            "rank": 5,
+            "uci": "d8d7",
+            "san": "d8d7",
+            "score": -2476
+          }
+        ],
+        "latency_ms": 66
+      }
+    },
+    {
+      "move_number": 22,
+      "command": "d8c8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-22",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1rk2G3/ppp1p3p/3p1pp2/8B/9/PPPPPPP1P/1B5R1/LNSGKGSNL[SNP] w - - 0 12",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 2892,
+        "win_chance_white": 0.9999,
+        "win_chance_black": 0.0001,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "i5g7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "i5g7",
+            "san": "i5g7",
+            "score": 2892
+          },
+          {
+            "rank": 2,
+            "uci": "i5g7+",
+            "san": "i5g7+",
+            "score": 2630
+          },
+          {
+            "rank": 3,
+            "uci": "h9i9",
+            "san": "h9i9",
+            "score": 2600
+          },
+          {
+            "rank": 4,
+            "uci": "h2h7+",
+            "san": "h2h7+",
+            "score": 2484
+          },
+          {
+            "rank": 5,
+            "uci": "c3c4",
+            "san": "c3c4",
+            "score": 2261
+          }
+        ],
+        "latency_ms": 19
+      }
+    },
+    {
+      "move_number": 23,
+      "command": "i5h4",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-23",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1rk2G3/ppp1p3p/3p1pp2/9/7B1/PPPPPPP1P/1B5R1/LNSGKGSNL[SNP] b - - 0 12",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -2046,
+        "win_chance_white": 0.0011,
+        "win_chance_black": 0.9989,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "c8d7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "c8d7",
+            "san": "c8d7",
+            "score": -2046
+          },
+          {
+            "rank": 2,
+            "uci": "c9d8",
+            "san": "c9d8",
+            "score": -2192
+          },
+          {
+            "rank": 3,
+            "uci": "f6f5",
+            "san": "f6f5",
+            "score": -2199
+          },
+          {
+            "rank": 4,
+            "uci": "i9i8",
+            "san": "i9i8",
+            "score": -2253
+          },
+          {
+            "rank": 5,
+            "uci": "a9a8",
+            "san": "a9a8",
+            "score": -2330
+          }
+        ],
+        "latency_ms": 46
+      }
+    },
+    {
+      "move_number": 24,
+      "command": "c8d7",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-24",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1r3G3/pppkp3p/3p1pp2/9/7B1/PPPPPPP1P/1B5R1/LNSGKGSNL[SNP] w - - 0 13",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 2315,
+        "win_chance_white": 0.9996,
+        "win_chance_black": 0.0004,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "f8f7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "f8f7",
+            "san": "f8f7",
+            "score": 2315
+          },
+          {
+            "rank": 2,
+            "uci": "N@c5",
+            "san": "N@c5",
+            "score": 2270
+          },
+          {
+            "rank": 3,
+            "uci": "h4i5",
+            "san": "h4i5",
+            "score": 2238
+          },
+          {
+            "rank": 4,
+            "uci": "N@e5",
+            "san": "N@e5",
+            "score": 2215
+          },
+          {
+            "rank": 5,
+            "uci": "S@f7",
+            "san": "S@f7",
+            "score": 2153
+          }
+        ],
+        "latency_ms": 109
+      }
+    },
+    {
+      "move_number": 25,
+      "command": "h4f6",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-25",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1r3G3/pppkp3p/3p1Bp2/9/9/PPPPPPP1P/1B5R1/LNSGKGSNL[SNPP] b - - 0 13",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -2015,
+        "win_chance_white": 0.0012,
+        "win_chance_black": 0.9988,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "b8f8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "b8f8",
+            "san": "b8f8",
+            "score": -2015
+          },
+          {
+            "rank": 2,
+            "uci": "d9d8",
+            "san": "d9d8",
+            "score": -2476
+          },
+          {
+            "rank": 3,
+            "uci": "d7c8",
+            "san": "d7c8",
+            "score": -2623
+          },
+          {
+            "rank": 4,
+            "uci": "b8d8",
+            "san": "b8d8",
+            "score": -2785
+          },
+          {
+            "rank": 5,
+            "uci": "b8e8",
+            "san": "b8e8",
+            "score": -2876
+          }
+        ],
+        "latency_ms": 82
+      }
+    },
+    {
+      "move_number": 26,
+      "command": "d7d8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-26",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1r1k1G3/ppp1p3p/3p1Bp2/9/9/PPPPPPP1P/1B5R1/LNSGKGSNL[SNPP] w - - 0 14",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 3661,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "f6e7+",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "f6e7+",
+            "san": "f6e7+",
+            "score": 3661
+          },
+          {
+            "rank": 2,
+            "uci": "h2h8",
+            "san": "h2h8",
+            "score": 3446
+          },
+          {
+            "rank": 3,
+            "uci": "h2h7+",
+            "san": "h2h7+",
+            "score": 3350
+          },
+          {
+            "rank": 4,
+            "uci": "h2h7",
+            "san": "h2h7",
+            "score": 3161
+          },
+          {
+            "rank": 5,
+            "uci": "h9i9",
+            "san": "h9i9",
+            "score": 2876
+          }
+        ],
+        "latency_ms": 65
+      }
+    },
+    {
+      "move_number": 27,
+      "command": "f8f7",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-27",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1r1k5/ppp1pG2p/3p1Bp2/9/9/PPPPPPP1P/1B5R1/LNSGKGSNL[SNPP] b - - 0 14",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -2934,
+        "win_chance_white": 0.0001,
+        "win_chance_black": 0.9999,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "c7c6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "c7c6",
+            "san": "c7c6",
+            "score": -2934
+          },
+          {
+            "rank": 2,
+            "uci": "d9e9",
+            "san": "d9e9",
+            "score": -3111
+          },
+          {
+            "rank": 3,
+            "uci": "d9e8",
+            "san": "d9e8",
+            "score": -3330
+          },
+          {
+            "rank": 4,
+            "uci": "d8c8",
+            "san": "d8c8",
+            "score": -3346
+          },
+          {
+            "rank": 5,
+            "uci": "d8d7",
+            "san": "d8d7",
+            "score": -3423
+          }
+        ],
+        "latency_ms": 50
+      }
+    },
+    {
+      "move_number": 28,
+      "command": "d8c8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-28",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1rk6/ppp1pG2p/3p1Bp2/9/9/PPPPPPP1P/1B5R1/LNSGKGSNL[SNPP] w - - 0 15",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 4484,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "h2h8+",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h2h8+",
+            "san": "h2h8+",
+            "score": 4484
+          },
+          {
+            "rank": 2,
+            "uci": "h2h8",
+            "san": "h2h8",
+            "score": 3346
+          },
+          {
+            "rank": 3,
+            "uci": "h9i9",
+            "san": "h9i9",
+            "score": 2784
+          },
+          {
+            "rank": 4,
+            "uci": "f6e7+",
+            "san": "f6e7+",
+            "score": 2769
+          },
+          {
+            "rank": 5,
+            "uci": "S@d7",
+            "san": "S@d7",
+            "score": 2584
+          }
+        ],
+        "latency_ms": 122
+      }
+    },
+    {
+      "move_number": 29,
+      "command": "f7e7",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-29",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1rk6/ppp1G3p/3p1Bp2/9/9/PPPPPPP1P/1B5R1/LNSGKGSNL[SNPPP] b - - 0 15",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -2500,
+        "win_chance_white": 0.0002,
+        "win_chance_black": 0.9998,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "b7b6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "b7b6",
+            "san": "b7b6",
+            "score": -2500
+          },
+          {
+            "rank": 2,
+            "uci": "c9d8",
+            "san": "c9d8",
+            "score": -3014
+          },
+          {
+            "rank": 3,
+            "uci": "c7c6",
+            "san": "c7c6",
+            "score": -3192
+          },
+          {
+            "rank": 4,
+            "uci": "d9e8",
+            "san": "d9e8",
+            "score": -4153
+          },
+          {
+            "rank": 5,
+            "uci": "d9d8",
+            "san": "d9d8",
+            "score": -4353
+          }
+        ],
+        "latency_ms": 60
+      }
+    },
+    {
+      "move_number": 30,
+      "command": "d6d5",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-30",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1rk6/ppp1G3p/5Bp2/3p5/9/PPPPPPP1P/1B5R1/LNSGKGSNL[SNPPP] w - - 0 16",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 100000,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "S@d7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "S@d7",
+            "san": "S@d7",
+            "score": 100000
+          },
+          {
+            "rank": 2,
+            "uci": "N@d6",
+            "san": "N@d6",
+            "score": 100000
+          },
+          {
+            "rank": 3,
+            "uci": "h2h8",
+            "san": "h2h8",
+            "score": 100000
+          },
+          {
+            "rank": 4,
+            "uci": "h2h8+",
+            "san": "h2h8+",
+            "score": 100000
+          },
+          {
+            "rank": 5,
+            "uci": "h9i9",
+            "san": "h9i9",
+            "score": 3207
+          }
+        ],
+        "latency_ms": 59
+      }
+    },
+    {
+      "move_number": 31,
+      "command": "e7d7",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-31",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1rk6/pppG4p/5Bp2/3p5/9/PPPPPPP1P/1B5R1/LNSGKGSNL[SNPPP] b - - 0 16",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -2630,
+        "win_chance_white": 0.0002,
+        "win_chance_black": 0.9998,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "c8d7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "c8d7",
+            "san": "c8d7",
+            "score": -2630
+          }
+        ],
+        "latency_ms": 24
+      }
+    },
+    {
+      "move_number": 32,
+      "command": "c8d7",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-32",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1r7/pppk4p/5Bp2/3p5/9/PPPPPPP1P/1B5R1/LNSGKGSNL[SNPPPg] w - - 0 17",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 3161,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "h2h7+",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h2h7+",
+            "san": "h2h7+",
+            "score": 3161
+          },
+          {
+            "rank": 2,
+            "uci": "h2h7",
+            "san": "h2h7",
+            "score": 2746
+          },
+          {
+            "rank": 3,
+            "uci": "h9i9",
+            "san": "h9i9",
+            "score": 2507
+          },
+          {
+            "rank": 4,
+            "uci": "d1d2",
+            "san": "d1d2",
+            "score": 2400
+          },
+          {
+            "rank": 5,
+            "uci": "c3c4",
+            "san": "c3c4",
+            "score": 2300
+          }
+        ],
+        "latency_ms": 249
+      }
+    },
+    {
+      "move_number": 33,
+      "command": "h2h7+",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-33",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1r7/pppk3+Rp/5Bp2/3p5/9/PPPPPPP1P/1B7/LNSGKGSNL[SNPPPg] b - - 0 17",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -2676,
+        "win_chance_white": 0.0001,
+        "win_chance_black": 0.9999,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "d7c6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d7c6",
+            "san": "d7c6",
+            "score": -2676
+          },
+          {
+            "rank": 2,
+            "uci": "G@g7",
+            "san": "G@g7",
+            "score": -3476
+          },
+          {
+            "rank": 3,
+            "uci": "d7d6",
+            "san": "d7d6",
+            "score": -100000
+          },
+          {
+            "rank": 4,
+            "uci": "d7e8",
+            "san": "d7e8",
+            "score": -100000
+          },
+          {
+            "rank": 5,
+            "uci": "G@f7",
+            "san": "G@f7",
+            "score": -100000
+          }
+        ],
+        "latency_ms": 31
+      }
+    },
+    {
+      "move_number": 34,
+      "command": "d7e8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-34",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1r2k4/ppp4+Rp/5Bp2/3p5/9/PPPPPPP1P/1B7/LNSGKGSNL[SNPPPg] w - - 0 18",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 100000,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "f6e7+",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "f6e7+",
+            "san": "f6e7+",
+            "score": 100000
+          },
+          {
+            "rank": 2,
+            "uci": "h7e7",
+            "san": "h7e7",
+            "score": 100000
+          },
+          {
+            "rank": 3,
+            "uci": "S@d7",
+            "san": "S@d7",
+            "score": 5700
+          },
+          {
+            "rank": 4,
+            "uci": "h9i9",
+            "san": "h9i9",
+            "score": 5015
+          },
+          {
+            "rank": 5,
+            "uci": "h7g7",
+            "san": "h7g7",
+            "score": 3730
+          }
+        ],
+        "latency_ms": 174
+      }
+    },
+    {
+      "move_number": 35,
+      "command": "h7g6",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-35",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsg3+Pl/1r2k4/ppp5p/5B+R2/3p5/9/PPPPPPP1P/1B7/LNSGKGSNL[SNPPPPg] b - - 0 18",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -2946,
+        "win_chance_white": 0.0001,
+        "win_chance_black": 0.9999,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "G@f8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "G@f8",
+            "san": "G@f8",
+            "score": -2946
+          },
+          {
+            "rank": 2,
+            "uci": "d9d8",
+            "san": "d9d8",
+            "score": -2969
+          },
+          {
+            "rank": 3,
+            "uci": "c9d8",
+            "san": "c9d8",
+            "score": -3230
+          },
+          {
+            "rank": 4,
+            "uci": "i9i8",
+            "san": "i9i8",
+            "score": -3592
+          },
+          {
+            "rank": 5,
+            "uci": "b8a8",
+            "san": "b8a8",
+            "score": -3615
+          }
+        ],
+        "latency_ms": 107
+      }
+    },
+    {
+      "move_number": 36,
+      "command": "e8e9",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-36",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgk2+Pl/1r7/ppp5p/5B+R2/3p5/9/PPPPPPP1P/1B7/LNSGKGSNL[SNPPPPg] w - - 0 19",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 3738,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "g6h7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "g6h7",
+            "san": "g6h7",
+            "score": 3738
+          },
+          {
+            "rank": 2,
+            "uci": "N@d7",
+            "san": "N@d7",
+            "score": 3676
+          },
+          {
+            "rank": 3,
+            "uci": "f6g7",
+            "san": "f6g7",
+            "score": 3638
+          },
+          {
+            "rank": 4,
+            "uci": "g6g9",
+            "san": "g6g9",
+            "score": 3615
+          },
+          {
+            "rank": 5,
+            "uci": "h9i9",
+            "san": "h9i9",
+            "score": 3548
+          }
+        ],
+        "latency_ms": 129
+      }
+    },
+    {
+      "move_number": 37,
+      "command": "h9i9",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-37",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgk3+P/1r7/ppp5p/5B+R2/3p5/9/PPPPPPP1P/1B7/LNSGKGSNL[SNLPPPPg] b - - 0 19",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -3261,
+        "win_chance_white": 0,
+        "win_chance_black": 1,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "G@g8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "G@g8",
+            "san": "G@g8",
+            "score": -3261
+          },
+          {
+            "rank": 2,
+            "uci": "G@f8",
+            "san": "G@f8",
+            "score": -4407
+          },
+          {
+            "rank": 3,
+            "uci": "G@e5",
+            "san": "G@e5",
+            "score": -4630
+          },
+          {
+            "rank": 4,
+            "uci": "b8d8",
+            "san": "b8d8",
+            "score": -4715
+          },
+          {
+            "rank": 5,
+            "uci": "G@f5",
+            "san": "G@f5",
+            "score": -4846
+          }
+        ],
+        "latency_ms": 168
+      }
+    },
+    {
+      "move_number": 38,
+      "command": "G*c8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-38",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgk3+P/1rg6/ppp5p/5B+R2/3p5/9/PPPPPPP1P/1B7/LNSGKGSNL[SNLPPPP] w - - 0 20",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 100000,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "L@e4",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "L@e4",
+            "san": "L@e4",
+            "score": 100000
+          },
+          {
+            "rank": 2,
+            "uci": "L@e5",
+            "san": "L@e5",
+            "score": 100000
+          },
+          {
+            "rank": 3,
+            "uci": "L@e6",
+            "san": "L@e6",
+            "score": 100000
+          },
+          {
+            "rank": 4,
+            "uci": "g6g9",
+            "san": "g6g9",
+            "score": 100000
+          },
+          {
+            "rank": 5,
+            "uci": "f6g7",
+            "san": "f6g7",
+            "score": 100000
+          }
+        ],
+        "latency_ms": 31
+      }
+    },
+    {
+      "move_number": 39,
+      "command": "g6g8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-39",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgk3+P/1rg3+R2/ppp5p/5B3/3p5/9/PPPPPPP1P/1B7/LNSGKGSNL[SNLPPPP] b - - 0 20",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -100000,
+        "win_chance_white": 0,
+        "win_chance_black": 1,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "d9d8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d9d8",
+            "san": "d9d8",
+            "score": -100000
+          },
+          {
+            "rank": 2,
+            "uci": "c8d8",
+            "san": "c8d8",
+            "score": -100000
+          },
+          {
+            "rank": 3,
+            "uci": "c8d7",
+            "san": "c8d7",
+            "score": -100000
+          },
+          {
+            "rank": 4,
+            "uci": "b8a8",
+            "san": "b8a8",
+            "score": -100000
+          },
+          {
+            "rank": 5,
+            "uci": "c9d8",
+            "san": "c9d8",
+            "score": -100000
+          }
+        ],
+        "latency_ms": 75
+      }
+    },
+    {
+      "move_number": 40,
+      "command": "c8d8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-40",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgk3+P/1r1g2+R2/ppp5p/5B3/3p5/9/PPPPPPP1P/1B7/LNSGKGSNL[SNLPPPP] w - - 0 21",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 100000,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "N@f7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "N@f7",
+            "san": "N@f7",
+            "score": 100000
+          },
+          {
+            "rank": 2,
+            "uci": "f6g7",
+            "san": "f6g7",
+            "score": 100000
+          },
+          {
+            "rank": 3,
+            "uci": "f6g7+",
+            "san": "f6g7+",
+            "score": 100000
+          },
+          {
+            "rank": 4,
+            "uci": "L@e5",
+            "san": "L@e5",
+            "score": 100000
+          },
+          {
+            "rank": 5,
+            "uci": "L@e6",
+            "san": "L@e6",
+            "score": 100000
+          }
+        ],
+        "latency_ms": 29
+      }
+    },
+    {
+      "move_number": 41,
+      "command": "S*e6",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-41",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgk3+P/1r1g2+R2/ppp5p/4SB3/3p5/9/PPPPPPP1P/1B7/LNSGKGSNL[NLPPPP] b - - 0 21",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -100000,
+        "win_chance_white": 0,
+        "win_chance_black": 1,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "d9c8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d9c8",
+            "san": "d9c8",
+            "score": -100000
+          },
+          {
+            "rank": 2,
+            "uci": "d8e7",
+            "san": "d8e7",
+            "score": -100000
+          },
+          {
+            "rank": 3,
+            "uci": "c9c8",
+            "san": "c9c8",
+            "score": -100000
+          },
+          {
+            "rank": 4,
+            "uci": "b8a8",
+            "san": "b8a8",
+            "score": -100000
+          },
+          {
+            "rank": 5,
+            "uci": "b8c8",
+            "san": "b8c8",
+            "score": -100000
+          }
+        ],
+        "latency_ms": 15
+      }
+    },
+    {
+      "move_number": 42,
+      "command": "d8e8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-42",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgk3+P/1r2g1+R2/ppp5p/4SB3/3p5/9/PPPPPPP1P/1B7/LNSGKGSNL[NLPPPP] w - - 0 22",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 100000,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "g8g9",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "g8g9",
+            "san": "g8g9",
+            "score": 100000
+          },
+          {
+            "rank": 2,
+            "uci": "g8h9",
+            "san": "g8h9",
+            "score": 100000
+          },
+          {
+            "rank": 3,
+            "uci": "f6g7",
+            "san": "f6g7",
+            "score": 100000
+          },
+          {
+            "rank": 4,
+            "uci": "f6g7+",
+            "san": "f6g7+",
+            "score": 100000
+          },
+          {
+            "rank": 5,
+            "uci": "c1c2",
+            "san": "c1c2",
+            "score": 100000
+          }
+        ],
+        "latency_ms": 91
+      }
+    },
+    {
+      "move_number": 43,
+      "command": "L*h6",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-43",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgk3+P/1r2g1+R2/ppp5p/4SB1L1/3p5/9/PPPPPPP1P/1B7/LNSGKGSNL[NPPPP] b - - 0 22",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -100000,
+        "win_chance_white": 0,
+        "win_chance_black": 1,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "e8f8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e8f8",
+            "san": "e8f8",
+            "score": -100000
+          },
+          {
+            "rank": 2,
+            "uci": "e8e7",
+            "san": "e8e7",
+            "score": -100000
+          },
+          {
+            "rank": 3,
+            "uci": "e8f7",
+            "san": "e8f7",
+            "score": -100000
+          },
+          {
+            "rank": 4,
+            "uci": "b8a8",
+            "san": "b8a8",
+            "score": -100000
+          },
+          {
+            "rank": 5,
+            "uci": "b8c8",
+            "san": "b8c8",
+            "score": -100000
+          }
+        ],
+        "latency_ms": 48
+      }
+    },
+    {
+      "move_number": 44,
+      "command": "e8d8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-44",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgk3+P/1r1g2+R2/ppp5p/4SB1L1/3p5/9/PPPPPPP1P/1B7/LNSGKGSNL[NPPPP] w - - 0 23",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 100000,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "N@f7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "N@f7",
+            "san": "N@f7",
+            "score": 100000
+          },
+          {
+            "rank": 2,
+            "uci": "f6g7",
+            "san": "f6g7",
+            "score": 100000
+          },
+          {
+            "rank": 3,
+            "uci": "f6g7+",
+            "san": "f6g7+",
+            "score": 100000
+          },
+          {
+            "rank": 4,
+            "uci": "g8g9",
+            "san": "g8g9",
+            "score": 100000
+          },
+          {
+            "rank": 5,
+            "uci": "h6h7",
+            "san": "h6h7",
+            "score": 100000
+          }
+        ],
+        "latency_ms": 11
+      }
+    },
+    {
+      "move_number": 45,
+      "command": "e6d5",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-45",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgk3+P/1r1g2+R2/ppp5p/5B1L1/3S5/9/PPPPPPP1P/1B7/LNSGKGSNL[NPPPPP] b - - 0 23",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -100000,
+        "win_chance_white": 0,
+        "win_chance_black": 1,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "d9c8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d9c8",
+            "san": "d9c8",
+            "score": -100000
+          },
+          {
+            "rank": 2,
+            "uci": "d8e7",
+            "san": "d8e7",
+            "score": -100000
+          },
+          {
+            "rank": 3,
+            "uci": "b8a8",
+            "san": "b8a8",
+            "score": -100000
+          },
+          {
+            "rank": 4,
+            "uci": "b8c8",
+            "san": "b8c8",
+            "score": -100000
+          },
+          {
+            "rank": 5,
+            "uci": "c9c8",
+            "san": "c9c8",
+            "score": -100000
+          }
+        ],
+        "latency_ms": 7
+      }
+    },
+    {
+      "move_number": 46,
+      "command": "d8c8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-46",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgk3+P/1rg3+R2/ppp5p/5B1L1/3S5/9/PPPPPPP1P/1B7/LNSGKGSNL[NPPPPP] w - - 0 24",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 100000,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "N@f7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "N@f7",
+            "san": "N@f7",
+            "score": 100000
+          },
+          {
+            "rank": 2,
+            "uci": "f6g7",
+            "san": "f6g7",
+            "score": 100000
+          },
+          {
+            "rank": 3,
+            "uci": "f6g7+",
+            "san": "f6g7+",
+            "score": 100000
+          },
+          {
+            "rank": 4,
+            "uci": "d5e6",
+            "san": "d5e6",
+            "score": 100000
+          },
+          {
+            "rank": 5,
+            "uci": "g8g9",
+            "san": "g8g9",
+            "score": 100000
+          }
+        ],
+        "latency_ms": 10
+      }
+    },
+    {
+      "move_number": 47,
+      "command": "d5e6",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-47",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsgk3+P/1rg3+R2/ppp5p/4SB1L1/9/9/PPPPPPP1P/1B7/LNSGKGSNL[NPPPPP] b - - 0 24",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -100000,
+        "win_chance_white": 0,
+        "win_chance_black": 1,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "d9d8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d9d8",
+            "san": "d9d8",
+            "score": -100000
+          },
+          {
+            "rank": 2,
+            "uci": "b8a8",
+            "san": "b8a8",
+            "score": -100000
+          },
+          {
+            "rank": 3,
+            "uci": "c9d8",
+            "san": "c9d8",
+            "score": -100000
+          },
+          {
+            "rank": 4,
+            "uci": "a7a6",
+            "san": "a7a6",
+            "score": -100000
+          },
+          {
+            "rank": 5,
+            "uci": "b7b6",
+            "san": "b7b6",
+            "score": -100000
+          }
+        ],
+        "latency_ms": 2
+      }
+    },
+    {
+      "move_number": 48,
+      "command": "d9d8",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-48",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lns1k3+P/1rgg2+R2/ppp5p/4SB1L1/9/9/PPPPPPP1P/1B7/LNSGKGSNL[NPPPPP] w - - 0 25",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 100000,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "g8g9",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "g8g9",
+            "san": "g8g9",
+            "score": 100000
+          },
+          {
+            "rank": 2,
+            "uci": "f6g7",
+            "san": "f6g7",
+            "score": 100000
+          },
+          {
+            "rank": 3,
+            "uci": "f6g7+",
+            "san": "f6g7+",
+            "score": 100000
+          },
+          {
+            "rank": 4,
+            "uci": "N@f7",
+            "san": "N@f7",
+            "score": 100000
+          },
+          {
+            "rank": 5,
+            "uci": "e6e7",
+            "san": "e6e7",
+            "score": 100000
+          }
+        ],
+        "latency_ms": 108
+      }
+    },
+    {
+      "move_number": 49,
+      "command": "N*f7",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-49",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lns1k3+P/1rgg2+R2/ppp2N2p/4SB1L1/9/9/PPPPPPP1P/1B7/LNSGKGSNL[PPPPP] b - - 0 25",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": -100000,
+        "win_chance_white": 0,
+        "win_chance_black": 1,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "e9d9",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e9d9",
+            "san": "e9d9",
+            "score": -100000
+          }
+        ],
+        "latency_ms": 8
+      }
+    },
+    {
+      "move_number": 50,
+      "command": "e9d9",
+      "analysis": {
+        "request_id": "game-1784378836210672000-32d3ae8e-move-50",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "fen": "lnsk4+P/1rgg2+R2/ppp2N2p/4SB1L1/9/9/PPPPPPP1P/1B7/LNSGKGSNL[PPPPP] w - - 0 26",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 0,
+          "material_white": 0,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 100000,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "Position evaluated with Fairy-Stockfish.",
+        "best_move_uci": "g8f9",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "g8f9",
+            "san": "g8f9",
+            "score": 100000
+          },
+          {
+            "rank": 2,
+            "uci": "g8g9",
+            "san": "g8g9",
+            "score": 100000
+          },
+          {
+            "rank": 3,
+            "uci": "g8h9",
+            "san": "g8h9",
+            "score": 100000
+          },
+          {
+            "rank": 4,
+            "uci": "f7e9+",
+            "san": "f7e9+",
+            "score": 100000
+          },
+          {
+            "rank": 5,
+            "uci": "c3c4",
+            "san": "c3c4",
+            "score": 100000
+          }
+        ],
+        "latency_ms": 127
+      }
+    }
+  ],
+  "exported_at": "2026-07-18T12:51:38Z"
+}

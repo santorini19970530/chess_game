@@ -53,6 +53,53 @@
   transform: rotate(180deg) scale(1.1);
 }
 
+/* Same hint model as chess: square wash + corner rank. Deep blue/amber on pale wood. */
+.chess_board_wrapper[data-game-type="shogi"] .chess_board_square_suggested {
+  box-shadow: inset 0 0 0 3px #1d4ed8;
+  background: rgba(29, 78, 216, 0.22);
+}
+
+.chess_board_wrapper[data-game-type="shogi"] .chess_board_square_suggested_from {
+  box-shadow: inset 0 0 0 3px #b45309;
+  background: rgba(180, 83, 9, 0.28);
+}
+
+.chess_board_wrapper[data-game-type="shogi"] .chess_board_square_suggested[data-hint-rank]::after {
+  background: #1e3a8a;
+  color: #eff6ff;
+}
+
+/* Drop/relife dest: dashed edge so it is not confused with a board move. */
+.chess_board_wrapper[data-game-type="shogi"] .chess_board_square_suggested_drop {
+  outline: 3px dashed #1d4ed8;
+  outline-offset: -3px;
+}
+
+.shogi_hand_piece_hint {
+  outline: 3px solid #b45309;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px #fffbeb;
+  position: relative;
+}
+
+.shogi_hand_piece_hint[data-hint-rank]::before {
+  content: attr(data-hint-rank);
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 3;
+  min-width: 1rem;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #b45309;
+  color: #fffbeb;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  pointer-events: none;
+}
+
 /* Hands (snapshot captured): clickable drop inventory */
 .game_info_capture_value.shogi_hand {
   display: flex;
@@ -74,6 +121,10 @@
   border-radius: 4px;
   background: #e0c9a0;
   cursor: pointer;
+}
+
+span.shogi_hand_piece {
+  cursor: default;
 }
 
 .shogi_hand_piece:disabled {

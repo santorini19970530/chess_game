@@ -99,6 +99,19 @@ class TestVariantAnalyze(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["status"], "ok")
 
+    def test_uci_score_as_white_matches_chess_white_perspective(self) -> None:
+        # Same mapping chess uses: eval_cp is always White-minus-Black style.
+        self.assertEqual(analyzer.uci_score_as_white(120, XIANGQI_START), 120)
+        black_to_move = XIANGQI_START.replace(" w ", " b ", 1)
+        self.assertEqual(analyzer.uci_score_as_white(120, black_to_move), -120)
+
+    def test_win_chance_uses_shared_cp_mapping(self) -> None:
+        # Chess and variants must share cp_to_win_chance (not a separate formula).
+        cp = 150
+        expected = analyzer.cp_to_win_chance(cp)
+        self.assertAlmostEqual(expected + (1.0 - expected), 1.0, places=9)
+        self.assertGreater(expected, 0.5)
+
 
 if __name__ == "__main__":
     unittest.main()

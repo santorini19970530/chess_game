@@ -29,6 +29,7 @@ type analyzerRequest struct {
 	FEN       string `json:"fen"`
 	Color     string `json:"color"`
 	TopK      int    `json:"top_k"`
+	GameType  string `json:"game_type,omitempty"`
 }
 
 // explainRequest mirrors the payload expected by Python /explain.
@@ -461,10 +462,9 @@ func analysisWorkerLoop() {
 }
 
 func enqueueCurrentPositionAnalysis(gameID, command string) {
-	if game, err := sessionpkg.GetGameSessionByID(gameID); err == nil {
-		if game.Type == sessionpkg.GameTypeXiangqi || game.Type == sessionpkg.GameTypeShogi {
-			return // Python analyser is Chess-only
-		}
+	gameType := "chess"
+	if game, err := sessionpkg.GetGameSessionByID(gameID); err == nil && string(game.Type) != "" {
+		gameType = string(game.Type)
 	}
 	history, err := sessionpkg.MoveHistoryByID(gameID)
 	if err != nil {
@@ -491,6 +491,7 @@ func enqueueCurrentPositionAnalysis(gameID, command string) {
 			FEN:       fen,
 			Color:     color,
 			TopK:      5,
+			GameType:  gameType,
 		},
 	}
 
@@ -565,12 +566,11 @@ func recordMoveAnalysis(command string, result analyzerResponse) {
 // On success it broadcasts a dedicated "explanation_ready" socket event.
 // Any failure (Ollama down, timeout, etc.) is silently ignored so the game is never affected.
 func enqueueExplanation(gameID, moveUCI, moveSAN string) {
-	if game, err := sessionpkg.GetGameSessionByID(gameID); err == nil {
-		if game.Type == sessionpkg.GameTypeXiangqi || game.Type == sessionpkg.GameTypeShogi {
-			return // Python analyser / explain is Chess-only
-		}
-	}
 	go func() {
+		gameType := "chess"
+		if game, err := sessionpkg.GetGameSessionByID(gameID); err == nil && string(game.Type) != "" {
+			gameType = string(game.Type)
+		}
 		history, err := sessionpkg.MoveHistoryByID(gameID)
 		if err != nil {
 			return
@@ -589,7 +589,7 @@ func enqueueExplanation(gameID, moveUCI, moveSAN string) {
 			RequestID:   fmt.Sprintf("%s-explain-%d", gameID, moveNumber),
 			FEN:         fen,
 			Color:       color,
-			GameType:    "chess",
+			GameType:    gameType,
 			MoveUCI:     moveUCI,
 			MoveSAN:     moveSAN,
 			MoveHistory: history,

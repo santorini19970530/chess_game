@@ -161,10 +161,21 @@
   transform: translate(-50%, -50%) scale(1.12);
 }
 
+/* Same hint model as chess: square wash + corner rank. Deep blue/amber on pale wood. */
 .chess_board_wrapper[data-game-type="xianqi"] .chess_board_square_suggested {
-  background: transparent;
-  box-shadow: none;
-  outline: 3px solid #67e8f9;
-  outline-offset: -32%;
-  border-radius: 50%;
+  box-shadow: inset 0 0 0 3px #1d4ed8;
+  background: rgba(29, 78, 216, 0.22);
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .chess_board_square_suggested_from {
+  box-shadow: inset 0 0 0 3px #b45309;
+  background: rgba(180, 83, 9, 0.28);
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .chess_board_square_suggested[data-hint-rank]::after {
+  top: 8%;
+  right: 8%;
+  background: #1e3a8a;
+  color: #eff6ff;
+  font-size: 0.65rem;
 }

@@ -149,6 +149,14 @@ def _parse_info_multipv_pv(fields: List[str]) -> Tuple[int, Optional[str]]:
     return multipv, move
 
 
+def uci_score_as_white(score_cp: int, fen: str) -> int:
+    """UCI info scores are from the side to move; chess analyze uses White POV."""
+    parts = fen.split()
+    if len(parts) >= 2 and parts[1].lower() == "b":
+        return -int(score_cp)
+    return int(score_cp)
+
+
 def suggest_moves_fs_variant(
     fen: str,
     game_type: str,
@@ -157,18 +165,22 @@ def suggest_moves_fs_variant(
 ) -> Tuple[List[MoveSuggestion], Optional[int]]:
     """MultiPV search for xianqi/shogi via raw UCI (no chess.Board).
 
-    Returns (suggestions, eval_cp_white from multipv 1 score, or None if unavailable).
+    Returns (suggestions, eval_cp_white). Win% uses the same white-POV + cp_to_win_chance
+    path as chess; search is full-strength (not Skill Level handicap) so the bar does not
+    thrash from weak-profile noise.
     """
     variant = uci_variant_name(game_type)
-    options, limit = _profile_to_uci_options(profile)
-    skill = options.get("Skill Level", 5)
+    # Match chess analyze stability: true eval, not profile-handicapped search.
+    _ = profile  # kept for API compatibility with callers
+    skill = 20
+    limit = chess.engine.Limit(depth=10, time=0.5)
     multipv = max(1, min(top_k, 10))
     go_parts = []
     if limit.time is not None:
         go_parts.append(f"movetime {int(limit.time * 1000)}")
     if limit.depth is not None:
         go_parts.append(f"depth {int(limit.depth)}")
-    go_cmd = "go " + " ".join(go_parts) if go_parts else "go depth 8"
+    go_cmd = "go " + " ".join(go_parts) if go_parts else "go depth 10"
 
     with _raw_uci_lock:
         proc = _raw_uci_ensure(variant)
@@ -196,7 +208,7 @@ def suggest_moves_fs_variant(
             if move is None:
                 continue
             if score is not None and idx == 1:
-                eval_cp_white = score
+                eval_cp_white = uci_score_as_white(score, fen)
             if 1 <= idx <= multipv:
                 seen[idx] = MoveSuggestion(
                     rank=idx, uci=move, san=move, score=score if score is not None else 0

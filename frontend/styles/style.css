@@ -1,4 +1,5 @@
 /*! tailwindcss v4.2.2 | MIT License | https://tailwindcss.com */
+@layer properties;
 @layer theme, base, components, utilities;
 @layer theme {
   :root, :host {
@@ -161,7 +162,206 @@
     display: none !important;
   }
 }
-@layer utilities;
+@layer utilities {
+  .collapse {
+    visibility: collapse;
+  }
+  .visible {
+    visibility: visible;
+  }
+  .absolute {
+    position: absolute;
+  }
+  .fixed {
+    position: fixed;
+  }
+  .relative {
+    position: relative;
+  }
+  .static {
+    position: static;
+  }
+  .start {
+    inset-inline-start: var(--spacing);
+  }
+  .end {
+    inset-inline-end: var(--spacing);
+  }
+  .top-3 {
+    top: calc(var(--spacing) * 3);
+  }
+  .container {
+    width: 100%;
+    @media (width >= 40rem) {
+      max-width: 40rem;
+    }
+    @media (width >= 48rem) {
+      max-width: 48rem;
+    }
+    @media (width >= 64rem) {
+      max-width: 64rem;
+    }
+    @media (width >= 80rem) {
+      max-width: 80rem;
+    }
+    @media (width >= 96rem) {
+      max-width: 96rem;
+    }
+  }
+  .block {
+    display: block;
+  }
+  .contents {
+    display: contents;
+  }
+  .grid {
+    display: grid;
+  }
+  .hidden {
+    display: none;
+  }
+  .inline {
+    display: inline;
+  }
+  .inline-block {
+    display: inline-block;
+  }
+  .table {
+    display: table;
+  }
+  .grow {
+    flex-grow: 1;
+  }
+  .transform {
+    transform: var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,);
+  }
+  .truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .capitalize {
+    text-transform: capitalize;
+  }
+  .lowercase {
+    text-transform: lowercase;
+  }
+  .uppercase {
+    text-transform: uppercase;
+  }
+  .ring {
+    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+  .invert {
+    --tw-invert: invert(100%);
+    filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
+  }
+  .transition {
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+  }
+  .\[active\:chess\] {
+    active: chess;
+  }
+  .\[advancedpawn\:chess\] {
+    advancedpawn: chess;
+  }
+  .\[anti-losalamos\:losalamos\] {
+    anti-losalamos: losalamos;
+  }
+  .\[atomic-giveaway-hill\:giveaway\] {
+    atomic-giveaway-hill: giveaway;
+  }
+  .\[atomic-giveaway\:giveaway\] {
+    atomic-giveaway: giveaway;
+  }
+  .\[capture\:chess\] {
+    capture: chess;
+  }
+  .\[captureall\:extinction\] {
+    captureall: extinction;
+  }
+  .\[coffeehouse\:crazyhouse\] {
+    coffeehouse: crazyhouse;
+  }
+  .\[cornerrook\:chess\] {
+    cornerrook: chess;
+  }
+  .\[crossing\:kingofthehill\] {
+    crossing: kingofthehill;
+  }
+  .\[diana\:losalamos\] {
+    diana: losalamos;
+  }
+  .\[doublearmy\:chess\] {
+    doublearmy: chess;
+  }
+  .\[empire\:chess\] {
+    empire: chess;
+  }
+  .\[flipello\:flipersi\] {
+    flipello: flipersi;
+  }
+  .\[gemini\:janus\] {
+    gemini: janus;
+  }
+  .\[gothhouse\:capablanca\] {
+    gothhouse: capablanca;
+  }
+  .\[grandhouse\:grand\] {
+    grandhouse: grand;
+  }
+  .\[janggihouse\:janggi\] {
+    janggihouse: janggi;
+  }
+  .\[makrukhouse\:makruk\] {
+    makrukhouse: makruk;
+  }
+  .\[microchess\:gardner\] {
+    microchess: gardner;
+  }
+  .\[orda\:chess\] {
+    orda: chess;
+  }
+  .\[ordamirror\:chess\] {
+    ordamirror: chess;
+  }
+  .\[pawnsmassacre\:chess\] {
+    pawnsmassacre: chess;
+  }
+  .\[peasant\:chess\] {
+    peasant: chess;
+  }
+  .\[screen\:placement\] {
+    screen: placement;
+  }
+  .\[semitorpedo\:chess\] {
+    semitorpedo: chess;
+  }
+  .\[shinobi\:chess\] {
+    shinobi: chess;
+  }
+  .\[shogun\:crazyhouse\] {
+    shogun: crazyhouse;
+  }
+  .\[synochess\:pocketknight\] {
+    synochess: pocketknight;
+  }
+  .\[upsidedown\:chess\] {
+    upsidedown: chess;
+  }
+  .\[weak\:chess\] {
+    weak: chess;
+  }
+  .\[wildebeest\:chess\] {
+    wildebeest: chess;
+  }
+  .\[xiangqihouse\:xiangqi\] {
+    xiangqihouse: xiangqi;
+  }
+}
 * {
   margin: 0px;
   padding: 0px;
@@ -419,6 +619,28 @@ main {
   background: rgba(103, 232, 249, 0.10);
   position: relative;
 }
+.chess_board_square_suggested_from {
+  box-shadow: inset 0 0 0 3px #d97706;
+  background: rgba(217, 119, 6, 0.18);
+  position: relative;
+}
+.chess_board_square_suggested[data-hint-rank]::after {
+  content: attr(data-hint-rank);
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  z-index: 3;
+  min-width: 1rem;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #0c4a6e;
+  color: #f0f9ff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  pointer-events: none;
+}
 @media (min-width: 1100px) {
   .chess_board_wrapper {
     --board-size: min(100cqw, 100cqh, 100%);
@@ -556,11 +778,19 @@ main {
   transform: translate(-50%, -50%) scale(1.12);
 }
 .chess_board_wrapper[data-game-type="xianqi"] .chess_board_square_suggested {
-  background: transparent;
-  box-shadow: none;
-  outline: 3px solid #67e8f9;
-  outline-offset: -32%;
-  border-radius: 50%;
+  box-shadow: inset 0 0 0 3px #1d4ed8;
+  background: rgba(29, 78, 216, 0.22);
+}
+.chess_board_wrapper[data-game-type="xianqi"] .chess_board_square_suggested_from {
+  box-shadow: inset 0 0 0 3px #b45309;
+  background: rgba(180, 83, 9, 0.28);
+}
+.chess_board_wrapper[data-game-type="xianqi"] .chess_board_square_suggested[data-hint-rank]::after {
+  top: 8%;
+  right: 8%;
+  background: #1e3a8a;
+  color: #eff6ff;
+  font-size: 0.65rem;
 }
 .chess_board_wrapper[data-game-type="shogi"] .chess_board {
   --shogi-line: #3d2a1a;
@@ -596,6 +826,45 @@ main {
 .chess_board_wrapper[data-game-type="shogi"] .piece_img_selected[data-color="black"] {
   transform: rotate(180deg) scale(1.1);
 }
+.chess_board_wrapper[data-game-type="shogi"] .chess_board_square_suggested {
+  box-shadow: inset 0 0 0 3px #1d4ed8;
+  background: rgba(29, 78, 216, 0.22);
+}
+.chess_board_wrapper[data-game-type="shogi"] .chess_board_square_suggested_from {
+  box-shadow: inset 0 0 0 3px #b45309;
+  background: rgba(180, 83, 9, 0.28);
+}
+.chess_board_wrapper[data-game-type="shogi"] .chess_board_square_suggested[data-hint-rank]::after {
+  background: #1e3a8a;
+  color: #eff6ff;
+}
+.chess_board_wrapper[data-game-type="shogi"] .chess_board_square_suggested_drop {
+  outline: 3px dashed #1d4ed8;
+  outline-offset: -3px;
+}
+.shogi_hand_piece_hint {
+  outline: 3px solid #b45309;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px #fffbeb;
+  position: relative;
+}
+.shogi_hand_piece_hint[data-hint-rank]::before {
+  content: attr(data-hint-rank);
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 3;
+  min-width: 1rem;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #b45309;
+  color: #fffbeb;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  pointer-events: none;
+}
 .game_info_capture_value.shogi_hand {
   display: flex;
   flex-wrap: wrap;
@@ -615,6 +884,9 @@ main {
   border-radius: 4px;
   background: #e0c9a0;
   cursor: pointer;
+}
+span.shogi_hand_piece {
+  cursor: default;
 }
 .shogi_hand_piece:disabled {
   opacity: 0.45;
@@ -1047,4 +1319,180 @@ main {
 #simulation_download_json_btn[disabled], #simulation_download_csv_btn[disabled] {
   opacity: 0.6;
   cursor: not-allowed;
+}
+@property --tw-rotate-x {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-rotate-y {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-rotate-z {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-skew-x {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-skew-y {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-shadow-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+@property --tw-inset-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-inset-shadow-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-inset-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+@property --tw-ring-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-ring-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-inset-ring-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-inset-ring-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-ring-inset {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-ring-offset-width {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --tw-ring-offset-color {
+  syntax: "*";
+  inherits: false;
+  initial-value: #fff;
+}
+@property --tw-ring-offset-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-blur {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-brightness {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-contrast {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-grayscale {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-hue-rotate {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-invert {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-opacity {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-saturate {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-sepia {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-drop-shadow {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-drop-shadow-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-drop-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+@property --tw-drop-shadow-size {
+  syntax: "*";
+  inherits: false;
+}
+@layer properties {
+  @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
+    *, ::before, ::after, ::backdrop {
+      --tw-rotate-x: initial;
+      --tw-rotate-y: initial;
+      --tw-rotate-z: initial;
+      --tw-skew-x: initial;
+      --tw-skew-y: initial;
+      --tw-shadow: 0 0 #0000;
+      --tw-shadow-color: initial;
+      --tw-shadow-alpha: 100%;
+      --tw-inset-shadow: 0 0 #0000;
+      --tw-inset-shadow-color: initial;
+      --tw-inset-shadow-alpha: 100%;
+      --tw-ring-color: initial;
+      --tw-ring-shadow: 0 0 #0000;
+      --tw-inset-ring-color: initial;
+      --tw-inset-ring-shadow: 0 0 #0000;
+      --tw-ring-inset: initial;
+      --tw-ring-offset-width: 0px;
+      --tw-ring-offset-color: #fff;
+      --tw-ring-offset-shadow: 0 0 #0000;
+      --tw-blur: initial;
+      --tw-brightness: initial;
+      --tw-contrast: initial;
+      --tw-grayscale: initial;
+      --tw-hue-rotate: initial;
+      --tw-invert: initial;
+      --tw-opacity: initial;
+      --tw-saturate: initial;
+      --tw-sepia: initial;
+      --tw-drop-shadow: initial;
+      --tw-drop-shadow-color: initial;
+      --tw-drop-shadow-alpha: 100%;
+      --tw-drop-shadow-size: initial;
+    }
+  }
 }
