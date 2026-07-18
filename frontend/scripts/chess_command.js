@@ -54,6 +54,18 @@
   const LEGAL_PROMOTION_DESTINATION_CLASS = "chess_board_square_legal_promotion";
   const LEGAL_CAPTURE_DESTINATION_CLASS = "chess_board_square_legal_capture";
   const SUGGESTED_MOVE_CLASS = "chess_board_square_suggested";
+  const SUGGESTED_FROM_CLASS = "chess_board_square_suggested_from";
+  const SUGGESTED_DROP_CLASS = "chess_board_square_suggested_drop";
+  const HAND_HINT_CLASS = "shogi_hand_piece_hint";
+  const SHOGI_DROP_KIND_FROM_CHAR = {
+    p: "pawn",
+    l: "lance",
+    n: "knight",
+    s: "silver",
+    g: "gold",
+    b: "bishop",
+    r: "rook",
+  };
   let gameOver = false;
   let currentTurn = "white";
   let humanColor = "white";           // human's chosen color in Human vs AI mode
@@ -867,35 +879,10 @@
   const SHOGI_DROP_CHAR = {
     pawn: "P", lance: "L", knight: "N", silver: "S", gold: "G", bishop: "B", rook: "R",
   };
-  const PIECE_SYMBOL = {
-    queen: "♛",
-    rook: "♜",
-    bishop: "♝",
-    knight: "♞",
-    pawn: "♟",
-    king: "♚",
-    cannon: "砲",
-    elephant: "相",
-    advisor: "仕",
-    lance: "L",
-    silver: "S",
-    gold: "G",
-  };
-
   const capturedPieceOrder = () => {
     if (boardGameType === "xianqi") return XIANQI_PIECE_ORDER;
     if (boardGameType === "shogi") return SHOGI_PIECE_ORDER;
     return CHESS_PIECE_ORDER;
-  };
-
-  const capturedMapToText = (captured) => {
-    const parts = [];
-    for (const kind of capturedPieceOrder()) {
-      const count = captured[kind] || 0;
-      if (count <= 0) continue;
-      parts.push(`${PIECE_SYMBOL[kind] || kind}×${count}`);
-    }
-    return parts.length ? parts.join("  ") : "";
   };
 
   const isHandSidePlayable = (side) => {
@@ -906,45 +893,55 @@
     return true;
   };
 
-  const renderShogiHand = (el, side, captured) => {
+  // Shogi: icons are droppable hand pieces (own colour). Chess/Xiangqi: icons are captives (opponent colour).
+  const renderCapturedIcons = (el, side, captured) => {
     if (!el) return;
     el.replaceChildren();
     el.classList.add("shogi_hand");
+    const droppable = boardGameType === "shogi";
+    const iconColor = droppable ? side : side === "white" ? "black" : "white";
     let any = false;
-    for (const kind of SHOGI_PIECE_ORDER) {
+    for (const kind of capturedPieceOrder()) {
       const count = captured[kind] || 0;
       if (count <= 0) continue;
+      const path = imagePathFromPiece({ kind, color: iconColor });
+      if (!path) continue;
       any = true;
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "shogi_hand_piece";
-      btn.setAttribute("data-side", side);
-      btn.setAttribute("data-kind", kind);
-      btn.title = `${kind} ×${count}`;
+      const node = document.createElement(droppable ? "button" : "span");
+      if (droppable) node.type = "button";
+      node.className = "shogi_hand_piece";
+      node.setAttribute("data-side", side);
+      node.setAttribute("data-kind", kind);
+      node.title = `${kind} ×${count}`;
       if (
+        droppable &&
         selectedDropKind &&
         selectedDropKind.side === side &&
         selectedDropKind.kind === kind
       ) {
-        btn.classList.add("shogi_hand_piece_selected");
+        node.classList.add("shogi_hand_piece_selected");
       }
+      if (droppable) applyHandHintToNode(node, side, kind);
       const img = document.createElement("img");
-      img.src = `/pic/shogi_pic/${kind}.svg`;
+      img.src = path;
       img.alt = kind;
-      img.setAttribute("data-color", side);
+      // Shogi only: black hand pieces are rotated (same art). Xiangqi/chess use colour-specific art.
+      if (droppable) img.setAttribute("data-color", iconColor);
       img.draggable = false;
       const badge = document.createElement("span");
       badge.className = "shogi_hand_count";
       badge.textContent = String(count);
-      btn.appendChild(img);
-      btn.appendChild(badge);
-      btn.disabled = !isHandSidePlayable(side);
-      btn.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        void selectShogiHandPiece(side, kind);
-      });
-      el.appendChild(btn);
+      node.appendChild(img);
+      node.appendChild(badge);
+      if (droppable) {
+        node.disabled = !isHandSidePlayable(side);
+        node.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void selectShogiHandPiece(side, kind);
+        });
+      }
+      el.appendChild(node);
     }
     if (!any) {
       el.classList.remove("shogi_hand");
@@ -1011,19 +1008,8 @@
     const whiteTiny = whiteProb < 12;
     const blackTiny = blackProb < 12;
 
-    if (boardGameType === "shogi") {
-      renderShogiHand(capturedWhiteValue, "white", whiteCaptured);
-      renderShogiHand(capturedBlackValue, "black", blackCaptured);
-    } else {
-      if (capturedWhiteValue) {
-        capturedWhiteValue.classList.remove("shogi_hand");
-        capturedWhiteValue.textContent = capturedMapToText(whiteCaptured);
-      }
-      if (capturedBlackValue) {
-        capturedBlackValue.classList.remove("shogi_hand");
-        capturedBlackValue.textContent = capturedMapToText(blackCaptured);
-      }
-    }
+    renderCapturedIcons(capturedWhiteValue, "white", whiteCaptured);
+    renderCapturedIcons(capturedBlackValue, "black", blackCaptured);
     if (winProbWhiteValue) {
       winProbWhiteValue.textContent = formatPercentage(whiteProb);
       winProbWhiteValue.style.color = winProbLabelColor(whiteProb, true);
@@ -1051,10 +1037,6 @@
 
   const startAnalysisPolling = (targetMoveNumber, capturedSnapshot) => {
     stopAnalysisPolling();
-    if (boardGameType === "xianqi" || boardGameType === "shogi") {
-      setNotesText("Coach analysis is Chess-only for now. Play is unaffected.");
-      return;
-    }
     setNotesText("Analyzing...");
     const target = Number(targetMoveNumber) || 0;
     pendingAnalysisTargetMove = target;
@@ -1563,13 +1545,83 @@
   };
 
   let selectedSuggestedMoves = [];
+  /** @type {{ side: string, kind: string, rank: string }[]} */
+  let lastHandHints = [];
+
+  const parseUciMove = (move) => {
+    const raw = String(move || "").trim().toLowerCase();
+    const board = raw.match(/^([a-i])(\d{1,2})([a-i])(\d{1,2})(\+?)$/);
+    if (board) {
+      return {
+        from: { file: board[1].charCodeAt(0) - 96, rank: Number(board[2]) },
+        to: { file: board[3].charCodeAt(0) - 96, rank: Number(board[4]) },
+        dropKind: null,
+        promote: board[5] === "+",
+      };
+    }
+    const drop = raw.match(/^([plnsgbr])[*@]([a-i])([1-9])$/);
+    if (drop) {
+      return {
+        from: null,
+        to: { file: drop[2].charCodeAt(0) - 96, rank: Number(drop[3]) },
+        dropKind: drop[1].toUpperCase(),
+        promote: false,
+      };
+    }
+    return null;
+  };
+
+  const squareAt = (file, rank) => {
+    if (file < 1 || file > boardFiles || rank < 1 || rank > boardMaxRank) return null;
+    const sequence = sequenceByFileRank(file, rank);
+    return boardElement.querySelector(`.chess_board_square[data-sequence="${sequence}"]`);
+  };
+
+  const pieceKindAt = (file, rank) => {
+    const sq = squareAt(file, rank);
+    const kind = sq?.querySelector(".piece_img")?.getAttribute("data-kind");
+    return kind ? String(kind) : "piece";
+  };
+
+  const formatHintLine = (rank, parsed, scoreCp) => {
+    const sc =
+      typeof scoreCp === "number" ? ` (${scoreCp > 0 ? "+" : ""}${scoreCp})` : "";
+    if (!parsed) return `${rank}. ????${sc}`;
+    const toLab = `${String.fromCharCode(96 + parsed.to.file)}${parsed.to.rank}`;
+    if (parsed.dropKind) {
+      const kind =
+        SHOGI_DROP_KIND_FROM_CHAR[parsed.dropKind.toLowerCase()] || parsed.dropKind;
+      return `${rank}. DROP (relife) ${kind} from hand → ${toLab}${sc}`;
+    }
+    const fromLab = `${String.fromCharCode(96 + parsed.from.file)}${parsed.from.rank}`;
+    const kind = pieceKindAt(parsed.from.file, parsed.from.rank);
+    const promo = parsed.promote ? " (promote)" : "";
+    return `${rank}. ${kind} ${fromLab} → ${toLab}${promo}${sc}`;
+  };
+
+  const clearSuggestedHighlights = () => {
+    boardElement
+      .querySelectorAll(`.${SUGGESTED_MOVE_CLASS}, .${SUGGESTED_FROM_CLASS}, .${SUGGESTED_DROP_CLASS}`)
+      .forEach((square) => {
+        square.classList.remove(SUGGESTED_MOVE_CLASS, SUGGESTED_FROM_CLASS, SUGGESTED_DROP_CLASS);
+        square.removeAttribute("data-hint-rank");
+      });
+    document.querySelectorAll(`.${HAND_HINT_CLASS}`).forEach((el) => {
+      el.classList.remove(HAND_HINT_CLASS);
+      el.removeAttribute("data-hint-rank");
+    });
+    lastHandHints = [];
+  };
+
+  const applyHandHintToNode = (node, side, kind) => {
+    const hit = lastHandHints.find((h) => h.side === side && h.kind === kind);
+    if (!hit) return;
+    node.classList.add(HAND_HINT_CLASS);
+    node.setAttribute("data-hint-rank", hit.rank);
+  };
 
   const refreshSuggestedMoves = async (retry = true) => {
     if (isSimulationPlayback) return;
-    if (boardGameType === "xianqi" || boardGameType === "shogi") {
-      highlightSuggestedMoves([]);
-      return;
-    }
     if (!currentGameId || gameOver) {
       highlightSuggestedMoves([]);
       return;
@@ -1604,18 +1656,13 @@
   };
 
   const highlightSuggestedMoves = (suggestions) => {
-    // Clear previous suggestion highlights
-    boardElement
-      .querySelectorAll(`.${SUGGESTED_MOVE_CLASS}`)
-      .forEach((square) => square.classList.remove(SUGGESTED_MOVE_CLASS));
+    clearSuggestedHighlights();
 
     selectedSuggestedMoves = [];
     const top = Array.isArray(suggestions) ? suggestions.slice(0, 3) : [];
 
     if (!top.length) {
       if (gameInfoNotesBox) {
-        // Only clear if we previously wrote FS suggestions here.
-        // Preserve any LLM explanation that may still be relevant.
         if (gameInfoNotesBox.dataset.fsSuggestions === "1") {
           if (lastExplanationText) {
             setNotesText(lastExplanationText);
@@ -1628,32 +1675,43 @@
       return;
     }
 
-    // Subtle cyan ring on destination squares (secondary visual cue)
-    for (const sug of top) {
-      const toSq = String(sug?.to || sug?.move?.slice(2, 4) || "").toLowerCase();
-      if (!toSq || toSq.length !== 2) continue;
-      const file = toSq.charCodeAt(0) - 96;
-      const rank = Number(toSq[1]);
-      if (Number.isNaN(file) || Number.isNaN(rank)) continue;
-      const sequence = sequenceByFileRank(file, rank);
-      const square = boardElement.querySelector(
-        `.chess_board_square[data-sequence="${sequence}"]`
-      );
-      if (square) {
-        square.classList.add(SUGGESTED_MOVE_CLASS);
-        selectedSuggestedMoves.push({ sequence, move: sug.move || `${sug.from}${sug.to}` });
-      }
-    }
+    // Board move: amber origin + blue dest. Drop/relife: highlight hand chip + dashed dest.
+    top.forEach((sug, idx) => {
+      const parsed = parseUciMove(sug?.move || "");
+      if (!parsed) return;
+      const move = sug.move || "";
+      const rankLabel = String(idx + 1);
 
-    // Write suggestions into the existing notes textarea (reusing the reserved box)
+      if (parsed.dropKind) {
+        const kind = SHOGI_DROP_KIND_FROM_CHAR[parsed.dropKind.toLowerCase()];
+        const side = String(currentTurn || "white").toLowerCase();
+        if (kind) {
+          lastHandHints.push({ side, kind, rank: rankLabel });
+          document
+            .querySelectorAll(`.shogi_hand_piece[data-side="${side}"][data-kind="${kind}"]`)
+            .forEach((el) => applyHandHintToNode(el, side, kind));
+        }
+      } else if (parsed.from) {
+        const fromSq = squareAt(parsed.from.file, parsed.from.rank);
+        if (fromSq) fromSq.classList.add(SUGGESTED_FROM_CLASS);
+      }
+
+      const toSq = squareAt(parsed.to.file, parsed.to.rank);
+      if (toSq) {
+        toSq.classList.add(SUGGESTED_MOVE_CLASS);
+        if (parsed.dropKind) toSq.classList.add(SUGGESTED_DROP_CLASS);
+        toSq.setAttribute("data-hint-rank", rankLabel);
+        selectedSuggestedMoves.push({
+          sequence: Number(toSq.getAttribute("data-sequence")),
+          move,
+        });
+      }
+    });
+
     if (gameInfoNotesBox) {
-      // Note: full SAN notation requires a backend enhancement (current data is UCI).
-      // UCI is kept for now because it is unambiguous and matches engine output.
-      let text = "FS suggestions:\n";
+      let text = "FS suggestions (board move, or DROP/relife from hand):\n";
       top.forEach((sug, idx) => {
-        const mv = sug.move || "????";
-        const sc = typeof sug.score_cp === "number" ? ` (${sug.score_cp > 0 ? "+" : ""}${sug.score_cp})` : "";
-        text += `${idx + 1}. ${mv}${sc}\n`;
+        text += `${formatHintLine(idx + 1, parseUciMove(sug?.move || ""), sug.score_cp)}\n`;
       });
       if (lastExplanationText) {
         text += "\n" + lastExplanationText;

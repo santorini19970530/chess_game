@@ -30,8 +30,9 @@ from llm_providers import get_llm_provider
 app = Flask(__name__)
 
 
-# Chess-only advice agents. Go never sends xianqi/shogi here (variants use FS propose + Go legal filter).
+# History/Policy/Value stay chess-only. Coach (/analyze, /explain) accepts variants.
 SUPPORTED_GAME_TYPES = {"chess"}
+COACH_GAME_TYPES = {"chess", "xianqi", "shogi"}
 
 
 def _error_response(
@@ -53,7 +54,10 @@ def _error_response(
     )
 
 
-def _parse_common_payload(payload: dict[str, Any]) -> tuple[dict[str, Any] | None, tuple | None]:
+def _parse_common_payload(
+    payload: dict[str, Any],
+    allowed_game_types: set[str] | None = None,
+) -> tuple[dict[str, Any] | None, tuple | None]:
     request_id = str(payload.get("request_id", "")).strip() or None
     fen = str(payload.get("fen", "")).strip()
     color = str(payload.get("color", "")).strip().lower()
@@ -62,6 +66,7 @@ def _parse_common_payload(payload: dict[str, Any]) -> tuple[dict[str, Any] | Non
     move_number_raw = payload.get("move_number", 0)
     move_history_raw = payload.get("move_history", [])
     profile = str(payload.get("profile", "")).strip().lower() or "intermediate"
+    allowed = allowed_game_types if allowed_game_types is not None else SUPPORTED_GAME_TYPES
 
     if not fen:
         return None, _error_response(request_id, 'Missing required field: "fen"')
@@ -69,7 +74,7 @@ def _parse_common_payload(payload: dict[str, Any]) -> tuple[dict[str, Any] | Non
         return None, _error_response(request_id, 'Invalid "color". Use "white" or "black".')
     if not game_type:
         return None, _error_response(request_id, 'Missing required field: "game_type"')
-    if game_type not in SUPPORTED_GAME_TYPES:
+    if game_type not in allowed:
         return None, _error_response(
             request_id, f'Unsupported "game_type": {game_type}', "validation", 400
         )
@@ -134,11 +139,15 @@ def analyze() -> tuple:
     fen = str(payload.get("fen", "")).strip()
     color = str(payload.get("color", "")).strip().lower()
     top_k = payload.get("top_k", 5)
+    game_type = str(payload.get("game_type", "chess")).strip().lower() or "chess"
+    profile = str(payload.get("profile", "intermediate")).strip().lower() or "intermediate"
 
     if not fen:
         return jsonify({"error": 'Missing required field: "fen"'}), 400
     if color not in {"white", "black", "w", "b"}:
         return jsonify({"error": 'Invalid "color". Use "white" or "black".'}), 400
+    if game_type not in {"chess", "xianqi", "shogi"}:
+        return jsonify({"error": f'Unsupported "game_type": {game_type}'}), 400
 
     try:
         top_k_value = int(top_k)
@@ -151,6 +160,8 @@ def analyze() -> tuple:
             color=color,
             top_k=top_k_value,
             request_id=str(request_id) if request_id else None,
+            game_type=game_type,
+            profile=profile,
         )
     except ValueError as exc:
         # Covers invalid FEN / color parser errors from analyzer.
@@ -239,7 +250,7 @@ def value() -> tuple:
 @app.post("/explain")
 def explain() -> tuple:
     payload = request.get_json(silent=True) or {}
-    common, err = _parse_common_payload(payload)
+    common, err = _parse_common_payload(payload, allowed_game_types=COACH_GAME_TYPES)
     if err is not None:
         return err
 
@@ -251,6 +262,7 @@ def explain() -> tuple:
     started_at = time.perf_counter()
     provider = get_llm_provider()
     history = common.get("move_history", [])
+    game_type = common["game_type"]
 
     source = getattr(provider, "name", "ollama")
     explanation = ""
@@ -261,6 +273,7 @@ def explain() -> tuple:
             move_uci=move_uci or "",
             move_san=move_san,
             move_history=history,
+            game_type=game_type,
         )
     except Exception:
         # Any failure (Ollama down, timeout, bad response, etc.) → heuristic
@@ -271,6 +284,7 @@ def explain() -> tuple:
             color=common["color"],
             move_uci=move_uci or "",
             move_san=move_san,
+            game_type=game_type,
         )
         source = "heuristic_fallback"
     latency_ms = int((time.perf_counter() - started_at) * 1000)
@@ -285,6 +299,7 @@ def explain() -> tuple:
                 "move_uci": move_uci,
                 "move_san": move_san,
                 "latency_ms": latency_ms,
+                "game_type": game_type,
             }
         ),
         200,

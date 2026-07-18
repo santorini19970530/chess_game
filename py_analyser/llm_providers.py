@@ -9,6 +9,15 @@ from typing import Protocol
 from analyzer import build_explanation_fallback
 
 
+def _game_label(game_type: str) -> str:
+    gt = (game_type or "chess").strip().lower()
+    if gt == "xianqi":
+        return "Xiangqi (Chinese chess)"
+    if gt == "shogi":
+        return "Shogi (Japanese chess)"
+    return "Chess"
+
+
 class LLMProvider(Protocol):
     """Minimal protocol for LLM explanation providers."""
 
@@ -22,6 +31,7 @@ class LLMProvider(Protocol):
         move_uci: str,
         move_san: str | None,
         move_history: list[str] | None,
+        game_type: str = "chess",
     ) -> str:
         ...
 
@@ -49,13 +59,16 @@ class OllamaProvider:
         move_uci: str,
         move_san: str | None,
         move_history: list[str] | None,
+        game_type: str = "chess",
     ) -> str:
         move_text = move_san or move_uci or ""
         history = move_history or []
         history_str = " ".join(history[-6:]) if history else "(no prior moves)"
+        game = _game_label(game_type)
 
         prompt = (
-            f"You are a calm chess coach for an intermediate club player. "
+            f"You are a calm {game} coach for an intermediate club player. "
+            f"This is {game}, not Western chess — use the correct piece names and rules. "
             f"Explain the move {move_text} in 2-4 short sentences. "
             f"FEN: {fen}. Recent moves: {history_str}. "
             f"Mention whether it creates threats, changes material balance, or improves safety. "
@@ -91,12 +104,14 @@ class HeuristicProvider:
         move_uci: str,
         move_san: str | None,
         move_history: list[str] | None = None,
+        game_type: str = "chess",
     ) -> str:
         return build_explanation_fallback(
             fen=fen,
             color=color,
             move_uci=move_uci or "",
             move_san=move_san,
+            game_type=game_type,
         )
 
 

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	sessionpkg "go_backend/game/session"
 )
 
 func TestAnalyzerRequestTimeout_UsesEnvOverride(t *testing.T) {
@@ -199,5 +201,53 @@ func TestExplainByRequest_FallsBackOnError(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatalf("expected error for unreachable service, got nil")
+	}
+}
+
+func TestEnqueueCurrentPositionAnalysis_PassesXiangqiGameType(t *testing.T) {
+	got := make(chan map[string]interface{}, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/analyze" {
+			t.Errorf("expected /analyze, got %s", r.URL.Path)
+		}
+		var body map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Errorf("decode body: %v", err)
+		}
+		got <- body
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"request_id":"xq","status":"ok","source":"fairy-stockfish",
+			"fen":"","evaluated_for_color":"white","health_summary":{},
+			"eval_cp_white":0,"win_chance_white":0.5,"win_chance_black":0.5,
+			"threat_summary":"ok","best_move_uci":"h2e2","suggested_moves":[],
+			"latency_ms":1
+		}`))
+	}))
+	defer srv.Close()
+	t.Setenv("PY_ANALYSER_URL", srv.URL)
+
+	game, err := sessionpkg.CreateGame(
+		sessionpkg.GameModeHumanVsHuman,
+		sessionpkg.GameTypeXiangqi,
+		"white",
+		1,
+		"",
+		"",
+	)
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+
+	StartAnalyzerWorker()
+	enqueueCurrentPositionAnalysis(game.ID, "h2e2")
+
+	select {
+	case body := <-got:
+		if body["game_type"] != "xianqi" {
+			t.Fatalf("expected game_type xianqi, got %#v", body["game_type"])
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timed out waiting for /analyze with xianqi game_type")
 	}
 }
