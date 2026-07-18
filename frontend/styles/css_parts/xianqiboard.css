@@ -143,11 +143,12 @@
   background: transparent;
 }
 
+/* ~chess visual size: chess uses 80% of board/8; field is inset by --xq-pad so use ~100% of point cell */
 .chess_board_wrapper[data-game-type="xianqi"] .piece_img {
   top: 50%;
   left: 50%;
-  width: 68%;
-  height: 68%;
+  width: 100%;
+  height: 100%;
   transform: translate(-50%, -50%);
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
 }
@@ -157,7 +158,7 @@
     drop-shadow(0 0 0 #001018)
     drop-shadow(0 0 3px #c02828)
     drop-shadow(0 0 8px #c02828);
-  transform: translate(-50%, -50%) scale(1.1);
+  transform: translate(-50%, -50%) scale(1.12);
 }
 
 .chess_board_wrapper[data-game-type="xianqi"] .chess_board_square_suggested {

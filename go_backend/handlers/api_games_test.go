@@ -191,6 +191,65 @@ func TestAPIGameFlagRoute_SetsTerminalResult(t *testing.T) {
 	}
 }
 
+func TestAPIGameMove_XiangqiAcceptsFileI(t *testing.T) {
+	// Chess UCI parser is a-h/1-8 only; i4i5 must still reach Xiangqi apply.
+	h := NewHandler()
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeXiangqi, "white", 1, "", "intermediate")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/games/"+game.ID+"/move",
+		strings.NewReader("command=i4i5"),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	h.APIGameRoutes(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for i4i5, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	var payload struct {
+		Command string `json:"command"`
+		From    struct {
+			File string `json:"file"`
+			Rank int    `json:"rank"`
+		} `json:"from"`
+		To struct {
+			File string `json:"file"`
+			Rank int    `json:"rank"`
+		} `json:"to"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("json: %v", err)
+	}
+	if payload.Command != "i4i5" {
+		t.Fatalf("command=%q", payload.Command)
+	}
+	if payload.From.File != "i" || payload.From.Rank != 4 || payload.To.File != "i" || payload.To.Rank != 5 {
+		t.Fatalf("squares from=%s%d to=%s%d", payload.From.File, payload.From.Rank, payload.To.File, payload.To.Rank)
+	}
+}
+
+func TestAPIGameMove_XiangqiAcceptsRank10(t *testing.T) {
+	h := NewHandler()
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeXiangqi, "white", 1, "", "intermediate")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/games/"+game.ID+"/move",
+		strings.NewReader("command=h3h10"),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	h.APIGameRoutes(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for h3h10, got %d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestAPIGameLegalMovesRoute_ReturnsMovesForCurrentTurnPiece(t *testing.T) {
 	h := NewHandler()
 	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")

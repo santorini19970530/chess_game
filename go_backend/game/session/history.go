@@ -388,24 +388,32 @@ func GetBoardState() []PieceState {
 }
 
 // GetCapturedSummary computes captured-piece counts for each side
-// from current board state against standard initial piece counts.
+// from current board state against standard Chess initial piece counts.
 func GetCapturedSummary() CapturedSummary {
-	initial := map[string]int{
-		"pawn":   8,
-		"rook":   2,
-		"knight": 2,
-		"bishop": 2,
-		"queen":  1,
-		"king":   1,
-	}
-	liveWhite := map[string]int{
-		"pawn": 0, "rook": 0, "knight": 0, "bishop": 0, "queen": 0, "king": 0,
-	}
-	liveBlack := map[string]int{
-		"pawn": 0, "rook": 0, "knight": 0, "bishop": 0, "queen": 0, "king": 0,
+	return capturedSummaryAgainstInitial(map[string]int{
+		"pawn": 8, "rook": 2, "knight": 2, "bishop": 2, "queen": 1, "king": 1,
+	})
+}
+
+// GetXiangqiCapturedSummary uses Xiangqi starting counts (not Chess queens/bishops).
+func GetXiangqiCapturedSummary() CapturedSummary {
+	return capturedSummaryAgainstInitial(map[string]int{
+		"pawn": 5, "rook": 2, "knight": 2, "elephant": 2, "advisor": 2, "cannon": 2, "king": 1,
+	})
+}
+
+func capturedSummaryAgainstInitial(initial map[string]int) CapturedSummary {
+	liveWhite := map[string]int{}
+	liveBlack := map[string]int{}
+	for kind := range initial {
+		liveWhite[kind] = 0
+		liveBlack[kind] = 0
 	}
 	for _, p := range pieces.ChessPieces {
 		kind := string(p.Kind)
+		if _, ok := initial[kind]; !ok {
+			continue
+		}
 		if p.Color == pieces.White {
 			liveWhite[kind]++
 		} else if p.Color == pieces.Black {
@@ -413,21 +421,19 @@ func GetCapturedSummary() CapturedSummary {
 		}
 	}
 
-	whiteCaptured := map[string]int{
-		"pawn": 0, "rook": 0, "knight": 0, "bishop": 0, "queen": 0, "king": 0,
-	}
-	blackCaptured := map[string]int{
-		"pawn": 0, "rook": 0, "knight": 0, "bishop": 0, "queen": 0, "king": 0,
-	}
+	whiteCaptured := map[string]int{}
+	blackCaptured := map[string]int{}
 	for kind, total := range initial {
-		whiteCaptured[kind] = total - liveBlack[kind] // white captures black
-		blackCaptured[kind] = total - liveWhite[kind] // black captures white
-		if whiteCaptured[kind] < 0 {
-			whiteCaptured[kind] = 0
+		w := total - liveBlack[kind] // white captures black
+		b := total - liveWhite[kind] // black captures white
+		if w < 0 {
+			w = 0
 		}
-		if blackCaptured[kind] < 0 {
-			blackCaptured[kind] = 0
+		if b < 0 {
+			b = 0
 		}
+		whiteCaptured[kind] = w
+		blackCaptured[kind] = b
 	}
 
 	return CapturedSummary{

@@ -111,7 +111,7 @@ The playable board is a **CSS grid of div squares**, not a board image.
 - Client rebuild: `chess_command.js` `ensureBoardGeometry` / `rebuildBoardGrid` when `game.type` changes; sequence = `(maxRank - rank) * files + (file - 1)`.
 - Assets: **piece PNGs only** (`pic/chess_pic/`, `pic/xianqi_pic/`, `pic/shogi_pic/`). Do not use a full-board picture for layout.
 
-Xiangqi piece image map is still issue0035 step 5; Shogi hands/drops are issue0037. Rules stay in Go; the board divs only display state and collect moves.
+Xiangqi piece images: API kinds map to `pic/xianqi_pic/` (e.g. king→`general_*`, elephant→`bear_*`). Shogi hands/drops are issue0037. Rules stay in Go; the board divs only display state and collect moves.
 
 ---
 

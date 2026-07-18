@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	chessboard "go_backend/game/board"
-	commandpkg "go_backend/game/command"
 	pieces "go_backend/game/piece"
 	sessionpkg "go_backend/game/session"
 	"html/template"
@@ -466,14 +465,11 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Game session not found", http.StatusNotFound)
 		return
 	}
-	expectedColor := pieces.PieceColor(turnColor)
-	parsed, err := commandpkg.ParseCommandForColor(commandText, expectedColor)
+	fromFile, fromRank, toFile, toRank, err := resolveMoveSquares(
+		currentGame.Type, commandText, pieces.PieceColor(turnColor),
+	)
 	if err != nil {
-		log.Printf("warning: invalid chess command: %q (%v)", commandText, err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if err := commandpkg.ParseAndLogCommandForColor(commandText, expectedColor); err != nil {
+		log.Printf("warning: invalid command: %q (%v)", commandText, err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -485,6 +481,9 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("command accepted %s command=%s", gameIDLabel(gameID), normalizedMove)
+	if ff, fr, tf, tr, parseErr := parseVariantUCISquares(normalizedMove); parseErr == nil {
+		fromFile, fromRank, toFile, toRank = ff, fr, tf, tr
+	}
 
 	finalGame, err := sessionpkg.RefreshGameSessionOutcomeByID(gameID)
 	if err != nil {
@@ -567,10 +566,10 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 		State:           snapshot.State,
 		AIMove:          aiMoveApplied,
 	}
-	response.From.File = string(parsed.FromFile)
-	response.From.Rank = parsed.FromRank
-	response.To.File = string(parsed.ToFile)
-	response.To.Rank = parsed.ToRank
+	response.From.File = fromFile
+	response.From.Rank = fromRank
+	response.To.File = toFile
+	response.To.Rank = toRank
 
 	// Testing phase: call Python analyzer after each successful move
 	// and print full response in Go server terminal.

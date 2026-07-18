@@ -840,7 +840,8 @@
     updateSetupControlState();
   };
 
-  const PIECE_ORDER = ["queen", "rook", "bishop", "knight", "pawn", "king"];
+  const CHESS_PIECE_ORDER = ["queen", "rook", "bishop", "knight", "pawn", "king"];
+  const XIANQI_PIECE_ORDER = ["cannon", "rook", "knight", "elephant", "advisor", "pawn", "king"];
   const PIECE_SYMBOL = {
     queen: "♛",
     rook: "♜",
@@ -848,32 +849,40 @@
     knight: "♞",
     pawn: "♟",
     king: "♚",
+    cannon: "砲",
+    elephant: "相",
+    advisor: "仕",
   };
+
+  const capturedPieceOrder = () =>
+    boardGameType === "xianqi" ? XIANQI_PIECE_ORDER : CHESS_PIECE_ORDER;
 
   const capturedMapToText = (captured) => {
     const parts = [];
-    for (const kind of PIECE_ORDER) {
+    for (const kind of capturedPieceOrder()) {
       const count = captured[kind] || 0;
       if (count <= 0) continue;
-      parts.push(`${PIECE_SYMBOL[kind]}×${count}`);
+      parts.push(`${PIECE_SYMBOL[kind] || kind}×${count}`);
     }
     return parts.length ? parts.join("  ") : "";
   };
 
+  const emptyCapturedSide = () => {
+    const side = {};
+    for (const kind of capturedPieceOrder()) side[kind] = 0;
+    return side;
+  };
+
   const normalizeCapturedSummary = (summary) => {
-    if (!summary || typeof summary !== "object")
-      return {
-        white: { pawn: 0, rook: 0, knight: 0, bishop: 0, queen: 0, king: 0 },
-        black: { pawn: 0, rook: 0, knight: 0, bishop: 0, queen: 0, king: 0 },
-      };
-    const normalized = {
-      white: { pawn: 0, rook: 0, knight: 0, bishop: 0, queen: 0, king: 0 },
-      black: { pawn: 0, rook: 0, knight: 0, bishop: 0, queen: 0, king: 0 },
-    };
+    const order = capturedPieceOrder();
+    if (!summary || typeof summary !== "object") {
+      return { white: emptyCapturedSide(), black: emptyCapturedSide() };
+    }
+    const normalized = { white: emptyCapturedSide(), black: emptyCapturedSide() };
     for (const side of ["white", "black"]) {
       const source = summary[side];
       if (!source || typeof source !== "object") continue;
-      for (const kind of PIECE_ORDER) {
+      for (const kind of order) {
         const value = Number(source[kind]);
         normalized[side][kind] = Number.isFinite(value) && value > 0 ? value : 0;
       }
@@ -947,6 +956,10 @@
 
   const startAnalysisPolling = (targetMoveNumber, capturedSnapshot) => {
     stopAnalysisPolling();
+    if (boardGameType === "xianqi" || boardGameType === "shogi") {
+      setNotesText("Coach analysis is Chess-only for now. Play is unaffected.");
+      return;
+    }
     setNotesText("Analyzing...");
     const target = Number(targetMoveNumber) || 0;
     pendingAnalysisTargetMove = target;
@@ -991,10 +1004,39 @@
     const color = String(side || "").toLowerCase() === "black" ? "black" : "white";
     const kind = String(pieceKind || "").toLowerCase();
     const iconMap = {
-      white: { pawn: "♙", rook: "♖", knight: "♘", bishop: "♗", queen: "♕", king: "♔" },
-      black: { pawn: "♟", rook: "♜", knight: "♞", bishop: "♝", queen: "♛", king: "♚" },
+      white: {
+        pawn: "♙", rook: "♖", knight: "♘", bishop: "♗", queen: "♕", king: "♔",
+        // Xiangqi API kinds (unicode fallback when not using piece PNGs)
+        cannon: "砲", advisor: "仕", elephant: "相",
+        lance: "L", silver: "S", gold: "G",
+        promoted_pawn: "+P", promoted_lance: "+L", promoted_knight: "+N",
+        promoted_silver: "+S", dragon: "D", horse: "H",
+      },
+      black: {
+        pawn: "♟", rook: "♜", knight: "♞", bishop: "♝", queen: "♛", king: "♚",
+        cannon: "炮", advisor: "士", elephant: "象",
+        lance: "l", silver: "s", gold: "g",
+        promoted_pawn: "+p", promoted_lance: "+l", promoted_knight: "+n",
+        promoted_silver: "+s", dragon: "d", horse: "h",
+      },
     };
-    return iconMap[color]?.[kind] || (color === "black" ? "♟" : "♙");
+    return iconMap[color]?.[kind] || kind.slice(0, 1).toUpperCase() || "?";
+  };
+
+  const fillHistoryPieceIcon = (el, side, pieceKind) => {
+    el.className = "chess_move_history_piece_icon";
+    el.replaceChildren();
+    if (boardGameType === "xianqi") {
+      const path = imagePathFromPiece({ kind: pieceKind, color: side });
+      if (path) {
+        const img = document.createElement("img");
+        img.src = path;
+        img.alt = String(pieceKind || "");
+        el.appendChild(img);
+        return;
+      }
+    }
+    el.textContent = movePieceIcon(side, pieceKind);
   };
 
   const opponentSide = (side) =>
@@ -1003,15 +1045,15 @@
   const destinationFromCommand = (command) => {
     const text = String(command || "").trim().toLowerCase();
     if (!text) return "";
-    const match = text.match(/([a-h][1-8])[qrbn]?$/);
+    // Chess a-h/1-8 (+ promo); Xiangqi/Shogi a-i and ranks to 10 (+ optional '+')
+    const match = text.match(/([a-i]\d{1,2})(?:[qrbn]|\+)?$/i);
     return match ? match[1] : text;
   };
 
   const appendHistoryMove = (listEl, side, pieceKind, toSquare, fallbackText, isCapture, capturedPieceKind) => {
     const item = document.createElement("li");
     const iconSpan = document.createElement("span");
-    iconSpan.className = "chess_move_history_piece_icon";
-    iconSpan.textContent = movePieceIcon(side, pieceKind);
+    fillHistoryPieceIcon(iconSpan, side, pieceKind);
     const textSpan = document.createElement("span");
     textSpan.className = "chess_move_history_move_text";
     const moveText = toSquare || fallbackText || "";
@@ -1019,8 +1061,7 @@
       textSpan.textContent = `${moveText} x `;
       if (capturedPieceKind) {
         const capturedIcon = document.createElement("span");
-        capturedIcon.className = "chess_move_history_piece_icon";
-        capturedIcon.textContent = movePieceIcon(opponentSide(side), capturedPieceKind);
+        fillHistoryPieceIcon(capturedIcon, opponentSide(side), capturedPieceKind);
         textSpan.appendChild(capturedIcon);
       }
     } else {
@@ -1192,6 +1233,7 @@
   };
 
   const requiresPromotion = (toSequence) => {
+    if (boardGameType !== "chess") return false;
     const target = fileRankFromSequence(toSequence);
     if (!target) return false;
     return selectedLegalMoves.some(
@@ -1339,6 +1381,10 @@
 
   const refreshSuggestedMoves = async (retry = true) => {
     if (isSimulationPlayback) return;
+    if (boardGameType === "xianqi" || boardGameType === "shogi") {
+      highlightSuggestedMoves([]);
+      return;
+    }
     if (!currentGameId || gameOver) {
       highlightSuggestedMoves([]);
       return;
@@ -1484,10 +1530,27 @@
   const sequenceByFileRank = (fileNum, rankNum) =>
     (boardMaxRank - rankNum) * boardFiles + (fileNum - 1);
 
+  // API kinds → xianqi_pic filenames (bear = elephant; unused: dragon_*, empress_*).
+  const XIANQI_KIND_FILE = {
+    king: "general",
+    advisor: "advisor",
+    elephant: "bear",
+    knight: "horse",
+    rook: "chariot",
+    cannon: "cannon",
+    pawn: "soldier",
+  };
+
   const imagePathFromPiece = (piece) => {
     const kind = String(piece?.kind || "").toLowerCase();
     const color = String(piece?.color || "").toLowerCase();
     if (!kind || !color) return "";
+    if (boardGameType === "xianqi") {
+      const file = XIANQI_KIND_FILE[kind];
+      if (!file) return "";
+      const side = color === "black" ? "black" : "white";
+      return `/pic/xianqi_pic/${file}_${side}.png`;
+    }
     const tone = color === "black" ? "dark" : "light";
     return `/pic/chess_pic/${kind}_${tone}.png`;
   };
@@ -1899,7 +1962,11 @@
         const resp = await fetch("/api/simulate?details=true", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ games: n, profile }),
+          body: JSON.stringify({
+            games: n,
+            profile,
+            game: String(gameTypeSelect?.value || boardGameType || "chess"),
+          }),
         });
         simulationRequestInFlight = false;
         updateSetupControlState();
@@ -2074,7 +2141,30 @@
     if (moveHistoryBlackList) moveHistoryBlackList.innerHTML = '<li class="chess_move_history_placeholder">No moves yet.</li>';
   }
 
+  function initialXiangqiState() {
+    const state = [];
+    const back = ["rook", "knight", "elephant", "advisor", "king", "advisor", "elephant", "knight", "rook"];
+    for (let file = 1; file <= 9; file++) {
+      state.push({ file, rank: 1, kind: back[file - 1], color: "white" });
+      state.push({ file, rank: 10, kind: back[file - 1], color: "black" });
+    }
+    for (const file of [2, 8]) {
+      state.push({ file, rank: 3, kind: "cannon", color: "white" });
+      state.push({ file, rank: 8, kind: "cannon", color: "black" });
+    }
+    for (const file of [1, 3, 5, 7, 9]) {
+      state.push({ file, rank: 4, kind: "pawn", color: "white" });
+      state.push({ file, rank: 7, kind: "pawn", color: "black" });
+    }
+    return state;
+  }
+
   function resetBoardToInitialState() {
+    ensureBoardGeometry(gameTypeSelect?.value || boardGameType);
+    if (boardGameType === "xianqi") {
+      renderBoardFromState(initialXiangqiState());
+      return;
+    }
     renderBoardFromState(initialChessState());
   }
 

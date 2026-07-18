@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	commandpkg "go_backend/game/command"
 	"go_backend/game/engine"
 	pieces "go_backend/game/piece"
 	sessionpkg "go_backend/game/session"
@@ -287,13 +286,10 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 		writeJSONError(w, http.StatusNotFound, "Game session not found")
 		return
 	}
-	expectedColor := pieces.PieceColor(turnColor)
-	parsed, err := commandpkg.ParseCommandForColor(commandText, expectedColor)
+	fromFile, fromRank, toFile, toRank, err := resolveMoveSquares(
+		currentGame.Type, commandText, pieces.PieceColor(turnColor),
+	)
 	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	if err := commandpkg.ParseAndLogCommandForColor(commandText, expectedColor); err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -303,6 +299,10 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 		return
 	}
 	log.Printf("api move accepted %s command=%s", gameIDLabel(gameID), normalizedMove)
+	// Prefer squares from the accepted/normalized UCI (handles shogi "+").
+	if ff, fr, tf, tr, parseErr := parseVariantUCISquares(normalizedMove); parseErr == nil {
+		fromFile, fromRank, toFile, toRank = ff, fr, tf, tr
+	}
 
 	// Enqueue LLM explanation for the move just played (human move).
 	enqueueExplanation(gameID, normalizedMove, normalizedMove)
@@ -402,10 +402,10 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 		State:           snapshot.State,
 		AIMove:          aiMoveApplied,
 	}
-	response.From.File = string(parsed.FromFile)
-	response.From.Rank = parsed.FromRank
-	response.To.File = string(parsed.ToFile)
-	response.To.Rank = parsed.ToRank
+	response.From.File = fromFile
+	response.From.Rank = fromRank
+	response.To.File = toFile
+	response.To.Rank = toRank
 
 	gameSocketHub.Broadcast(gameID, socketEventMoveApplied, map[string]interface{}{
 		"command":     normalizedMove,
