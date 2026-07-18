@@ -2,9 +2,11 @@ package session
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"go_backend/game/movement"
+	pieces "go_backend/game/piece"
 )
 
 type GameSnapshot struct {
@@ -331,6 +333,24 @@ func LegalMovesForSquareByID(gameID string, file, rank int) ([]LegalDestination,
 		return shogiLegalDestinationsForSquare(file, rank)
 	}
 	return LegalMovesForSquare(file, rank), nil
+}
+
+// LegalDropsForKindByID returns drop destinations for a hand piece (shogi only).
+func LegalDropsForKindByID(gameID string, kind string) ([]LegalDestination, error) {
+	game, err := lockRuntimeStateByID(gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer unlockRuntimeStateByID(game)
+	if game.Session.Type != GameTypeShogi {
+		return nil, fmt.Errorf("drops only for shogi")
+	}
+	k := pieces.PieceKind(strings.ToLower(strings.TrimSpace(kind)))
+	side := CurrentTurnColor()
+	if shogiHandCount(side, k) <= 0 {
+		return []LegalDestination{}, nil
+	}
+	return shogiLegalDropDestinations(k, side), nil
 }
 
 // AllLegalUCIMovesByID returns every legal UCI move for the side to move.

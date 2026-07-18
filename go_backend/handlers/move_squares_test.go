@@ -16,3 +16,17 @@ func TestParseVariantUCISquares(t *testing.T) {
 		t.Fatalf("e8e9+ -> %s%d %s%d err=%v", ff, fr, tf, tr, err)
 	}
 }
+
+func TestParseVariantDropSquares(t *testing.T) {
+	tf, tr, ok := parseVariantDropSquares("P*e5")
+	if !ok || tf != "e" || tr != 5 {
+		t.Fatalf("P*e5 -> %s%d ok=%v", tf, tr, ok)
+	}
+	tf, tr, ok = parseVariantDropSquares("p@a1")
+	if !ok || tf != "a" || tr != 1 {
+		t.Fatalf("p@a1 -> %s%d ok=%v", tf, tr, ok)
+	}
+	if _, _, ok = parseVariantDropSquares("e2e4"); ok {
+		t.Fatal("board move must not parse as drop")
+	}
+}

@@ -15,6 +15,9 @@ import (
 // Fairy / Xiangqi / Shogi UCI: files a-i, ranks 1-10 (optional trailing '+' for shogi promote).
 var variantUCIPattern = regexp.MustCompile(`^([a-i])([0-9]{1,2})([a-i])([0-9]{1,2})\+?$`)
 
+// Shogi drop: P*e5 / p@e5 (piece letter + *|@ + square). from is empty.
+var variantDropPattern = regexp.MustCompile(`^[plnsgbr][*@]([a-i])([1-9])$`)
+
 func parseVariantUCISquares(move string) (fromFile string, fromRank int, toFile string, toRank int, err error) {
 	move = strings.ToLower(strings.TrimSpace(move))
 	m := variantUCIPattern.FindStringSubmatch(move)
@@ -32,6 +35,19 @@ func parseVariantUCISquares(move string) (fromFile string, fromRank int, toFile 
 	return m[1], fromRank, m[3], toRank, nil
 }
 
+func parseVariantDropSquares(move string) (toFile string, toRank int, ok bool) {
+	move = strings.ToLower(strings.TrimSpace(move))
+	m := variantDropPattern.FindStringSubmatch(move)
+	if m == nil {
+		return "", 0, false
+	}
+	rank, err := strconv.Atoi(m[2])
+	if err != nil {
+		return "", 0, false
+	}
+	return m[1], rank, true
+}
+
 // resolveMoveSquares validates command shape before ApplyMove.
 // Chess keeps the a-h/1-8 (+ SAN) parser; Xiangqi/Shogi skip it (file i / rank 10).
 func resolveMoveSquares(
@@ -39,6 +55,12 @@ func resolveMoveSquares(
 ) (fromFile string, fromRank int, toFile string, toRank int, err error) {
 	switch gameType {
 	case sessionpkg.GameTypeXiangqi, sessionpkg.GameTypeShogi:
+		if gameType == sessionpkg.GameTypeShogi {
+			if tf, tr, ok := parseVariantDropSquares(commandText); ok {
+				log.Printf("command parsed: raw=%q format=drop game=shogi to=%s%d", commandText, tf, tr)
+				return "", 0, tf, tr, nil
+			}
+		}
 		fromFile, fromRank, toFile, toRank, err = parseVariantUCISquares(commandText)
 		if err != nil {
 			return "", 0, "", 0, err

@@ -76,6 +76,13 @@ func TestShogiDrop_FromHand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
+	dests, err := LegalDropsForKindByID(game.ID, "pawn")
+	if err != nil {
+		t.Fatalf("legal drops: %v", err)
+	}
+	if len(dests) == 0 {
+		t.Fatal("expected pawn drop destinations")
+	}
 	if _, err := ApplyMoveByCommandByID(game.ID, "P*e5"); err != nil {
 		t.Fatalf("drop P*e5: %v", err)
 	}

@@ -58,6 +58,7 @@
   let currentTurn = "white";
   let humanColor = "white";           // human's chosen color in Human vs AI mode
   let selectedSquareSequence = null;
+  let selectedDropKind = null; // shogi hand: { side, kind } or null
   let dragSourceSequence = null;
   let legalMovesRequestVersion = 0;
   let selectedLegalMoves = [];
@@ -861,6 +862,11 @@
 
   const CHESS_PIECE_ORDER = ["queen", "rook", "bishop", "knight", "pawn", "king"];
   const XIANQI_PIECE_ORDER = ["cannon", "rook", "knight", "elephant", "advisor", "pawn", "king"];
+  // Unpromoted hand kinds only (promoted captives demote before entering hand).
+  const SHOGI_PIECE_ORDER = ["rook", "bishop", "gold", "silver", "knight", "lance", "pawn"];
+  const SHOGI_DROP_CHAR = {
+    pawn: "P", lance: "L", knight: "N", silver: "S", gold: "G", bishop: "B", rook: "R",
+  };
   const PIECE_SYMBOL = {
     queen: "♛",
     rook: "♜",
@@ -871,10 +877,16 @@
     cannon: "砲",
     elephant: "相",
     advisor: "仕",
+    lance: "L",
+    silver: "S",
+    gold: "G",
   };
 
-  const capturedPieceOrder = () =>
-    boardGameType === "xianqi" ? XIANQI_PIECE_ORDER : CHESS_PIECE_ORDER;
+  const capturedPieceOrder = () => {
+    if (boardGameType === "xianqi") return XIANQI_PIECE_ORDER;
+    if (boardGameType === "shogi") return SHOGI_PIECE_ORDER;
+    return CHESS_PIECE_ORDER;
+  };
 
   const capturedMapToText = (captured) => {
     const parts = [];
@@ -884,6 +896,59 @@
       parts.push(`${PIECE_SYMBOL[kind] || kind}×${count}`);
     }
     return parts.length ? parts.join("  ") : "";
+  };
+
+  const isHandSidePlayable = (side) => {
+    const s = String(side || "").toLowerCase();
+    if (s !== currentTurn) return false;
+    const mode = String(gameModeSelect?.value || "");
+    if (mode === "human_vs_ai" && s !== humanColor) return false;
+    return true;
+  };
+
+  const renderShogiHand = (el, side, captured) => {
+    if (!el) return;
+    el.replaceChildren();
+    el.classList.add("shogi_hand");
+    let any = false;
+    for (const kind of SHOGI_PIECE_ORDER) {
+      const count = captured[kind] || 0;
+      if (count <= 0) continue;
+      any = true;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "shogi_hand_piece";
+      btn.setAttribute("data-side", side);
+      btn.setAttribute("data-kind", kind);
+      btn.title = `${kind} ×${count}`;
+      if (
+        selectedDropKind &&
+        selectedDropKind.side === side &&
+        selectedDropKind.kind === kind
+      ) {
+        btn.classList.add("shogi_hand_piece_selected");
+      }
+      const img = document.createElement("img");
+      img.src = `/pic/shogi_pic/${kind}.svg`;
+      img.alt = kind;
+      img.setAttribute("data-color", side);
+      img.draggable = false;
+      const badge = document.createElement("span");
+      badge.className = "shogi_hand_count";
+      badge.textContent = String(count);
+      btn.appendChild(img);
+      btn.appendChild(badge);
+      btn.disabled = !isHandSidePlayable(side);
+      btn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        void selectShogiHandPiece(side, kind);
+      });
+      el.appendChild(btn);
+    }
+    if (!any) {
+      el.classList.remove("shogi_hand");
+    }
   };
 
   const emptyCapturedSide = () => {
@@ -946,8 +1011,19 @@
     const whiteTiny = whiteProb < 12;
     const blackTiny = blackProb < 12;
 
-    if (capturedWhiteValue) capturedWhiteValue.textContent = capturedMapToText(whiteCaptured);
-    if (capturedBlackValue) capturedBlackValue.textContent = capturedMapToText(blackCaptured);
+    if (boardGameType === "shogi") {
+      renderShogiHand(capturedWhiteValue, "white", whiteCaptured);
+      renderShogiHand(capturedBlackValue, "black", blackCaptured);
+    } else {
+      if (capturedWhiteValue) {
+        capturedWhiteValue.classList.remove("shogi_hand");
+        capturedWhiteValue.textContent = capturedMapToText(whiteCaptured);
+      }
+      if (capturedBlackValue) {
+        capturedBlackValue.classList.remove("shogi_hand");
+        capturedBlackValue.textContent = capturedMapToText(blackCaptured);
+      }
+    }
     if (winProbWhiteValue) {
       winProbWhiteValue.textContent = formatPercentage(whiteProb);
       winProbWhiteValue.style.color = winProbLabelColor(whiteProb, true);
@@ -1297,6 +1373,7 @@
 
   const clearSelectedSquare = () => {
     selectedSquareSequence = null;
+    selectedDropKind = null;
     selectedLegalMoves = [];
     legalMovesRequestVersion += 1;
     boardElement
@@ -1309,7 +1386,61 @@
         square.classList.remove(LEGAL_PROMOTION_DESTINATION_CLASS);
         square.classList.remove(LEGAL_CAPTURE_DESTINATION_CLASS);
       });
+    document.querySelectorAll(".shogi_hand_piece_selected").forEach((el) => {
+      el.classList.remove("shogi_hand_piece_selected");
+    });
     // Do not clear FS suggestion highlights here; they are independent of piece selection.
+  };
+
+  const selectShogiHandPiece = async (side, kind) => {
+    if (boardGameType !== "shogi" || gameOver || isSubmitting) return;
+    if (!isHandSidePlayable(side)) return;
+    if (
+      selectedDropKind &&
+      selectedDropKind.side === side &&
+      selectedDropKind.kind === kind
+    ) {
+      clearSelectedSquare();
+      return;
+    }
+    clearSelectedSquare();
+    selectedDropKind = { side, kind };
+    document
+      .querySelectorAll(`.shogi_hand_piece[data-side="${side}"][data-kind="${kind}"]`)
+      .forEach((el) => el.classList.add("shogi_hand_piece_selected"));
+    const requestVersion = ++legalMovesRequestVersion;
+    try {
+      if (!currentGameId) return;
+      const response = await fetch(
+        `/api/games/${encodeURIComponent(currentGameId)}/legal-moves?dropKind=${encodeURIComponent(kind)}`
+      );
+      if (!response.ok) {
+        if (requestVersion === legalMovesRequestVersion) highlightLegalDestinations([]);
+        return;
+      }
+      const result = await response.json();
+      if (requestVersion !== legalMovesRequestVersion) return;
+      if (!selectedDropKind || selectedDropKind.kind !== kind) return;
+      const moves = Array.isArray(result?.legalMoves) ? result.legalMoves : [];
+      selectedLegalMoves = moves;
+      highlightLegalDestinations(moves);
+    } catch (_error) {
+      if (requestVersion === legalMovesRequestVersion) highlightLegalDestinations([]);
+    }
+  };
+
+  const submitShogiDrop = async (toSequence) => {
+    if (!selectedDropKind) return false;
+    const target = fileRankFromSequence(toSequence);
+    if (!target) return false;
+    const legal = selectedLegalMoves.some(
+      (move) => Number(move?.file) === target.file && Number(move?.rank) === target.rank
+    );
+    if (!legal) return false;
+    const ch = SHOGI_DROP_CHAR[selectedDropKind.kind];
+    if (!ch) return false;
+    const fileLetter = String.fromCharCode("a".charCodeAt(0) + target.file - 1);
+    return submitCommand(`${ch}*${fileLetter}${target.rank}`);
   };
 
   const highlightLegalDestinations = (moves) => {
@@ -1528,6 +1659,7 @@
   };
 
   const setSelectedSquare = (sequence) => {
+    // clearSelectedSquare also clears drop selection
     clearSelectedSquare();
     selectedSquareSequence = Number(sequence);
     if (Number.isNaN(selectedSquareSequence)) {
@@ -1767,6 +1899,13 @@
 
       const targetSequence = getSquareSequence(targetSquare);
       if (Number.isNaN(targetSequence)) return;
+
+      if (selectedDropKind) {
+        const dropped = await submitShogiDrop(targetSequence);
+        if (dropped) clearSelectedSquare();
+        return;
+      }
+
       const targetHasCurrentTurnPiece = isCurrentTurnPiece(targetSquare);
 
       if (selectedSquareSequence == null) {

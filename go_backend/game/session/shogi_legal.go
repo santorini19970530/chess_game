@@ -76,18 +76,26 @@ func shogiAllLegalDrops(side pieces.PieceColor) []string {
 		if !ok {
 			continue
 		}
-		for file := 1; file <= 9; file++ {
-			for rank := 1; rank <= 9; rank++ {
-				if err := validateShogiDrop(kind, side, file, rank); err != nil {
-					continue
-				}
-				dropCh := ch
-				if dropCh >= 'A' && dropCh <= 'Z' {
-					dropCh += 'a' - 'A'
-				}
-				// Lowercase so handlers.normalizeUCI matches engine candidates.
-				out = append(out, fmt.Sprintf("%c*%c%d", dropCh, byte('a'+file-1), rank))
+		for _, d := range shogiLegalDropDestinations(kind, side) {
+			dropCh := ch
+			if dropCh >= 'A' && dropCh <= 'Z' {
+				dropCh += 'a' - 'A'
 			}
+			// Lowercase so handlers.normalizeUCI matches engine candidates.
+			out = append(out, fmt.Sprintf("%c*%c%d", dropCh, byte('a'+d.File-1), d.Rank))
+		}
+	}
+	return out
+}
+
+func shogiLegalDropDestinations(kind pieces.PieceKind, side pieces.PieceColor) []LegalDestination {
+	out := make([]LegalDestination, 0, 32)
+	for file := 1; file <= 9; file++ {
+		for rank := 1; rank <= 9; rank++ {
+			if err := validateShogiDrop(kind, side, file, rank); err != nil {
+				continue
+			}
+			out = append(out, LegalDestination{File: file, Rank: rank})
 		}
 	}
 	return out
