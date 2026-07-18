@@ -45,6 +45,8 @@ Add next variant with same backend pattern.
 Keep feature parity minimal first.
 Stabilize before adding more.
 
+**Variant parity + smoke (issue0038):** see [`documentation/variant_parity.md`](documentation/variant_parity.md).
+
 ### Phase 5: Quality and polish
 
 Tune easy, medium, and hard profiles.
