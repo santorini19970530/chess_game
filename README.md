@@ -109,9 +109,9 @@ The playable board is a **CSS grid of div squares**, not a board image.
 - Style: `input.css` imports per-game board sheets — `chessboard.css` / `xianqiboard.css` / `shogiboard.css` (active via `data-game-type`); Tailwind builds one `style.css`.
 - **Piece placement:** Chess/Shogi = inside the square. Xiangqi = on junctions; line layer uses real spacing (`x=i/8`, `y=j/9`), not 9×10 cell centers.
 - Client rebuild: `chess_command.js` `ensureBoardGeometry` / `rebuildBoardGrid` when `game.type` changes; sequence = `(maxRank - rank) * files + (file - 1)`.
-- Assets: **piece PNGs only** (`pic/chess_pic/`, `pic/xianqi_pic/`, `pic/shogi_pic/`). Do not use a full-board picture for layout.
+- Assets: piece art only (`pic/chess_pic/` PNGs, `pic/xianqi_pic/` PNGs, `pic/shogi_pic/` SVGs). Do not use a full-board picture for layout.
 
-Xiangqi piece images: API kinds map to `pic/xianqi_pic/` (e.g. king→`general_*`, elephant→`bear_*`). Shogi hands/drops are issue0037. Rules stay in Go; the board divs only display state and collect moves.
+Xiangqi: API kinds → `xianqi_pic` (e.g. king→`general_*`, elephant→`bear_*`). Shogi: kinds → `shogi_pic/{kind}.svg` (black via CSS rotate); hands from snapshot `captured`; drops `P*e5`; optional promote dialog / must-promote auto `+`. Rules stay in Go; the board divs only display state and collect moves.
 
 ---
 

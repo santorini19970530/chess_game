@@ -1127,6 +1127,7 @@
         const img = document.createElement("img");
         img.src = path;
         img.alt = String(pieceKind || "");
+        img.setAttribute("data-color", String(side || "").toLowerCase());
         el.appendChild(img);
         return;
       }

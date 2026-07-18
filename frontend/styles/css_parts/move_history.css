@@ -70,6 +70,11 @@
   vertical-align: middle;
 }
 
+/* Shogi: single SVG set; black faces the other way (same as board). */
+.chess_move_history_piece_icon img[data-color="black"] {
+  transform: rotate(180deg);
+}
+
 .chess_move_history_placeholder {
   list-style: none;
   margin-left: 0;
