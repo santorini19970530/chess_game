@@ -10,18 +10,21 @@ type ChessBoardSquare struct {
 	BoxWidth string
 }
 
-// NewChessBoardSquare creates a square with alternating color
+// NewChessBoardSquare creates a square with alternating color for an 8-wide board.
 func NewChessBoardSquare(sequence int) ChessBoardSquare {
-	isLight := false
-	if (sequence/8)%2 == 0 {
-		isLight = sequence%2 == 0
-	} else {
-		isLight = sequence%2 == 1
-	}
+	return NewBoardSquare(sequence, 8)
+}
 
+// NewBoardSquare creates a square; files is the board width used for checker parity.
+func NewBoardSquare(sequence, files int) ChessBoardSquare {
+	if files <= 0 {
+		files = 8
+	}
+	row := sequence / files
+	col := sequence % files
 	return ChessBoardSquare{
 		Sequence: sequence,
-		IsLight:  isLight,
+		IsLight:  (row+col)%2 == 0,
 		BoxWidth: "30px",
 	}
 }

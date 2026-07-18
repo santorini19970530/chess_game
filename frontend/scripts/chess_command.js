@@ -30,6 +30,10 @@
   const aiStrengthSelect = document.getElementById("ai_strength");
   const configApplyButton = document.getElementById("game_config_apply");
   const boardElement = document.querySelector(".chess_board");
+  const boardWrapper = document.querySelector(".chess_board_wrapper");
+  let boardFiles = 8;
+  let boardMaxRank = 8;
+  let boardGameType = "chess";
   const promotionPicker = document.getElementById("promotion_picker");
   const simulationSummaryPanel = document.getElementById("simulation_summary_panel");
   const simulationSummaryGames = document.getElementById("simulation_summary_games");
@@ -692,10 +696,140 @@
     }
   };
 
+  const geometryForGameType = (type) => {
+    switch (String(type || "chess").toLowerCase()) {
+      case "xianqi":
+        return { files: 9, maxRank: 10, type: "xianqi" };
+      case "shogi":
+        return { files: 9, maxRank: 9, type: "shogi" };
+      default:
+        return { files: 8, maxRank: 8, type: "chess" };
+    }
+  };
+
+  const rebuildBoardLabels = () => {
+    const ranksEl = boardWrapper.querySelector(".board_ranks");
+    if (ranksEl) {
+      ranksEl.replaceChildren(
+        ...Array.from({ length: boardMaxRank }, (_, i) => {
+          const span = document.createElement("span");
+          span.className = "board_label";
+          span.textContent = String(boardMaxRank - i);
+          return span;
+        })
+      );
+    }
+    const filesEl = boardWrapper.querySelector(".board_files");
+    if (filesEl) {
+      filesEl.replaceChildren(
+        ...Array.from({ length: boardFiles }, (_, i) => {
+          const span = document.createElement("span");
+          span.className = "board_label";
+          span.textContent = String.fromCharCode("a".charCodeAt(0) + i);
+          return span;
+        })
+      );
+    }
+  };
+
+  const rebuildXiangqiBoard = () => {
+    // Lines at x=i/8, y=j/9 inside .xianqi_field; board padding holds edge-piece overhang.
+    boardElement.classList.add("xianqi_board");
+    const field = document.createElement("div");
+    field.className = "xianqi_field";
+
+    const art = document.createElement("div");
+    art.className = "xianqi_artwork";
+    art.setAttribute("aria-hidden", "true");
+
+    for (let j = 0; j <= 9; j++) {
+      const h = document.createElement("div");
+      h.className = "xianqi_h_line";
+      h.style.top = `${(j / 9) * 100}%`;
+      art.appendChild(h);
+    }
+    for (let i = 0; i <= 8; i++) {
+      const v = document.createElement("div");
+      v.className = i === 0 || i === 8 ? "xianqi_v_line xianqi_v_outer" : "xianqi_v_line xianqi_v_inner";
+      v.style.left = `${(i / 8) * 100}%`;
+      art.appendChild(v);
+    }
+    for (const side of ["top", "bottom"]) {
+      const palace = document.createElement("div");
+      palace.className = `xianqi_palace xianqi_palace_${side}`;
+      art.appendChild(palace);
+    }
+
+    const points = document.createElement("div");
+    points.className = "xianqi_points";
+    for (let seq = 0; seq < 90; seq++) {
+      const file = (seq % 9) + 1;
+      const rank = 10 - Math.floor(seq / 9);
+      const sq = document.createElement("div");
+      sq.className = "chess_board_square chess_board_square_light";
+      sq.setAttribute("data-sequence", String(seq));
+      sq.setAttribute("data-file", String(file));
+      sq.setAttribute("data-rank", String(rank));
+      sq.style.left = `${((file - 1) / 8) * 100}%`;
+      sq.style.top = `${((10 - rank) / 9) * 100}%`;
+      points.appendChild(sq);
+    }
+
+    field.append(art, points);
+    boardElement.replaceChildren(field);
+  };
+
+  const rebuildSquareGridBoard = () => {
+    boardElement.classList.remove("xianqi_board");
+    const n = boardFiles * boardMaxRank;
+    const squares = [];
+    for (let seq = 0; seq < n; seq++) {
+      const file = (seq % boardFiles) + 1;
+      const rank = boardMaxRank - Math.floor(seq / boardFiles);
+      const row = Math.floor(seq / boardFiles);
+      const col = seq % boardFiles;
+      const isLight = (row + col) % 2 === 0;
+      const div = document.createElement("div");
+      div.className = [
+        "chess_board_square",
+        isLight ? "chess_board_square_light" : "chess_board_square_dark",
+      ].join(" ");
+      div.setAttribute("data-sequence", String(seq));
+      div.setAttribute("data-file", String(file));
+      div.setAttribute("data-rank", String(rank));
+      squares.push(div);
+    }
+    boardElement.replaceChildren(...squares);
+  };
+
+  const rebuildBoardGrid = () => {
+    if (!boardElement || !boardWrapper) return;
+    boardWrapper.dataset.gameType = boardGameType;
+    boardWrapper.style.setProperty("--board-files", String(boardFiles));
+    boardWrapper.style.setProperty("--board-ranks", String(boardMaxRank));
+    rebuildBoardLabels();
+    if (boardGameType === "xianqi") rebuildXiangqiBoard();
+    else rebuildSquareGridBoard();
+  };
+
+  const ensureBoardGeometry = (type) => {
+    const g = geometryForGameType(type);
+    if (g.files === boardFiles && g.maxRank === boardMaxRank && g.type === boardGameType) {
+      if (boardWrapper) boardWrapper.dataset.gameType = boardGameType;
+      return false;
+    }
+    boardFiles = g.files;
+    boardMaxRank = g.maxRank;
+    boardGameType = g.type;
+    rebuildBoardGrid();
+    return true;
+  };
+
   const renderGameConfig = (game) => {
     const cfg = game?.config;
     if (!cfg) return;
     if (gameTypeSelect) gameTypeSelect.value = String(game.type || "chess");
+    ensureBoardGeometry(game.type || gameTypeSelect?.value || "chess");
     if (gameModeSelect) gameModeSelect.value = String(game.mode || "human_vs_human");
     if (humanSideSelect) humanSideSelect.value = String(cfg.humanColor || "white");
     if (aiGameCountInput) aiGameCountInput.value = String(cfg.aiGameCount || 1);
@@ -966,11 +1100,13 @@
     moveHistoryBlackList.scrollTop = moveHistoryBlackList.scrollHeight;
   };
 
+  const maxSequence = () => boardFiles * boardMaxRank - 1;
+
   const sequenceToSquare = (sequence) => {
     const seq = Number(sequence);
-    if (Number.isNaN(seq) || seq < 0 || seq > 63) return "";
-    const fileChar = String.fromCharCode("a".charCodeAt(0) + (seq % 8));
-    const rankNum = 8 - Math.floor(seq / 8);
+    if (Number.isNaN(seq) || seq < 0 || seq > maxSequence()) return "";
+    const fileChar = String.fromCharCode("a".charCodeAt(0) + (seq % boardFiles));
+    const rankNum = boardMaxRank - Math.floor(seq / boardFiles);
     return `${fileChar}${rankNum}`;
   };
 
@@ -983,38 +1119,36 @@
 
   const rankFromSequence = (sequence) => {
     const seq = Number(sequence);
-    if (Number.isNaN(seq) || seq < 0 || seq > 63) return NaN;
-    return 8 - Math.floor(seq / 8);
+    if (Number.isNaN(seq) || seq < 0 || seq > maxSequence()) return NaN;
+    return boardMaxRank - Math.floor(seq / boardFiles);
   };
 
   const fileRankFromSequence = (sequence) => {
     const seq = Number(sequence);
-    if (Number.isNaN(seq) || seq < 0 || seq > 63) return null;
+    if (Number.isNaN(seq) || seq < 0 || seq > maxSequence()) return null;
     return {
-      file: (seq % 8) + 1,
-      rank: 8 - Math.floor(seq / 8),
+      file: (seq % boardFiles) + 1,
+      rank: boardMaxRank - Math.floor(seq / boardFiles),
     };
   };
 
-  // Helper to apply a UCI move string (e.g. "e2e4") to the visual board DOM.
-  // Used for live AI simulation playback.
+  // Helper to apply a UCI move string (e.g. "e2e4", "h3h10") to the visual board DOM.
   const applyUciMoveToBoard = (uci) => {
     if (!uci || uci.length < 4) return;
-    const fromSq = uci.substring(0, 2);
-    const toSq = uci.substring(2, 4);
-
-    // Find squares by their algebraic notation (data-square or by calculating sequence)
-    // We use the existing sequence calculation logic.
-    const getSequenceFromAlgebraic = (alg) => {
-      if (!alg || alg.length !== 2) return -1;
-      const file = alg.charCodeAt(0) - 'a'.charCodeAt(0) + 1;
-      const rank = parseInt(alg[1], 10);
-      if (file < 1 || file > 8 || rank < 1 || rank > 8) return -1;
-      return (8 - rank) * 8 + (file - 1);
-    };
-
-    const fromSeq = getSequenceFromAlgebraic(fromSq);
-    const toSeq = getSequenceFromAlgebraic(toSq);
+    const match = String(uci).match(/^([a-i])(\d{1,2})([a-i])(\d{1,2})/i);
+    if (!match) return;
+    const fromFile = match[1].toLowerCase().charCodeAt(0) - "a".charCodeAt(0) + 1;
+    const fromRank = parseInt(match[2], 10);
+    const toFile = match[3].toLowerCase().charCodeAt(0) - "a".charCodeAt(0) + 1;
+    const toRank = parseInt(match[4], 10);
+    if (
+      fromFile < 1 || fromFile > boardFiles || fromRank < 1 || fromRank > boardMaxRank ||
+      toFile < 1 || toFile > boardFiles || toRank < 1 || toRank > boardMaxRank
+    ) {
+      return;
+    }
+    const fromSeq = sequenceByFileRank(fromFile, fromRank);
+    const toSeq = sequenceByFileRank(toFile, toRank);
 
     const fromEl = boardElement.querySelector(`.chess_board_square[data-sequence="${fromSeq}"]`);
     const toEl = boardElement.querySelector(`.chess_board_square[data-sequence="${toSeq}"]`);
@@ -1024,11 +1158,9 @@
     const piece = fromEl.querySelector(".piece_img");
     if (!piece) return;
 
-    // Capture logic: remove piece at destination if exists
     const captured = toEl.querySelector(".piece_img");
     if (captured) captured.remove();
 
-    // Move piece
     toEl.appendChild(piece);
   };
 
@@ -1350,7 +1482,7 @@
   };
 
   const sequenceByFileRank = (fileNum, rankNum) =>
-    (8 - rankNum) * 8 + (fileNum - 1);
+    (boardMaxRank - rankNum) * boardFiles + (fileNum - 1);
 
   const imagePathFromPiece = (piece) => {
     const kind = String(piece?.kind || "").toLowerCase();
@@ -1363,8 +1495,11 @@
   // Full board sync from backend state (handles en passant, castling, promotion)
   const renderBoardFromState = (state) => {
     if (!Array.isArray(state)) return false;
+    ensureBoardGeometry(gameTypeSelect?.value || boardGameType);
 
-    const boardSquares = document.querySelectorAll(".chess_board_square[data-sequence]");
+    const boardSquares = boardElement
+      ? boardElement.querySelectorAll(".chess_board_square[data-sequence]")
+      : document.querySelectorAll(".chess_board_square[data-sequence]");
     boardSquares.forEach((square) => {
       square.querySelectorAll(".piece_img").forEach((el) => el.remove());
     });
@@ -1372,9 +1507,9 @@
     for (const piece of state) {
       if (!piece || !piece.file || !piece.rank) continue;
       const sequence = sequenceByFileRank(piece.file, piece.rank);
-      const square = document.querySelector(
-        `.chess_board_square[data-sequence="${sequence}"]`
-      );
+      const square = boardElement
+        ? boardElement.querySelector(`.chess_board_square[data-sequence="${sequence}"]`)
+        : document.querySelector(`.chess_board_square[data-sequence="${sequence}"]`);
       if (!square) continue;
       const imagePath = imagePathFromPiece(piece);
       if (!imagePath) continue;
@@ -2168,21 +2303,22 @@
   });
   void createSessionOnLoad();
 
-  // Helper for step 4 – apply AI move when the backend returns it together with the human move
+  // Apply AI move when the backend returns it together with the human move
   window.applyAIMoveFromResult = (result) => {
     if (!result || !result.aiMove) return false;
-    const uci = String(result.aiMove).toLowerCase();
-    if (uci.length < 4) return false;
-
-    const fromFile = uci.charCodeAt(0) - 97 + 1;
-    const fromRank = parseInt(uci[1], 10);
-    const toFile = uci.charCodeAt(2) - 97 + 1;
-    const toRank = parseInt(uci[3], 10);
-
-    if (fromFile && fromRank && toFile && toRank) {
-      applyMoveOnBoard(fromFile, fromRank, toFile, toRank);
-      return true;
+    const match = String(result.aiMove).match(/^([a-i])(\d{1,2})([a-i])(\d{1,2})/i);
+    if (!match) return false;
+    const fromFile = match[1].toLowerCase().charCodeAt(0) - 97 + 1;
+    const fromRank = parseInt(match[2], 10);
+    const toFile = match[3].toLowerCase().charCodeAt(0) - 97 + 1;
+    const toRank = parseInt(match[4], 10);
+    if (
+      fromFile < 1 || fromFile > boardFiles || fromRank < 1 || fromRank > boardMaxRank ||
+      toFile < 1 || toFile > boardFiles || toRank < 1 || toRank > boardMaxRank
+    ) {
+      return false;
     }
-    return false;
+    applyMoveOnBoard(fromFile, fromRank, toFile, toRank);
+    return true;
   };
 })();

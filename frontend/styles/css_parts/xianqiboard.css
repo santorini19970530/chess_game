@@ -1,0 +1,169 @@
+/*
+ * Xiangqi: real point geometry inside an inset field.
+ * Outer points sit on the line frame; padding around the field absorbs piece overhang
+ * (junction pieces would otherwise clip at top/bottom/side ranks & files).
+ */
+
+.chess_board_wrapper[data-game-type="xianqi"] .chess_board.xianqi_board {
+  --xq-line: #2b1a0e;
+  --xq-pad: 7%;
+  position: relative;
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: 8 / 9;
+  display: block;
+  margin: 0 auto;
+  border: 2px solid var(--xq-line);
+  background-color: #efd8a0;
+  overflow: visible;
+  padding: var(--xq-pad);
+  box-sizing: border-box;
+}
+
+/* Line grid + points live here; edge pieces may paint into --xq-pad */
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_field {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_artwork {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_h_line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--xq-line);
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_v_line {
+  position: absolute;
+  width: 2px;
+  margin-left: -1px;
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_v_outer {
+  top: 0;
+  bottom: 0;
+  background: var(--xq-line);
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_v_inner {
+  top: 0;
+  bottom: 0;
+  background: transparent;
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_v_inner::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 2px;
+  top: 0;
+  height: calc(100% * 4 / 9);
+  background: var(--xq-line);
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_v_inner::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 2px;
+  top: calc(100% * 5 / 9);
+  height: calc(100% * 4 / 9);
+  background: var(--xq-line);
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_palace {
+  position: absolute;
+  width: calc(100% * 2 / 8);
+  height: calc(100% * 2 / 9);
+  pointer-events: none;
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_palace_top {
+  left: calc(100% * 3 / 8);
+  top: 0;
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_palace_bottom {
+  left: calc(100% * 3 / 8);
+  top: calc(100% * 7 / 9);
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_palace::before,
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_palace::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 141.421%;
+  height: 2px;
+  background: var(--xq-line);
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_palace::before {
+  top: 0;
+  transform: rotate(45deg);
+  transform-origin: 0 0;
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_palace::after {
+  bottom: 0;
+  transform: rotate(-45deg);
+  transform-origin: 0 100%;
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_points {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_points .chess_board_square {
+  position: absolute;
+  width: calc(100% / 8);
+  height: calc(100% / 9);
+  transform: translate(-50%, -50%);
+  border: none;
+  background: transparent;
+  aspect-ratio: unset;
+  overflow: visible;
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_points .chess_board_square_light,
+.chess_board_wrapper[data-game-type="xianqi"] .xianqi_points .chess_board_square_dark {
+  background: transparent;
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .piece_img {
+  top: 50%;
+  left: 50%;
+  width: 68%;
+  height: 68%;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .piece_img_selected {
+  filter:
+    drop-shadow(0 0 0 #001018)
+    drop-shadow(0 0 3px #c02828)
+    drop-shadow(0 0 8px #c02828);
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .chess_board_square_suggested {
+  background: transparent;
+  box-shadow: none;
+  outline: 3px solid #67e8f9;
+  outline-offset: -32%;
+  border-radius: 50%;
+}

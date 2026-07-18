@@ -6,21 +6,24 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"time"
 )
 
 var buildMu sync.Mutex
 
+// EnsureStyleCSS rebuilds style.css from input.css when input or any imported
+// partial under the same styles directory is newer than the output.
 func EnsureStyleCSS(inputPath, outputPath, tailwindPath string) error {
 	buildMu.Lock()
 	defer buildMu.Unlock()
 
-	inputInfo, err := os.Stat(inputPath)
+	newest, err := newestCSSSourceTime(inputPath)
 	if err != nil {
 		return err
 	}
 
 	outputInfo, err := os.Stat(outputPath)
-	if err == nil && !inputInfo.ModTime().After(outputInfo.ModTime()) {
+	if err == nil && !newest.After(outputInfo.ModTime()) {
 		return nil
 	}
 
@@ -31,6 +34,41 @@ func EnsureStyleCSS(inputPath, outputPath, tailwindPath string) error {
 		return err
 	}
 
-	log.Printf("rebuilt %s from %s", filepath.Base(outputPath), filepath.Base(inputPath))
+	log.Printf("rebuilt %s from %s (+ css_parts)", filepath.Base(outputPath), filepath.Base(inputPath))
 	return nil
+}
+
+func newestCSSSourceTime(inputPath string) (time.Time, error) {
+	info, err := os.Stat(inputPath)
+	if err != nil {
+		return time.Time{}, err
+	}
+	newest := info.ModTime()
+
+	stylesDir := filepath.Dir(inputPath)
+	err = filepath.Walk(stylesDir, func(path string, fi os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if fi.IsDir() {
+			// skip nested junk; allow css_parts/
+			base := filepath.Base(path)
+			if base == "node_modules" || base == ".git" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if filepath.Ext(path) != ".css" {
+			return nil
+		}
+		// style.css is the build output — ignore it
+		if filepath.Base(path) == "style.css" {
+			return nil
+		}
+		if fi.ModTime().After(newest) {
+			newest = fi.ModTime()
+		}
+		return nil
+	})
+	return newest, err
 }
