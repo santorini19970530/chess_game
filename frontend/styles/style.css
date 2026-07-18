@@ -759,15 +759,38 @@ main {
   border-radius: 50%;
 }
 .chess_board_wrapper[data-game-type="shogi"] .chess_board {
+  --shogi-line: #3d2a1a;
+  --shogi-wood: #e0c9a0;
   aspect-ratio: 1 / 1;
-  border-color: #4a3828;
-  background: #c4a882;
+  border: 3px solid var(--shogi-line);
+  background: var(--shogi-wood);
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  grid-template-rows: repeat(9, minmax(0, 1fr));
 }
-.chess_board_wrapper[data-game-type="shogi"] .chess_board_square_light {
-  background-color: #e8d4b0;
+.chess_board_wrapper[data-game-type="shogi"] .chess_board_square {
+  border: 1px solid var(--shogi-line);
+  background-color: var(--shogi-wood);
 }
-.chess_board_wrapper[data-game-type="shogi"] .chess_board_square_dark {
-  background-color: #d9c49a;
+.chess_board_wrapper[data-game-type="shogi"] .chess_board_square_light, .chess_board_wrapper[data-game-type="shogi"] .chess_board_square_dark {
+  background-color: var(--shogi-wood);
+}
+.chess_board_wrapper[data-game-type="shogi"] .piece_img {
+  top: 6%;
+  left: 6%;
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+}
+.chess_board_wrapper[data-game-type="shogi"] .piece_img_selected {
+  filter: drop-shadow(0 0 0 #1a0a00) drop-shadow(0 0 3px #b45309) drop-shadow(0 0 8px #b45309);
+  transform: scale(1.1);
+}
+.chess_board_wrapper[data-game-type="shogi"] .piece_img[data-color="black"] {
+  transform: rotate(180deg);
+}
+.chess_board_wrapper[data-game-type="shogi"] .piece_img_selected[data-color="black"] {
+  transform: rotate(180deg) scale(1.1);
 }
 .game_panel_right_top, .game_panel_right_bottom {
   flex: 1 1 auto;

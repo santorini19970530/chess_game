@@ -332,12 +332,12 @@
       if (!response.ok) return;
       const result = await response.json();
       syncGameIdFromResult(result);
-      renderBoardFromState(result.state);
+      renderGameConfig(result.game);
+      renderBoardFromState(result.state, result.game?.type);
       renderMoveHistory(result.history, result.historyDetailed);
       renderCurrentTurn(result.currentTurn);
       renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
       renderGameOutcome(result.game);
-      renderGameConfig(result.game);
       renderGameInfo(result.captured, result.analysis);
       clearSelectedSquare();
       void refreshSuggestedMoves();
@@ -825,17 +825,37 @@
     return true;
   };
 
+  /** Preview start layout for the selected game type (does not create a session). */
+  const previewBoardForGameType = (type) => {
+    const t = String(type || gameTypeSelect?.value || boardGameType || "chess").toLowerCase();
+    ensureBoardGeometry(t);
+    if (t === "xianqi") {
+      renderBoardFromState(initialXiangqiState(), "xianqi");
+      return;
+    }
+    if (t === "shogi") {
+      // Pieces wired in issue0037 step 2; still rebuild the 9×9 wood grid now.
+      renderBoardFromState([], "shogi");
+      return;
+    }
+    renderBoardFromState(initialChessState(), "chess");
+  };
+
   const renderGameConfig = (game) => {
-    const cfg = game?.config;
-    if (!cfg) return;
+    if (!game) return;
+    // Always sync board geometry from game type (config may be sparse).
     if (gameTypeSelect) gameTypeSelect.value = String(game.type || "chess");
     ensureBoardGeometry(game.type || gameTypeSelect?.value || "chess");
+    const cfg = game.config;
+    if (!cfg) {
+      updateSetupControlState();
+      return;
+    }
     if (gameModeSelect) gameModeSelect.value = String(game.mode || "human_vs_human");
     if (humanSideSelect) humanSideSelect.value = String(cfg.humanColor || "white");
     if (aiGameCountInput) aiGameCountInput.value = String(cfg.aiGameCount || 1);
     if (fenInput) fenInput.value = String(cfg.startFen || "");
     if (aiStrengthSelect) aiStrengthSelect.value = String(cfg.aiProfile || cfg.aiStrength || "intermediate");
-    // Update the internal humanColor variable used for move validation
     humanColor = String(cfg.humanColor || "white").toLowerCase();
     updateSetupControlState();
   };
@@ -1556,9 +1576,9 @@
   };
 
   // Full board sync from backend state (handles en passant, castling, promotion)
-  const renderBoardFromState = (state) => {
+  const renderBoardFromState = (state, typeHint) => {
     if (!Array.isArray(state)) return false;
-    ensureBoardGeometry(gameTypeSelect?.value || boardGameType);
+    ensureBoardGeometry(typeHint || gameTypeSelect?.value || boardGameType);
 
     const boardSquares = boardElement
       ? boardElement.querySelectorAll(".chess_board_square[data-sequence]")
@@ -1707,12 +1727,12 @@
       }
       const result = await response.json();
       syncGameIdFromResult(result);
-      renderBoardFromState(result.state);
+      renderGameConfig(result.game);
+      renderBoardFromState(result.state, result.game?.type);
       renderMoveHistory(result.history, result.historyDetailed);
       renderCurrentTurn(result.currentTurn);
       renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
       renderGameOutcome(result.game);
-      renderGameConfig(result.game);
       cachedAnalysis = null;
       renderGameInfo(result.captured, result.analysis);
       stopAnalysisPolling();
@@ -1847,6 +1867,12 @@
   if (gameModeSelect) gameModeSelect.addEventListener("change", updateSetupControlState);
   if (fenInput) fenInput.addEventListener("input", updateSetupControlState);
   if (aiStrengthSelect) aiStrengthSelect.addEventListener("change", updateSetupControlState);
+  if (gameTypeSelect) {
+    gameTypeSelect.addEventListener("change", () => {
+      previewBoardForGameType(gameTypeSelect.value);
+      updateSetupControlState();
+    });
+  }
 
   // --- Top-3 move hints (Shift + hover) ---
   let hintsVisible = false;
@@ -1910,6 +1936,7 @@
         const result = await response.json();
         syncGameIdFromResult(result);
         renderGameConfig(result.game);
+        previewBoardForGameType(result.game?.type || gameTypeSelect?.value);
 
         // Immediately store the human color from the applied config
         if (result.game?.config?.humanColor) {
@@ -2083,12 +2110,13 @@
         }
         const result = await response.json();
         syncGameIdFromResult(result);
-        renderBoardFromState(result.state);
+        // Config first so geometry / data-game-type match server type before placing pieces.
+        renderGameConfig(result.game);
+        renderBoardFromState(result.state, result.game?.type);
         renderMoveHistory(result.history, result.historyDetailed);
         renderCurrentTurn(result.currentTurn);
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
         renderGameOutcome(result.game);
-        renderGameConfig(result.game);
 
         // Store the human color from the game config for Human vs AI mode
         if (result.game?.config?.humanColor) {
@@ -2160,12 +2188,7 @@
   }
 
   function resetBoardToInitialState() {
-    ensureBoardGeometry(gameTypeSelect?.value || boardGameType);
-    if (boardGameType === "xianqi") {
-      renderBoardFromState(initialXiangqiState());
-      return;
-    }
-    renderBoardFromState(initialChessState());
+    previewBoardForGameType(gameTypeSelect?.value || boardGameType);
   }
 
   function clearResultLabelClasses() {
