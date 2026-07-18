@@ -403,8 +403,22 @@ def build_threat_summary(board: chess.Board, eval_cp_white: int) -> str:
 
 
 def build_explanation_fallback(
-    fen: str, color: str, move_uci: str, move_san: str | None = None
+    fen: str,
+    color: str,
+    move_uci: str,
+    move_san: str | None = None,
+    game_type: str = "chess",
 ) -> str:
+    move_text = move_san or move_uci
+    gt = (game_type or "chess").strip().lower()
+    if gt in {"xianqi", "shogi"}:
+        label = "Xiangqi" if gt == "xianqi" else "Shogi"
+        return (
+            f"{move_text} is a legal-looking {label} move in the current position. "
+            f"Without a full board model here, treat it as a candidate to re-check for "
+            f"checks, captures, and piece safety before committing."
+        )
+
     board = chess.Board(fen)
     requested = parse_color(color)
     board.turn = requested
@@ -412,7 +426,6 @@ def build_explanation_fallback(
     threat = build_threat_summary(board, evaluate_position(board, chess.WHITE))
     material = material_score(board, requested)
     sign = "ahead" if material > 50 else ("behind" if material < -50 else "level")
-    move_text = move_san or move_uci
     return (
         f"{move_text} keeps material {sign}. {threat} "
         "It is a reasonable choice given the current threats and balance."
