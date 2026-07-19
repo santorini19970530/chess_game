@@ -69,6 +69,11 @@
   color: #eff6ff;
 }
 
+.chess_board_wrapper[data-game-type="shogi"] .chess_board_square_suggested_from[data-hint-rank]::after {
+  background: #9a3412;
+  color: #fff7ed;
+}
+
 /* Drop/relife dest: dashed edge so it is not confused with a board move. */
 .chess_board_wrapper[data-game-type="shogi"] .chess_board_square_suggested_drop {
   outline: 3px dashed #1d4ed8;

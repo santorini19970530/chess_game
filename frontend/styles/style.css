@@ -636,6 +636,26 @@ main {
   line-height: 1.15;
   text-align: center;
   pointer-events: none;
+  white-space: nowrap;
+}
+.chess_board_square_suggested_from[data-hint-rank]::after {
+  content: attr(data-hint-rank);
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  right: auto;
+  z-index: 3;
+  min-width: 1rem;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #92400e;
+  color: #fffbeb;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  pointer-events: none;
+  white-space: nowrap;
 }
 @media (min-width: 1100px) {
   .chess_board_wrapper {
@@ -788,6 +808,14 @@ main {
   color: #eff6ff;
   font-size: 0.65rem;
 }
+.chess_board_wrapper[data-game-type="xianqi"] .chess_board_square_suggested_from[data-hint-rank]::after {
+  top: 8%;
+  left: 8%;
+  right: auto;
+  background: #9a3412;
+  color: #fff7ed;
+  font-size: 0.65rem;
+}
 .chess_board_wrapper[data-game-type="shogi"] .chess_board {
   --shogi-line: #3d2a1a;
   --shogi-wood: #e0c9a0;
@@ -833,6 +861,10 @@ main {
 .chess_board_wrapper[data-game-type="shogi"] .chess_board_square_suggested[data-hint-rank]::after {
   background: #1e3a8a;
   color: #eff6ff;
+}
+.chess_board_wrapper[data-game-type="shogi"] .chess_board_square_suggested_from[data-hint-rank]::after {
+  background: #9a3412;
+  color: #fff7ed;
 }
 .chess_board_wrapper[data-game-type="shogi"] .chess_board_square_suggested_drop {
   outline: 3px dashed #1d4ed8;

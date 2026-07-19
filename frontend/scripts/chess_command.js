@@ -1611,6 +1611,33 @@
     lastHandHints = [];
   };
 
+  const appendHintRank = (el, rankLabel) => {
+    if (!el) return;
+    const label = String(rankLabel || "").trim();
+    if (!label) return;
+    const prev = el.getAttribute("data-hint-rank");
+    if (!prev) {
+      el.setAttribute("data-hint-rank", label);
+      return;
+    }
+    const parts = prev.split(/[·,/]/).map((s) => s.trim()).filter(Boolean);
+    if (!parts.includes(label)) parts.push(label);
+    parts.sort((a, b) => Number(a) - Number(b));
+    el.setAttribute("data-hint-rank", parts.join("·"));
+  };
+
+  const mergeHandHintRank = (side, kind, rankLabel) => {
+    const hit = lastHandHints.find((h) => h.side === side && h.kind === kind);
+    if (!hit) {
+      lastHandHints.push({ side, kind, rank: String(rankLabel) });
+      return;
+    }
+    const parts = String(hit.rank).split(/[·,/]/).map((s) => s.trim()).filter(Boolean);
+    if (!parts.includes(String(rankLabel))) parts.push(String(rankLabel));
+    parts.sort((a, b) => Number(a) - Number(b));
+    hit.rank = parts.join("·");
+  };
+
   const applyHandHintToNode = (node, side, kind) => {
     const hit = lastHandHints.find((h) => h.side === side && h.kind === kind);
     if (!hit) return;
@@ -1684,21 +1711,24 @@
         const kind = SHOGI_DROP_KIND_FROM_CHAR[parsed.dropKind.toLowerCase()];
         const side = String(currentTurn || "white").toLowerCase();
         if (kind) {
-          lastHandHints.push({ side, kind, rank: rankLabel });
+          mergeHandHintRank(side, kind, rankLabel);
           document
             .querySelectorAll(`.shogi_hand_piece[data-side="${side}"][data-kind="${kind}"]`)
             .forEach((el) => applyHandHintToNode(el, side, kind));
         }
       } else if (parsed.from) {
         const fromSq = squareAt(parsed.from.file, parsed.from.rank);
-        if (fromSq) fromSq.classList.add(SUGGESTED_FROM_CLASS);
+        if (fromSq) {
+          fromSq.classList.add(SUGGESTED_FROM_CLASS);
+          appendHintRank(fromSq, rankLabel);
+        }
       }
 
       const toSq = squareAt(parsed.to.file, parsed.to.rank);
       if (toSq) {
         toSq.classList.add(SUGGESTED_MOVE_CLASS);
         if (parsed.dropKind) toSq.classList.add(SUGGESTED_DROP_CLASS);
-        toSq.setAttribute("data-hint-rank", rankLabel);
+        appendHintRank(toSq, rankLabel);
         selectedSuggestedMoves.push({
           sequence: Number(toSq.getAttribute("data-sequence")),
           move,
@@ -2055,6 +2085,28 @@
       piece.classList.add("piece_img_dragging");
       event.dataTransfer?.setData("text/plain", String(sourceSequence));
       if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+      // Shogi black uses CSS rotate(180deg); native drag ghost often drops that transform.
+      // Use a pixel-sized canvas — cloning the <img> into body makes % width explode.
+      if (
+        event.dataTransfer &&
+        piece instanceof HTMLImageElement &&
+        String(boardWrapper?.dataset?.gameType || "").toLowerCase() === "shogi" &&
+        String(piece.getAttribute("data-color") || "").toLowerCase() === "black"
+      ) {
+        const rect = piece.getBoundingClientRect();
+        const w = Math.max(1, Math.round(rect.width));
+        const h = Math.max(1, Math.round(rect.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.translate(w / 2, h / 2);
+          ctx.rotate(Math.PI);
+          ctx.drawImage(piece, -w / 2, -h / 2, w, h);
+          event.dataTransfer.setDragImage(canvas, w / 2, h / 2);
+        }
+      }
     });
 
     boardElement.addEventListener("dragover", (event) => {
