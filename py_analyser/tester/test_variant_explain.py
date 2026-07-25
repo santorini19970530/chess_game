@@ -77,6 +77,38 @@ class TestVariantExplain(unittest.TestCase):
         self.assertEqual(payload["status"], "ok")
         self.assertTrue(str(payload.get("explanation", "")).strip())
 
+    def test_teacher_prompt_loads_variant_terms(self) -> None:
+        """issue0051: xianqi/shogi prompts inject that game's terms, not chess copy."""
+        from llm_providers import build_teacher_prompt
+
+        kwargs = dict(
+            fen=XIANGQI_START,
+            move_uci="h2e2",
+            move_san=None,
+            move_history=[],
+            skill_level="intermediate",
+        )
+        xq = build_teacher_prompt(**kwargs, game_type="xianqi")
+        sh = build_teacher_prompt(
+            fen=SHOGI_START,
+            move_uci="c3c4",
+            move_san=None,
+            move_history=[],
+            skill_level="intermediate",
+            game_type="shogi",
+        )
+        chess = build_teacher_prompt(
+            fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            move_uci="e2e4",
+            move_san="e4",
+            move_history=[],
+            skill_level="intermediate",
+            game_type="chess",
+        )
+        self.assertIn("palace", xq)
+        self.assertIn("drop", sh)
+        self.assertNotIn("palace", chess)
+
     def test_explain_chess_still_works(self) -> None:
         response = self.client.post(
             "/explain",

@@ -1096,7 +1096,13 @@
 
     if (gameInfoNotesBox && effectiveAnalysis) {
       const threatSummary = String(effectiveAnalysis?.threat_summary || "").trim();
-      lastThreatSummary = threatSummary || "No analysis summary yet.";
+      // Skip empty / stub lines that looked like Fairy-Stockfish authored the coach note.
+      const stubThreat = new Set([
+        "",
+        "Position evaluated with Fairy-Stockfish.",
+        "No analysis summary yet.",
+      ]);
+      lastThreatSummary = stubThreat.has(threatSummary) ? "" : threatSummary;
       refreshNotesBox();
     }
   };

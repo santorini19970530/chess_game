@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""issue0048: teacher-quality smoke (chess) — runnable regression gate.
+"""Teacher-quality smoke — runnable regression gate.
 
 Always-on (offline):
-  - chess_terms.json / chess_tone.json load
-  - beginner vs advanced prompts differ
+  - chess + xiangqi + shogi terms/tone JSON load (issue0048 / issue0051)
+  - beginner vs advanced prompts differ (chess)
+  - variant prompts use game vocab, not chess copy (issue0051)
   - /explain heuristic path non-empty
 
 Optional live Ollama (set TEACHER_SMOKE_OLLAMA=1 with ollama up):
@@ -27,9 +28,19 @@ DATA_DIR = Path(PARENT_DIR) / "data"
 FEN_AFTER_E4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
 
 
+_TERMS_TONE_FILES = (
+    "chess_terms.json",
+    "chess_tone.json",
+    "xiangqi_terms.json",
+    "xiangqi_tone.json",
+    "shogi_terms.json",
+    "shogi_tone.json",
+)
+
+
 class TestTeacherSmokeOffline(unittest.TestCase):
     def test_terms_and_tone_json_load(self) -> None:
-        for name in ("chess_terms.json", "chess_tone.json"):
+        for name in _TERMS_TONE_FILES:
             path = DATA_DIR / name
             self.assertTrue(path.is_file(), f"missing {path}")
             data = json.loads(path.read_text(encoding="utf-8"))
@@ -52,6 +63,24 @@ class TestTeacherSmokeOffline(unittest.TestCase):
         self.assertNotEqual(beg, adv)
         self.assertIn("friendly teacher", beg)
         self.assertIn("prophylaxis", adv)
+
+    def test_variant_prompts_use_own_terms(self) -> None:
+        from llm_providers import build_teacher_prompt
+
+        kwargs = dict(
+            fen=FEN_AFTER_E4,
+            move_uci="e2e4",
+            move_san="e4",
+            move_history=[],
+            skill_level="intermediate",
+        )
+        chess = build_teacher_prompt(**kwargs, game_type="chess")
+        xq = build_teacher_prompt(**kwargs, game_type="xianqi")
+        sh = build_teacher_prompt(**kwargs, game_type="shogi")
+        self.assertIn("palace", xq)
+        self.assertIn("drop", sh)
+        self.assertNotIn("palace", chess)
+        self.assertNotIn("drop", chess)
 
     def test_explain_heuristic_nonempty(self) -> None:
         os.environ["LLM_PROVIDER"] = "heuristic"

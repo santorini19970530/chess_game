@@ -37,6 +37,19 @@ class TestMoveGroundTruth(unittest.TestCase):
         self.assertIn("pawn e2→e4", gt["summary"])
         self.assertIn("attacks no enemy piece", gt["summary"])
 
+    def test_shogi_labels_piece_from_post_move_fen(self) -> None:
+        # After sente silver g1→f2 (piece sits on f2 in this FEN).
+        fen = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B3S1R1/LNSGKG1NL[] b - - 0 1"
+        gt = build_move_ground_truth(fen, "g1f2", ["g1f2"], "shogi")
+        self.assertEqual(gt.get("san"), "silver g1→f2")
+        self.assertIn("silver g1→f2", gt["summary"])
+        self.assertNotEqual(gt.get("san"), "g1f2")
+
+    def test_shogi_drop_label(self) -> None:
+        fen = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL[P] w - - 0 1"
+        gt = build_move_ground_truth(fen, "P*e5", ["P*e5"], "shogi")
+        self.assertEqual(gt.get("san"), "drop pawn → e5")
+
     def test_does_not_claim_far_bishop_attack_on_f3(self) -> None:
         # Opening-ish: after 1.e4 e5 2.Nf3 Nc6 3.Bb5 a6 4.Ba4 Nf6 5.O-O Be7 6.Re1 b5 7.Bb3 d6 8.c3 O-O 9.h3 Nb8 …
         # Simpler: white plays f3 in a position with black bishop nowhere attacked by that pawn.

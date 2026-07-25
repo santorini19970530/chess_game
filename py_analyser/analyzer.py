@@ -18,6 +18,7 @@ import json
 import math
 import os
 import random
+import re
 import subprocess
 import threading
 import time
@@ -432,6 +433,98 @@ def normalize_history_uci(raw: str) -> str:
     return s.lower()
 
 
+_SHOGI_KIND = {
+    "p": "pawn",
+    "l": "lance",
+    "n": "knight",
+    "s": "silver",
+    "g": "gold",
+    "b": "bishop",
+    "r": "rook",
+    "k": "king",
+}
+_SHOGI_PROMO_KIND = {
+    "p": "tokin",
+    "l": "promoted lance",
+    "n": "promoted knight",
+    "s": "promoted silver",
+    "b": "horse",
+    "r": "dragon",
+}
+_XIANGQI_KIND = {
+    "k": "general",
+    "a": "advisor",
+    "b": "elephant",
+    "e": "elephant",
+    "n": "horse",
+    "r": "chariot",
+    "c": "cannon",
+    "p": "soldier",
+}
+
+
+def _variant_board_grid(fen: str, *, files: int, ranks: int) -> Dict[Tuple[int, int], str]:
+    """Map (file, rank) → piece kind from SFEN/FEN placement (post-move board)."""
+    placement = (fen or "").split()[0] if fen else ""
+    if "[" in placement:
+        placement = placement.split("[", 1)[0]
+    rows = placement.split("/")
+    if len(rows) != ranks:
+        return {}
+    out: Dict[Tuple[int, int], str] = {}
+    for i, row in enumerate(rows):
+        rank = ranks - i
+        file_i = 1
+        j = 0
+        while j < len(row) and file_i <= files:
+            ch = row[j]
+            if ch.isdigit():
+                file_i += int(ch)
+                j += 1
+                continue
+            promoted = False
+            if ch == "+":
+                promoted = True
+                j += 1
+                if j >= len(row):
+                    break
+                ch = row[j]
+            kind_key = ch.lower()
+            if ranks == 9:  # shogi
+                kind = (
+                    _SHOGI_PROMO_KIND.get(kind_key)
+                    if promoted
+                    else _SHOGI_KIND.get(kind_key)
+                )
+            else:
+                kind = _XIANGQI_KIND.get(kind_key)
+            if kind and 1 <= file_i <= files:
+                out[(file_i, rank)] = kind
+            file_i += 1
+            j += 1
+    return out
+
+
+def _variant_move_label(fen: str, target: str, gt: str) -> str:
+    """Human label for xianqi/shogi UCI using post-move FEN (piece on destination)."""
+    key = "shogi" if gt == "shogi" else "xianqi"
+    drop = re.match(r"^([plnsgbr])[*@]([a-i])([1-9])$", target)
+    if drop and key == "shogi":
+        kind = _SHOGI_KIND.get(drop.group(1), "piece")
+        return f"drop {kind} → {drop.group(2)}{drop.group(3)}"
+
+    board = re.match(r"^([a-i])(\d{1,2})([a-i])(\d{1,2})(\+?)$", target)
+    if not board:
+        return target
+    ff, fr = board.group(1), board.group(2)
+    tf, tr, promo = board.group(3), int(board.group(4)), board.group(5)
+    files, ranks = (9, 9) if key == "shogi" else (9, 10)
+    grid = _variant_board_grid(fen, files=files, ranks=ranks)
+    kind = grid.get((ord(tf) - ord("a") + 1, tr), "piece")
+    suffix = " (promote)" if promo == "+" else ""
+    return f"{kind} {ff}{fr}→{tf}{tr}{suffix}"
+
+
 def build_move_ground_truth(
     fen: str,
     move_uci: str,
@@ -451,12 +544,16 @@ def build_move_ground_truth(
     if not target:
         return {"summary": "GROUND TRUTH: last move unknown — do not invent tactics, attacks, or captures."}
 
-    if gt in {"xianqi", "shogi"}:
-        label = "Xiangqi" if gt == "xianqi" else "Shogi"
-        return {
-            "summary": f"GROUND TRUTH: last {label} move UCI {target}. Do not invent Chess piece attacks.",
-            "uci": target,
-        }
+    if gt in {"xianqi", "xiangqi", "shogi"}:
+        label = "Xiangqi" if gt in {"xianqi", "xiangqi"} else "Shogi"
+        move_lab = _variant_move_label(fen, target, gt)
+        squares = " ".join(dict.fromkeys(re.findall(r"[a-i]\d{1,2}", f"{move_lab} {target}")))
+        summary = (
+            f"GROUND TRUTH: last {label} move {move_lab} (UCI {target}). "
+            f"Only mention squares {squares or target}. "
+            f"Do not invent other pieces, squares, captures, or Chess ideas (centre/castling)."
+        )
+        return {"summary": summary, "san": move_lab, "uci": target}
 
     try:
         board = chess.Board()
@@ -617,12 +714,12 @@ def build_explanation_fallback(
 ) -> str:
     move_text = move_san or move_uci
     gt = (game_type or "chess").strip().lower()
-    if gt in {"xianqi", "shogi"}:
-        label = "Xiangqi" if gt == "xianqi" else "Shogi"
+    if gt in {"xianqi", "xiangqi", "shogi"}:
+        label = "Xiangqi" if gt in {"xianqi", "xiangqi"} else "Shogi"
+        lab = _variant_move_label(fen, normalize_history_uci(move_uci or ""), gt) or move_text
         return (
-            f"{move_text} is a legal-looking {label} move in the current position. "
-            f"Without a full board model here, treat it as a candidate to re-check for "
-            f"checks, captures, and piece safety before committing."
+            f"{lab} is a legal-looking {label} move. "
+            f"Re-check checks, captures, and piece safety before committing."
         )
 
     board = chess.Board(fen)
@@ -652,7 +749,9 @@ def _analyze_position_variant(
     eval_cp_white = 0
     suggestions: List[MoveSuggestion] = []
     source = "fairy-stockfish"
-    threat = "Position evaluated with Fairy-Stockfish."
+    # Empty on success — a stub like "Position evaluated with Fairy-Stockfish."
+    # sat between suggestions and coach and looked like FS endorsed the LLM.
+    threat = ""
 
     try:
         suggestions, score = suggest_moves_fs_variant(fen, game_type, top_k, profile)

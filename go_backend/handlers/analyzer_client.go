@@ -301,9 +301,12 @@ var (
 	analysisPendingByGame   = map[string]bool{}
 	analysisLastErrorByGame = map[string]string{}
 	exportedGames           = map[string]bool{}
+	explainLatestByGame     = map[string]int{} // coalesce Ollama: only newest ply runs
 	analysisStoreMu         sync.Mutex
 	analysisQueue           = make(chan analysisJob, 128)
 	analysisWorkerOnce      sync.Once
+	// One Ollama /explain at a time — unbounded goroutines melt the machine late-game.
+	explainOllamaSem = make(chan struct{}, 1)
 )
 
 const (
@@ -496,8 +499,26 @@ func explainByRequest(reqPayload explainRequest) (*explainResponse, error) {
 		}
 	}
 
-	log.Printf("explain response: %s", string(respBody))
+	if len(respBody) > 240 {
+		log.Printf("explain response: %s…", string(respBody[:240]))
+	} else {
+		log.Printf("explain response: %s", string(respBody))
+	}
 	return &parsed, nil
+}
+
+func noteExplainRequest(gameID string, moveNumber int) {
+	analysisStoreMu.Lock()
+	defer analysisStoreMu.Unlock()
+	if moveNumber >= explainLatestByGame[gameID] {
+		explainLatestByGame[gameID] = moveNumber
+	}
+}
+
+func isExplainStale(gameID string, moveNumber int) bool {
+	analysisStoreMu.Lock()
+	defer analysisStoreMu.Unlock()
+	return moveNumber < explainLatestByGame[gameID]
 }
 
 func StartAnalyzerWorker() {
@@ -725,6 +746,7 @@ func shouldExplainCommand(command string) bool {
 // Prefer calling this after analysis is recorded so concept_hints match Suggested moves.
 // On success it broadcasts a dedicated "explanation_ready" socket event.
 // Any failure (Ollama down, timeout, etc.) is silently ignored so the game is never affected.
+// Ollama is single-flight + stale-skipped so late-game ply storms cannot wedge the machine/UI.
 func enqueueExplanation(gameID, moveUCI, moveSAN string) {
 	go func() {
 		gameType := "chess"
@@ -750,8 +772,12 @@ func enqueueExplanation(gameID, moveUCI, moveSAN string) {
 			return
 		}
 		moveNumber := len(history)
+		noteExplainRequest(gameID, moveNumber)
 
 		hints := waitConceptHintsForFEN(gameID, fen, explainHintWait())
+		if isExplainStale(gameID, moveNumber) {
+			return
+		}
 		base := explainRequest{
 			FEN:          fen,
 			Color:        color,
@@ -769,25 +795,35 @@ func enqueueExplanation(gameID, moveUCI, moveSAN string) {
 		quickReq.RequestID = fmt.Sprintf("%s-explain-quick-%d", gameID, moveNumber)
 		quickReq.Quick = true
 		if quick, qerr := explainByRequest(quickReq); qerr == nil && quick != nil && strings.TrimSpace(quick.Explanation) != "" {
-			gameSocketHub.Broadcast(gameID, socketEventExplanationReady, map[string]interface{}{
-				"move_number":   moveNumber,
-				"move_uci":      quick.MoveUCI,
-				"move_san":      quick.MoveSAN,
-				"explanation":   quick.Explanation,
-				"source":        quick.Source,
-				"latency_ms":    quick.LatencyMS,
-				"skill_level":   skillLevel,
-				"concept_hints": hints,
-				"quick":         true,
-			})
+			if !isExplainStale(gameID, moveNumber) {
+				gameSocketHub.Broadcast(gameID, socketEventExplanationReady, map[string]interface{}{
+					"move_number":   moveNumber,
+					"move_uci":      quick.MoveUCI,
+					"move_san":      quick.MoveSAN,
+					"explanation":   quick.Explanation,
+					"source":        quick.Source,
+					"latency_ms":    quick.LatencyMS,
+					"skill_level":   skillLevel,
+					"concept_hints": hints,
+					"quick":         true,
+				})
+			}
 		}
 
-		// 2) Full Ollama coach (slower); replaces the quick line when ready.
+		// 2) Full Ollama coach — one at a time; skip if a newer ply already superseded this.
+		explainOllamaSem <- struct{}{}
+		defer func() { <-explainOllamaSem }()
+		if isExplainStale(gameID, moveNumber) {
+			return
+		}
 		req := base
 		req.RequestID = fmt.Sprintf("%s-explain-%d", gameID, moveNumber)
 		result, err := explainByRequest(req)
 		if err != nil || result == nil || strings.TrimSpace(result.Explanation) == "" {
 			return // graceful: keep quick line if any
+		}
+		if isExplainStale(gameID, moveNumber) {
+			return
 		}
 
 		if len(result.ConceptHints) > 0 {

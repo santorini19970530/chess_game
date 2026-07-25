@@ -394,6 +394,7 @@ def explain() -> tuple:
             last_mover=last_mover,
             human_color=human_color,
             ground_summary=str(ground.get("summary") or ""),
+            concept_hints=concept_hints or None,
         )
     latency_ms = int((time.perf_counter() - started_at) * 1000)
     request_id = common["request_id"] or uuid.uuid4().hex
