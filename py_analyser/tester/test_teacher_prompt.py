@@ -34,6 +34,25 @@ class TestTeacherPrompt(unittest.TestCase):
         self.assertIn("prophylaxis", adv)
         self.assertNotIn("avoid engine jargon", adv.lower())
 
+    def test_prompt_pov_for_human_white_after_black_move(self) -> None:
+        # After Black plays e6, White to move — advice must target White, not Black's plan.
+        fen = "rnbqkbnr/pppp1ppp/4p3/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2"
+        prompt = build_teacher_prompt(
+            fen=fen,
+            move_uci="e7e6",
+            move_san="e6",
+            move_history=["e2e4", "e7e6"],
+            skill_level="beginner",
+            side_to_move="white",
+            human_color="white",
+        )
+        self.assertIn("Black just played", prompt)
+        self.assertIn("White is to move", prompt)
+        self.assertIn("human plays White", prompt)
+        self.assertIn("advise YOU (White) only", prompt)
+        self.assertIn("at most 2 short sentences", prompt)
+        self.assertIn("under 45 words", prompt)
+
     def test_heuristic_still_works(self) -> None:
         text = HeuristicProvider().explain(
             fen=self.FEN,

@@ -36,9 +36,10 @@ type analyzerRequest struct {
 type explainRequest struct {
 	RequestID   string   `json:"request_id"`
 	FEN         string   `json:"fen"`
-	Color       string   `json:"color"`
+	Color       string   `json:"color"` // side to move AFTER the explained move
 	GameType    string   `json:"game_type"`
 	SkillLevel  string   `json:"skill_level,omitempty"`
+	HumanColor  string   `json:"human_color,omitempty"` // human seat in HvAI (white|black)
 	MoveUCI     string   `json:"move_uci,omitempty"`
 	MoveSAN     string   `json:"move_san,omitempty"`
 	MoveHistory []string `json:"move_history,omitempty"`
@@ -575,11 +576,13 @@ func enqueueExplanation(gameID, moveUCI, moveSAN string) {
 	go func() {
 		gameType := "chess"
 		skillLevel := "intermediate"
+		humanColor := ""
 		if game, err := sessionpkg.GetGameSessionByID(gameID); err == nil {
 			if string(game.Type) != "" {
 				gameType = string(game.Type)
 			}
 			skillLevel = sessionpkg.ResolveSkillLevel(game.Config.SkillLevel, game.Config.AIProfile)
+			humanColor = strings.ToLower(strings.TrimSpace(game.Config.HumanColor))
 		}
 		history, err := sessionpkg.MoveHistoryByID(gameID)
 		if err != nil {
@@ -601,6 +604,7 @@ func enqueueExplanation(gameID, moveUCI, moveSAN string) {
 			Color:       color,
 			GameType:    gameType,
 			SkillLevel:  skillLevel,
+			HumanColor:  humanColor,
 			MoveUCI:     moveUCI,
 			MoveSAN:     moveSAN,
 			MoveHistory: history,

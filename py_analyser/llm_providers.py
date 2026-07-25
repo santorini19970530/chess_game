@@ -44,6 +44,20 @@ def _level_block(filename: str, skill_level: str) -> dict[str, Any]:
     return block if isinstance(block, dict) else {}
 
 
+def _normalize_side(color: str | None) -> str:
+    c = (color or "").strip().lower()
+    if c in {"black", "b"}:
+        return "black"
+    return "white"
+
+
+def _side_to_move_from_fen(fen: str, fallback: str = "white") -> str:
+    parts = (fen or "").split()
+    if len(parts) >= 2 and parts[1] in {"w", "b"}:
+        return "white" if parts[1] == "w" else "black"
+    return _normalize_side(fallback)
+
+
 def build_teacher_prompt(
     *,
     fen: str,
@@ -52,6 +66,8 @@ def build_teacher_prompt(
     move_history: list[str] | None,
     game_type: str = "chess",
     skill_level: str = "intermediate",
+    side_to_move: str = "white",
+    human_color: str | None = None,
 ) -> str:
     """Assemble Ollama prompt from chess_terms.json + chess_tone.json by skill_level."""
     level = normalize_skill_level(skill_level)
@@ -62,6 +78,9 @@ def build_teacher_prompt(
     history = move_history or []
     history_str = " ".join(history[-6:]) if history else "(no prior moves)"
     game = _game_label(game_type)
+    to_move = _side_to_move_from_fen(fen, side_to_move)
+    last_mover = "black" if to_move == "white" else "white"
+    human = _normalize_side(human_color) if human_color else ""
 
     voice = str(tone.get("voice") or f"{game} coach").strip()
     style_rules = tone.get("style_rules") or []
@@ -90,11 +109,28 @@ def build_teacher_prompt(
         f"You are a {voice}.",
         f"This is {game} — use the correct piece names and rules.",
         f"Skill level: {level}.",
-        f"In 2-4 short sentences: (1) briefly explain what move {move_text} did, "
-        f"(2) say what the side to move should watch or try next (threats, ideas, not a full PV).",
+        f"{last_mover.capitalize()} just played {move_text}. {to_move.capitalize()} is to move now.",
+        "Hard length limit: at most 2 short sentences, under 45 words total. "
+        "No lists, no numbered steps, no section headers, no 'Practical next-step advice' labels.",
+        "Only mention pieces/squares that match the FEN; do not invent pieces.",
         f"FEN after the move: {fen}. Recent moves: {history_str}.",
-        "Cover threats, material, or safety when relevant.",
     ]
+    if human in {"white", "black"}:
+        if last_mover == human:
+            parts.append(
+                f"The human plays {human.capitalize()} and just moved. "
+                f"Speak to them as 'you': what you did, then what to watch next."
+            )
+        else:
+            parts.append(
+                f"The human plays {human.capitalize()}; the opponent just moved. "
+                f"One clause on what {last_mover.capitalize()} did, then advise YOU ({human.capitalize()}) only. "
+                f"Do not give a plan for {last_mover.capitalize()}."
+            )
+    else:
+        parts.append(
+            f"Explain the last move in third person, then advise {to_move.capitalize()} only."
+        )
     if style_line:
         parts.append(f"Style: {style_line}.")
     if terms_line:
@@ -121,6 +157,7 @@ class LLMProvider(Protocol):
         move_history: list[str] | None,
         game_type: str = "chess",
         skill_level: str = "intermediate",
+        human_color: str | None = None,
     ) -> str:
         ...
 
@@ -150,8 +187,8 @@ class OllamaProvider:
         move_history: list[str] | None,
         game_type: str = "chess",
         skill_level: str = "intermediate",
+        human_color: str | None = None,
     ) -> str:
-        _ = color
         prompt = build_teacher_prompt(
             fen=fen,
             move_uci=move_uci,
@@ -159,6 +196,8 @@ class OllamaProvider:
             move_history=move_history,
             game_type=game_type,
             skill_level=skill_level,
+            side_to_move=color,
+            human_color=human_color,
         )
 
         req = urllib.request.Request(
@@ -192,8 +231,10 @@ class HeuristicProvider:
         move_history: list[str] | None = None,
         game_type: str = "chess",
         skill_level: str = "intermediate",
+        human_color: str | None = None,
     ) -> str:
         _ = skill_level
+        _ = human_color
         return build_explanation_fallback(
             fen=fen,
             color=color,
