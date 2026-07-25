@@ -414,6 +414,126 @@ def build_threat_summary(board: chess.Board, eval_cp_white: int) -> str:
     return "Position is roughly balanced."
 
 
+_PIECE_NAMES = {
+    chess.PAWN: "pawn",
+    chess.KNIGHT: "knight",
+    chess.BISHOP: "bishop",
+    chess.ROOK: "rook",
+    chess.QUEEN: "queen",
+    chess.KING: "king",
+}
+
+
+def normalize_history_uci(raw: str) -> str:
+    """Strip session labels like 'White: e2e4' / 'Black: e7e5' → bare UCI."""
+    s = str(raw or "").strip()
+    if ":" in s:
+        s = s.split(":", 1)[1].strip()
+    return s.lower()
+
+
+def build_move_ground_truth(
+    fen: str,
+    move_uci: str,
+    move_history: Optional[List[str]] = None,
+    game_type: str = "chess",
+) -> Dict[str, str]:
+    """Deterministic facts about the move just played (chess via python-chess).
+
+    Returns at least ``summary``; may include ``san`` / ``uci``. Never raises.
+    """
+    gt = (game_type or "chess").strip().lower()
+    target = normalize_history_uci(move_uci)
+    hist = [normalize_history_uci(m) for m in (move_history or []) if str(m).strip()]
+    hist = [m for m in hist if m]
+    if not target and hist:
+        target = hist[-1]
+    if not target:
+        return {"summary": "GROUND TRUTH: last move unknown — do not invent tactics, attacks, or captures."}
+
+    if gt in {"xianqi", "shogi"}:
+        label = "Xiangqi" if gt == "xianqi" else "Shogi"
+        return {
+            "summary": f"GROUND TRUTH: last {label} move UCI {target}. Do not invent Chess piece attacks.",
+            "uci": target,
+        }
+
+    try:
+        board = chess.Board()
+        if hist and hist[-1] == target:
+            for u in hist[:-1]:
+                board.push_uci(u)
+        elif hist and target in hist:
+            for u in hist:
+                if u == target:
+                    break
+                board.push_uci(u)
+        elif hist:
+            # History present but target not in it — replay all then fail closed.
+            for u in hist:
+                board.push_uci(u)
+            return {
+                "summary": (
+                    f"GROUND TRUTH: explained move {target} is not the tip of move_history "
+                    f"({hist[-1]}); do not invent attacks. Recent UCI: {' '.join(hist[-6:])}."
+                ),
+                "uci": target,
+            }
+
+        move = chess.Move.from_uci(target)
+        if move not in board.legal_moves:
+            return {
+                "summary": f"GROUND TRUTH: {target} is not legal in the replayed position — do not invent tactics.",
+                "uci": target,
+            }
+
+        piece = board.piece_at(move.from_square)
+        piece_name = _PIECE_NAMES.get(piece.piece_type, "piece") if piece else "piece"
+        mover = "White" if piece and piece.color == chess.WHITE else "Black"
+        from_sq = chess.square_name(move.from_square)
+        to_sq = chess.square_name(move.to_square)
+        san = board.san(move)
+        is_capture = board.is_capture(move)
+        if board.is_en_passant(move):
+            capture_bit = ", capturing pawn en passant"
+        elif is_capture:
+            victim = board.piece_at(move.to_square)
+            vname = _PIECE_NAMES.get(victim.piece_type, "piece") if victim else "piece"
+            capture_bit = f", capturing {vname} on {to_sq}"
+        else:
+            capture_bit = ", no capture"
+
+        board.push(move)
+        attacked: List[str] = []
+        for sq in board.attacks(move.to_square):
+            hit = board.piece_at(sq)
+            if hit is not None and piece is not None and hit.color != piece.color:
+                attacked.append(f"{_PIECE_NAMES.get(hit.piece_type, 'piece')} on {chess.square_name(sq)}")
+        if attacked:
+            attack_bit = " After the move, that piece attacks: " + ", ".join(attacked) + "."
+        else:
+            attack_bit = " After the move, that piece attacks no enemy piece."
+
+        fen_ok = True
+        fen_core = (fen or "").split()
+        if fen_core:
+            fen_ok = board.board_fen() == fen_core[0]
+        mismatch = "" if fen_ok else " (replay FEN mismatch — still prefer these move facts over invention)."
+
+        recent = " ".join(hist[-6:]) if hist else target
+        summary = (
+            f"GROUND TRUTH (never contradict): {mover} moved {piece_name} {from_sq}→{to_sq} "
+            f"(SAN {san}, UCI {target}){capture_bit}.{attack_bit} "
+            f"Recent UCI history: {recent}.{mismatch}"
+        )
+        return {"summary": summary, "san": san, "uci": target}
+    except Exception:
+        return {
+            "summary": f"GROUND TRUTH: last move UCI {target}; do not invent piece attacks or captures.",
+            "uci": target,
+        }
+
+
 def build_concept_hints(
     analysis: Optional[Dict[str, object]] = None,
     *,
@@ -424,7 +544,7 @@ def build_concept_hints(
     Order (at most ``max_hints``):
       1. threat / check / mate note
       2. material note (when clearly unbalanced)
-      3. top suggested reply (SAN preferred, else UCI)
+      3. engine suggested replies (up to 3, SAN preferred)
 
     Missing or empty analysis → []. Never raises on bad shape.
     """
@@ -457,18 +577,22 @@ def build_concept_hints(
         else:
             hints.append("Black is ahead on material / evaluation.")
 
+    labels: List[str] = []
     suggestions = analysis.get("suggested_moves")
-    top_label = ""
-    if isinstance(suggestions, list) and suggestions:
-        top = suggestions[0]
-        if isinstance(top, dict):
-            top_label = str(top.get("san") or top.get("uci") or "").strip()
-        else:
-            top_label = str(getattr(top, "san", None) or getattr(top, "uci", "") or "").strip()
-    if not top_label:
-        top_label = str(analysis.get("best_move_uci") or "").strip()
-    if top_label:
-        hints.append(f"Top suggestion for the side to move: {top_label}.")
+    if isinstance(suggestions, list):
+        for item in suggestions[:3]:
+            if isinstance(item, dict):
+                lab = str(item.get("san") or item.get("uci") or "").strip()
+            else:
+                lab = str(getattr(item, "san", None) or getattr(item, "uci", "") or "").strip()
+            if lab:
+                labels.append(lab)
+    if not labels:
+        best = str(analysis.get("best_move_uci") or "").strip()
+        if best:
+            labels = [best]
+    if labels:
+        hints.append("Engine suggested replies (side to move): " + ", ".join(labels) + ".")
 
     # Dedupe while preserving order (threat can repeat material idea).
     seen: set[str] = set()

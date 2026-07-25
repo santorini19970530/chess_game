@@ -305,8 +305,8 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 		fromFile, fromRank, toFile, toRank = ff, fr, tf, tr
 	}
 
-	// Enqueue LLM explanation for the move just played (human move).
-	enqueueExplanation(gameID, normalizedMove, normalizedMove)
+	// Coach explain runs after /analyze completes (see analysisWorkerLoop) so concept_hints
+	// match Suggested moves. Do not enqueue here — that raced MultiPV and left hints empty.
 
 	finalGame, err := sessionpkg.RefreshGameSessionOutcomeByID(gameID)
 	if err != nil {
@@ -343,11 +343,8 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 			// Broadcast the AI move via WebSocket so the frontend updates immediately
 			gameSocketHub.Broadcast(gameID, socketEventMoveApplied, moveAppliedPayload(gameID, aiMove))
 
-			// Enqueue analysis (for the analysis panel / win prob update)
+			// Enqueue analysis; explain follows when analysis is recorded (same-FEN cues).
 			enqueueCurrentPositionAnalysis(gameID, aiMove)
-
-			// Enqueue LLM explanation for the AI move.
-			enqueueExplanation(gameID, aiMove, aiMove)
 
 			// Refresh outcome (may end the game)
 			if _, refreshErr := sessionpkg.RefreshGameSessionOutcomeByID(gameID); refreshErr != nil {

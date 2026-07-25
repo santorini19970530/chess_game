@@ -14,8 +14,39 @@ if PARENT_DIR not in sys.path:
 
 os.environ["LLM_PROVIDER"] = "heuristic"
 
-from analyzer import build_concept_hints  # noqa: E402
+from analyzer import build_concept_hints, build_move_ground_truth  # noqa: E402
 import server  # noqa: E402
+
+
+class TestMoveGroundTruth(unittest.TestCase):
+    def test_quiet_pawn_push_attacks_nothing(self) -> None:
+        fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        gt = build_move_ground_truth(fen, "e2e4", ["e2e4"], "chess")
+        summary = gt["summary"]
+        self.assertIn("GROUND TRUTH", summary)
+        self.assertIn("SAN e4", summary)
+        self.assertIn("no capture", summary)
+        self.assertIn("attacks no enemy piece", summary)
+        self.assertEqual(gt.get("san"), "e4")
+
+    def test_labeled_session_history_replays(self) -> None:
+        # Go MoveHistory uses "White: e2e4" labels — must still ground-truth.
+        fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        gt = build_move_ground_truth(fen, "e2e4", ["White: e2e4"], "chess")
+        self.assertEqual(gt.get("san"), "e4")
+        self.assertIn("pawn e2→e4", gt["summary"])
+        self.assertIn("attacks no enemy piece", gt["summary"])
+
+    def test_does_not_claim_far_bishop_attack_on_f3(self) -> None:
+        # Opening-ish: after 1.e4 e5 2.Nf3 Nc6 3.Bb5 a6 4.Ba4 Nf6 5.O-O Be7 6.Re1 b5 7.Bb3 d6 8.c3 O-O 9.h3 Nb8 …
+        # Simpler: white plays f3 in a position with black bishop nowhere attacked by that pawn.
+        hist = ["e2e4", "e7e5", "f2f3"]
+        board_fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/5P2/PPPP2PP/RNBQKBNR b KQkq - 0 2"
+        gt = build_move_ground_truth(board_fen, "f2f3", hist, "chess")
+        self.assertIn("pawn f2→f3", gt["summary"])
+        self.assertIn("no capture", gt["summary"])
+        self.assertIn("attacks no enemy piece", gt["summary"])
+        self.assertNotIn("bishop", gt["summary"].lower())
 
 
 class TestConceptHints(unittest.TestCase):
@@ -34,7 +65,7 @@ class TestConceptHints(unittest.TestCase):
         self.assertEqual(len(hints), 3)
         self.assertEqual(hints[0], "Black king is in check.")
         self.assertIn("White is ahead", hints[1])
-        self.assertEqual(hints[2], "Top suggestion for the side to move: e4.")
+        self.assertEqual(hints[2], "Engine suggested replies (side to move): e4.")
 
     def test_skips_balanced_material(self) -> None:
         hints = build_concept_hints(
@@ -48,7 +79,7 @@ class TestConceptHints(unittest.TestCase):
             hints,
             [
                 "Position is roughly balanced.",
-                "Top suggestion for the side to move: g1f3.",
+                "Engine suggested replies (side to move): g1f3.",
             ],
         )
 
@@ -133,7 +164,7 @@ class TestExplainConceptHintsContract(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         hints = response.get_json()["concept_hints"]
         self.assertIn("White has the initiative.", hints)
-        self.assertIn("Top suggestion for the side to move: d2d4.", hints)
+        self.assertIn("Engine suggested replies (side to move): d2d4.", hints)
 
 
 if __name__ == "__main__":

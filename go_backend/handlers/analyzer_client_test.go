@@ -172,6 +172,7 @@ func TestConceptHintsFromAnalysis(t *testing.T) {
 		EvalCPWhite:   180,
 		SuggestedMoves: []analyzerSuggestedMove{
 			{Rank: 1, UCI: "e7e5", SAN: "e5", Score: 20},
+			{Rank: 2, UCI: "c7c5", SAN: "c5", Score: 10},
 		},
 	})
 	if len(hints) != 3 {
@@ -183,13 +184,46 @@ func TestConceptHintsFromAnalysis(t *testing.T) {
 	if !strings.Contains(hints[1], "White is ahead") {
 		t.Fatalf("material hint: %q", hints[1])
 	}
-	if !strings.Contains(hints[2], "e5") {
-		t.Fatalf("top-move hint: %q", hints[2])
+	if !strings.Contains(hints[2], "Engine suggested replies") || !strings.Contains(hints[2], "e5") || !strings.Contains(hints[2], "c5") {
+		t.Fatalf("engine replies hint: %q", hints[2])
 	}
 
 	empty := conceptHintsFromAnalysis(analyzerResponse{})
 	if len(empty) != 0 {
 		t.Fatalf("empty analysis should yield no hints, got %v", empty)
+	}
+}
+
+func TestExplainHintWait_DefaultZero(t *testing.T) {
+	t.Setenv("EXPLAIN_HINT_WAIT_MS", "")
+	if got := explainHintWait(); got != 0 {
+		t.Fatalf("default wait want 0, got %v", got)
+	}
+	t.Setenv("EXPLAIN_HINT_WAIT_MS", "2500")
+	if got := explainHintWait(); got != 2500*time.Millisecond {
+		t.Fatalf("want 2500ms, got %v", got)
+	}
+}
+
+func TestConceptHintsForExplain_RequiresMatchingFEN(t *testing.T) {
+	fen := "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+	latest := latestAnalysisState{
+		Analysis: analyzerResponse{
+			FEN:           fen,
+			ThreatSummary: "Position is roughly balanced.",
+			BestMoveUCI:   "e7e5",
+			SuggestedMoves: []analyzerSuggestedMove{
+				{Rank: 1, UCI: "e7e5", SAN: "e5"},
+			},
+		},
+	}
+	got := conceptHintsForExplain(latest, fen)
+	if len(got) == 0 || !strings.Contains(got[len(got)-1], "e5") {
+		t.Fatalf("same FEN should yield cues, got %v", got)
+	}
+	stale := conceptHintsForExplain(latest, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+	if stale != nil {
+		t.Fatalf("mismatched FEN must yield nil cues, got %v", stale)
 	}
 }
 

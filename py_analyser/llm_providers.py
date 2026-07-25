@@ -2,16 +2,108 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import urllib.error
 import urllib.request
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Protocol
 
-from analyzer import build_explanation_fallback
+from analyzer import build_explanation_fallback, build_move_ground_truth
 
 _DATA_DIR = Path(__file__).resolve().parent / "data"
 _SKILL_LEVELS = frozenset({"beginner", "intermediate", "advanced"})
+# Player-facing text must never echo engine FEN (prompt leak from small local models).
+_FEN_TOKEN = re.compile(
+    r"(?i)\bFEN\s*:\s*"
+    r"(?:[rnbqkpRNBQKP1-8]+/){7}[rnbqkpRNBQKP1-8]+"
+    r"(?:\s+[wb]\s+(?:[KQkq]+|-)\s+(?:[a-h][1-8]|-)\s+\d+\s+\d+)?"
+)
+_BARE_FEN = re.compile(
+    r"\b(?:[rnbqkpRNBQKP1-8]+/){7}[rnbqkpRNBQKP1-8]+"
+    r"(?:\s+[wb]\s+(?:[KQkq]+|-)\s+(?:[a-h][1-8]|-)\s+\d+\s+\d+)?\b"
+)
+_INTERNAL_FEN_NOISE = re.compile(
+    r"(?i)\(?\s*internal board(?:\s+fen)?[^)\n]*\)?\.?"
+)
+_UCI_TOKEN = re.compile(r"^[a-h](?:[1-9]|10)[a-h](?:[1-9]|10)[qrbn]?$", re.I)
+
+
+def looks_like_uci(move: str | None) -> bool:
+    return bool(_UCI_TOKEN.match(str(move or "").strip()))
+
+
+def sanitize_explanation(text: str) -> str:
+    """Strip leaked FEN / label noise from coach text."""
+    cleaned = _FEN_TOKEN.sub(" ", text or "")
+    cleaned = _BARE_FEN.sub(" ", cleaned)
+    cleaned = _INTERNAL_FEN_NOISE.sub(" ", cleaned)
+    cleaned = re.sub(r"(?i)\bzwischenzug\b", "in-between idea", cleaned)
+    cleaned = re.sub(r"[ \t]+", " ", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()
+
+
+def finalize_explanation(
+    text: str,
+    *,
+    move_san: str | None,
+    last_mover: str,
+    human_color: str | None = None,
+    ground_summary: str = "",
+) -> str:
+    """Force correct opener + drop follow-up fluff that invents pieces/forks."""
+    cleaned = sanitize_explanation(text)
+    san = (move_san or "").strip()
+    if not san:
+        return cleaned
+
+    mover = _normalize_side(last_mover)
+    human = _normalize_side(human_color) if human_color else ""
+    if human and mover == human:
+        opener = f"You played {san}."
+    else:
+        opener = f"{mover.capitalize()} played {san}."
+
+    body = cleaned
+    if re.match(re.escape(opener), body, flags=re.IGNORECASE):
+        rest = body[len(opener) :].lstrip(" \n")
+    else:
+        rest = re.sub(
+            r"^(You|Black|White)\s+played\s+\S+\.?\s*",
+            "",
+            body,
+            count=1,
+            flags=re.IGNORECASE,
+        ).strip()
+
+    allow = (ground_summary or "").lower()
+    moved_piece = ""
+    pm = re.search(r"moved (\w+) ", ground_summary or "", flags=re.IGNORECASE)
+    if pm:
+        moved_piece = pm.group(1).lower()
+
+    follow: list[str] = []
+    for part in re.split(r"(?<=[.!?])\s+", rest) if rest else []:
+        sentence = part.strip()
+        if not sentence:
+            continue
+        sl = sentence.lower()
+        if "fork" in sl and "fork" not in allow and "attacks:" not in allow:
+            continue
+        if re.search(r"\bknight fork\b", sl) and "knight" not in allow:
+            continue
+        yours = re.search(r"\byour (pawn|knight|bishop|rook|queen|king)\b", sl)
+        if yours:
+            claimed = yours.group(1)
+            if moved_piece and claimed != moved_piece and claimed not in allow:
+                continue
+        follow.append(sentence)
+        break  # at most one follow-up sentence
+
+    if follow:
+        return f"{opener} {' '.join(follow)}".strip()
+    return opener
 
 
 def _game_label(game_type: str) -> str:
@@ -51,11 +143,15 @@ def _normalize_side(color: str | None) -> str:
     return "white"
 
 
-def _side_to_move_from_fen(fen: str, fallback: str = "white") -> str:
+def side_to_move_from_fen(fen: str, fallback: str = "white") -> str:
     parts = (fen or "").split()
     if len(parts) >= 2 and parts[1] in {"w", "b"}:
         return "white" if parts[1] == "w" else "black"
     return _normalize_side(fallback)
+
+
+# Back-compat alias for older callers/tests.
+_side_to_move_from_fen = side_to_move_from_fen
 
 
 def build_teacher_prompt(
@@ -75,11 +171,21 @@ def build_teacher_prompt(
     terms = _level_block("chess_terms.json", level)
     tone = _level_block("chess_tone.json", level)
 
-    move_text = move_san or move_uci or ""
+    ground = build_move_ground_truth(
+        fen=fen,
+        move_uci=move_uci,
+        move_history=move_history,
+        game_type=game_type,
+    )
+    # Prefer real SAN from board replay; ignore UCI mistakenly sent as move_san.
+    move_text = (ground.get("san") or "").strip()
+    if not move_text:
+        candidate = (move_san or "").strip()
+        move_text = candidate if candidate and not looks_like_uci(candidate) else (move_uci or "").strip()
     history = move_history or []
     history_str = " ".join(history[-6:]) if history else "(no prior moves)"
     game = _game_label(game_type)
-    to_move = _side_to_move_from_fen(fen, side_to_move)
+    to_move = side_to_move_from_fen(fen, side_to_move)
     last_mover = "black" if to_move == "white" else "white"
     human = _normalize_side(human_color) if human_color else ""
     cues = [str(h).strip() for h in (concept_hints or []) if str(h).strip()][:3]
@@ -92,62 +198,72 @@ def build_teacher_prompt(
         style_line = str(style_rules).strip()
 
     allowed = terms.get("allowed_terms") or []
+    # Keep prompt short — long glossaries slow local Ollama prefill a lot.
     if isinstance(allowed, list):
-        terms_line = ", ".join(str(t).strip() for t in allowed if str(t).strip())
+        terms_line = ", ".join([str(t).strip() for t in allowed if str(t).strip()][:8])
     else:
         terms_line = ""
 
-    definitions = terms.get("definitions") or {}
-    def_bits: list[str] = []
-    if isinstance(definitions, dict):
-        for key, val in definitions.items():
-            k, v = str(key).strip(), str(val).strip()
-            if k and v:
-                def_bits.append(f"{k}: {v}")
-    defs_line = "; ".join(def_bits[:6])
-    guidance = str(terms.get("guidance") or "").strip()
-
+    you_or_side = "You played" if human and last_mover == human else f"{last_mover.capitalize()} played"
     parts = [
-        f"You are a {voice}.",
-        f"This is {game} — use the correct piece names and rules.",
-        f"Skill level: {level}.",
-        f"{last_mover.capitalize()} just played {move_text}. {to_move.capitalize()} is to move now.",
-        "Hard length limit: at most 2 short sentences, under 45 words total. "
-        "No lists, no numbered steps, no section headers, no 'Practical next-step advice' labels.",
-        "Only mention pieces/squares that match the FEN; do not invent pieces.",
-        f"FEN after the move: {fen}. Recent moves: {history_str}.",
+        f"You are a {voice} for {game}. Skill: {level}.",
+        str(ground.get("summary") or "GROUND TRUTH: unavailable."),
+        f'Only explain {move_text}. {to_move.capitalize()} to move. '
+        f'Open with "{you_or_side} {move_text}." then ONE short idea (≤45 words total).',
+        "Use ONLY GROUND TRUTH + cues. No invented forks/pieces/captures. "
+        "No next-move SAN unless it appears in cues. No FEN/UCI dumps.",
+        f"Recent moves: {history_str}.",
     ]
     if cues:
-        parts.append(
-            "Position cues (use lightly; do not quote this label or dump them all): "
-            + " | ".join(cues)
-            + "."
-        )
+        parts.append("Cues: " + " | ".join(cues) + ".")
     if human in {"white", "black"}:
         if last_mover == human:
-            parts.append(
-                f"The human plays {human.capitalize()} and just moved. "
-                f"Speak to them as 'you': what you did, then what to watch next."
-            )
+            parts.append(f"Speak as 'you' ({human}).")
         else:
-            parts.append(
-                f"The human plays {human.capitalize()}; the opponent just moved. "
-                f"One clause on what {last_mover.capitalize()} did, then advise YOU ({human.capitalize()}) only. "
-                f"Do not give a plan for {last_mover.capitalize()}."
-            )
-    else:
-        parts.append(
-            f"Explain the last move in third person, then advise {to_move.capitalize()} only."
-        )
+            parts.append(f"Advise YOU ({human}) only after one clause on {last_mover}'s move.")
     if style_line:
         parts.append(f"Style: {style_line}.")
     if terms_line:
-        parts.append(f"Preferred terms when accurate: {terms_line}.")
-    if defs_line:
-        parts.append(f"Term hints: {defs_line}.")
-    if guidance:
-        parts.append(guidance)
+        parts.append(f"Ok terms: {terms_line}.")
     return " ".join(parts)
+
+
+def build_quick_coach_line(
+    *,
+    fen: str,
+    move_uci: str,
+    move_san: str | None,
+    move_history: list[str] | None,
+    game_type: str = "chess",
+    human_color: str | None = None,
+    side_to_move: str = "white",
+) -> str:
+    """Instant coach text from ground truth (no Ollama). Fills notes while LLM runs."""
+    ground = build_move_ground_truth(
+        fen=fen,
+        move_uci=move_uci,
+        move_history=move_history,
+        game_type=game_type,
+    )
+    san = (ground.get("san") or move_san or move_uci or "").strip()
+    summary = str(ground.get("summary") or "").lower()
+    if "capturing" in summary:
+        idea = "This was a capture — check whether the piece is safe."
+    elif "attacks:" in summary:
+        idea = "This creates pressure on the pieces it now attacks."
+    elif "attacks no enemy piece" in summary:
+        idea = "Quiet move — watch the centre and development."
+    else:
+        idea = "Watch checks, captures, and loose pieces."
+    to_move = side_to_move_from_fen(fen, side_to_move)
+    last_mover = "black" if to_move == "white" else "white"
+    return finalize_explanation(
+        f"Placeholder. {idea}",
+        move_san=san,
+        last_mover=last_mover,
+        human_color=human_color,
+        ground_summary=str(ground.get("summary") or ""),
+    )
 
 
 class LLMProvider(Protocol):
@@ -211,9 +327,28 @@ class OllamaProvider:
             concept_hints=concept_hints,
         )
 
+        # Cap tokens so local Ollama finishes faster (coach is ≤2 short sentences).
+        try:
+            num_predict = max(24, int(os.getenv("OLLAMA_NUM_PREDICT", "40")))
+        except ValueError:
+            num_predict = 40
+        try:
+            num_ctx = max(512, int(os.getenv("OLLAMA_NUM_CTX", "1024")))
+        except ValueError:
+            num_ctx = 1024
+        body = {
+            "model": self.model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "num_predict": num_predict,
+                "num_ctx": num_ctx,
+                "temperature": 0.3,
+            },
+        }
         req = urllib.request.Request(
             self.url,
-            data=json.dumps({"model": self.model, "prompt": prompt, "stream": False}).encode("utf-8"),
+            data=json.dumps(body).encode("utf-8"),
             headers={"Content-Type": "application/json"},
             method="POST",
         )
@@ -224,7 +359,7 @@ class OllamaProvider:
             text = (data.get("response") or "").strip()
             if not text:
                 raise ValueError("empty response from ollama")
-            return text
+            return sanitize_explanation(text)
 
 
 class HeuristicProvider:

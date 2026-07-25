@@ -10,10 +10,12 @@ Endpoints:
 
 from __future__ import annotations
 
+import json
 import os
 import time
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from flask import Flask, jsonify, request
@@ -37,6 +39,20 @@ COACH_GAME_TYPES = {"chess", "xianqi", "shogi"}
 SKILL_LEVELS = frozenset({"beginner", "intermediate", "advanced"})
 DEFAULT_SKILL_LEVEL = "intermediate"
 MAX_CONCEPT_HINTS = 3
+_EXPLAIN_LOG_DIR = Path(__file__).resolve().parent / "data" / "explain_logs"
+
+
+def _append_explain_log(entry: dict[str, Any]) -> None:
+    """Append one JSON line for QA / report evidence. Set EXPLAIN_LOG=0 to disable."""
+    if os.getenv("EXPLAIN_LOG", "1").strip() == "0":
+        return
+    try:
+        _EXPLAIN_LOG_DIR.mkdir(parents=True, exist_ok=True)
+        path = _EXPLAIN_LOG_DIR / "explain.jsonl"
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
 
 
 def _parse_skill_level(payload: dict[str, Any]) -> str:
@@ -313,38 +329,97 @@ def explain() -> tuple:
     history = common.get("move_history", [])
     game_type = common["game_type"]
 
-    source = getattr(provider, "name", "ollama")
-    explanation = ""
-    try:
-        explanation = provider.explain(
+    from analyzer import build_move_ground_truth
+    from llm_providers import finalize_explanation, looks_like_uci, side_to_move_from_fen
+
+    ground = build_move_ground_truth(
+        fen=common["fen"],
+        move_uci=move_uci or "",
+        move_history=history,
+        game_type=game_type,
+    )
+    # Always prefer board-derived SAN; Go often sends UCI in the san field.
+    if ground.get("san"):
+        move_san = ground["san"]
+    elif move_san and looks_like_uci(move_san):
+        move_san = None
+
+    quick = bool(payload.get("quick")) or str(payload.get("mode", "")).strip().lower() == "quick"
+    to_move = side_to_move_from_fen(common["fen"], common["color"])
+    last_mover = "black" if to_move == "white" else "white"
+
+    if quick:
+        from llm_providers import build_quick_coach_line
+
+        explanation = build_quick_coach_line(
             fen=common["fen"],
-            color=common["color"],
             move_uci=move_uci or "",
             move_san=move_san,
             move_history=history,
             game_type=game_type,
-            skill_level=skill_level,
             human_color=human_color,
-            concept_hints=concept_hints or None,
+            side_to_move=common["color"],
         )
-    except Exception:
-        # Any failure (Ollama down, timeout, bad response, etc.) → heuristic
-        from analyzer import build_explanation_fallback as _fallback
+        source = "quick"
+    else:
+        source = getattr(provider, "name", "ollama")
+        explanation = ""
+        try:
+            explanation = provider.explain(
+                fen=common["fen"],
+                color=common["color"],
+                move_uci=move_uci or "",
+                move_san=move_san,
+                move_history=history,
+                game_type=game_type,
+                skill_level=skill_level,
+                human_color=human_color,
+                concept_hints=concept_hints or None,
+            )
+        except Exception:
+            # Any failure (Ollama down, timeout, bad response, etc.) → heuristic
+            from analyzer import build_explanation_fallback as _fallback
 
-        explanation = _fallback(
-            fen=common["fen"],
-            color=common["color"],
-            move_uci=move_uci or "",
+            explanation = _fallback(
+                fen=common["fen"],
+                color=common["color"],
+                move_uci=move_uci or "",
+                move_san=move_san,
+                game_type=game_type,
+            )
+            source = "heuristic_fallback"
+        explanation = finalize_explanation(
+            explanation,
             move_san=move_san,
-            game_type=game_type,
+            last_mover=last_mover,
+            human_color=human_color,
+            ground_summary=str(ground.get("summary") or ""),
         )
-        source = "heuristic_fallback"
     latency_ms = int((time.perf_counter() - started_at) * 1000)
+    request_id = common["request_id"] or uuid.uuid4().hex
+    _append_explain_log(
+        {
+            "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+            "request_id": request_id,
+            "source": source,
+            "skill_level": skill_level,
+            "game_type": game_type,
+            "fen": common["fen"],
+            "color": common["color"],
+            "move_uci": move_uci,
+            "move_san": move_san,
+            "move_history": history[-8:] if isinstance(history, list) else [],
+            "concept_hints": concept_hints,
+            "explanation": explanation,
+            "latency_ms": latency_ms,
+            "human_color": human_color,
+        }
+    )
 
     return (
         jsonify(
             {
-                "request_id": common["request_id"] or uuid.uuid4().hex,
+                "request_id": request_id,
                 "status": "ok",
                 "source": source,
                 "explanation": explanation,
