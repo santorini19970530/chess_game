@@ -45,16 +45,8 @@ type explainRequest struct {
 }
 
 // explainSkillLevelFromProfile maps AI strength (4 levels) → explain skill_level (3).
-// master has no teacher register yet → advanced. Empty/unknown → intermediate.
 func explainSkillLevelFromProfile(profile string) string {
-	switch strings.ToLower(strings.TrimSpace(profile)) {
-	case "beginner", "intermediate", "advanced":
-		return strings.ToLower(strings.TrimSpace(profile))
-	case "master":
-		return "advanced"
-	default:
-		return "intermediate"
-	}
+	return sessionpkg.SkillLevelFromAIProfile(profile)
 }
 
 // explainResponse is the JSON shape returned by Python /explain.
@@ -587,7 +579,7 @@ func enqueueExplanation(gameID, moveUCI, moveSAN string) {
 			if string(game.Type) != "" {
 				gameType = string(game.Type)
 			}
-			skillLevel = explainSkillLevelFromProfile(game.Config.AIProfile)
+			skillLevel = sessionpkg.ResolveSkillLevel(game.Config.SkillLevel, game.Config.AIProfile)
 		}
 		history, err := sessionpkg.MoveHistoryByID(gameID)
 		if err != nil {
@@ -620,12 +612,13 @@ func enqueueExplanation(gameID, moveUCI, moveSAN string) {
 		}
 
 		gameSocketHub.Broadcast(gameID, socketEventExplanationReady, map[string]interface{}{
-			"move_number": moveNumber,
-			"move_uci":    result.MoveUCI,
-			"move_san":    result.MoveSAN,
-			"explanation": result.Explanation,
-			"source":      result.Source,
-			"latency_ms":  result.LatencyMS,
+			"move_number":  moveNumber,
+			"move_uci":     result.MoveUCI,
+			"move_san":     result.MoveSAN,
+			"explanation":  result.Explanation,
+			"source":       result.Source,
+			"latency_ms":   result.LatencyMS,
+			"skill_level":  skillLevel,
 		})
 	}()
 }

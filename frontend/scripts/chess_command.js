@@ -28,6 +28,7 @@
   const aiGameCountInput = document.getElementById("ai_game_count");
   const fenInput = document.getElementById("fen_input");
   const aiStrengthSelect = document.getElementById("ai_strength");
+  const coachLevelSelect = document.getElementById("coach_level");
   const configApplyButton = document.getElementById("game_config_apply");
   const boardElement = document.querySelector(".chess_board");
   const boardWrapper = document.querySelector(".chess_board_wrapper");
@@ -429,7 +430,11 @@
       if (!gameInfoNotesBox) return;
       const expl = String(data?.explanation || data?.analysis_explanation || "").trim();
       if (!expl) return;
-      const prefix = data?.source === "heuristic_fallback" ? "(heuristic) " : "";
+      const skill = String(data?.skill_level || "").trim().toLowerCase();
+      const bits = [];
+      if (skill) bits.push(`coach:${skill}`);
+      if (data?.source === "heuristic_fallback") bits.push("heuristic");
+      const prefix = bits.length ? `[${bits.join(" · ")}] ` : "";
       lastExplanationText = prefix + expl;
       const current = String(gameInfoNotesBox.value || "").trim();
       if (current && current !== "Analyzing...") {
@@ -900,6 +905,13 @@
     if (aiGameCountInput) aiGameCountInput.value = String(cfg.aiGameCount || 1);
     if (fenInput) fenInput.value = String(cfg.startFen || "");
     if (aiStrengthSelect) aiStrengthSelect.value = String(cfg.aiProfile || cfg.aiStrength || "intermediate");
+    if (coachLevelSelect) {
+      const skill = String(cfg.skillLevel || "").toLowerCase();
+      coachLevelSelect.value =
+        skill === "beginner" || skill === "intermediate" || skill === "advanced"
+          ? skill
+          : "intermediate";
+    }
     humanColor = String(cfg.humanColor || "white").toLowerCase();
     updateSetupControlState();
   };
@@ -2019,6 +2031,7 @@
       humanColor: String(humanSideSelect?.value || "white"),
       aiGameCount: aiCount,
       aiProfile: String(aiStrengthSelect?.value || "intermediate"),
+      skillLevel: String(coachLevelSelect?.value || "intermediate"),
       fen,
     });
 
@@ -2203,10 +2216,52 @@
     });
   };
 
+  const setupConfigBody = () => {
+    const mode = String(gameModeSelect?.value || "human_vs_human");
+    const fen = String(fenInput?.value || "").trim();
+    const aiCount = fen ? "1" : String(aiGameCountInput?.value || "1");
+    return new URLSearchParams({
+      type: String(gameTypeSelect?.value || "chess"),
+      mode,
+      humanColor: String(humanSideSelect?.value || "white"),
+      aiGameCount: aiCount,
+      aiProfile: String(aiStrengthSelect?.value || "intermediate"),
+      skillLevel: String(coachLevelSelect?.value || "intermediate"),
+      fen,
+    });
+  };
+
+  // Quiet config POST so the next /explain sees AI strength / coach level without Apply.
+  const syncSetupToSession = async () => {
+    if (!currentGameId || simulationRequestInFlight || isSimulationPlayback) return;
+    try {
+      const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/config`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: setupConfigBody().toString(),
+      });
+      if (!response.ok) return;
+      const result = await response.json();
+      if (result?.game) renderGameConfig(result.game);
+    } catch (_) {
+      // non-blocking
+    }
+  };
+
   button.addEventListener("click", submitCommand);
   if (gameModeSelect) gameModeSelect.addEventListener("change", updateSetupControlState);
   if (fenInput) fenInput.addEventListener("input", updateSetupControlState);
-  if (aiStrengthSelect) aiStrengthSelect.addEventListener("change", updateSetupControlState);
+  if (aiStrengthSelect) {
+    aiStrengthSelect.addEventListener("change", () => {
+      updateSetupControlState();
+      void syncSetupToSession();
+    });
+  }
+  if (coachLevelSelect) {
+    coachLevelSelect.addEventListener("change", () => {
+      void syncSetupToSession();
+    });
+  }
   if (gameTypeSelect) {
     gameTypeSelect.addEventListener("change", () => {
       previewBoardForGameType(gameTypeSelect.value);
@@ -2255,14 +2310,7 @@
           setStatus("Missing game session. Start a new game first.", "error");
           return;
         }
-        const body = new URLSearchParams({
-          type: String(gameTypeSelect?.value || "chess"),
-          mode,
-          humanColor: String(humanSideSelect?.value || "white"),
-          aiGameCount: aiCount,
-          aiProfile: String(aiStrengthSelect?.value || "intermediate"),
-          fen,
-        });
+        const body = setupConfigBody();
         const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/config`, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -2436,6 +2484,7 @@
           mode,
           humanColor: selectedHumanColor,
           aiProfile: String(aiStrengthSelect?.value || "intermediate"),
+          skillLevel: String(coachLevelSelect?.value || "intermediate"),
         });
 
         const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/new`, {

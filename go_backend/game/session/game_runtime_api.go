@@ -34,6 +34,7 @@ func CreateGame(mode GameMode, gameType GameType, humanColor string, aiGameCount
 		AIProfile:      profile,
 		WhiteAIProfile: white,
 		BlackAIProfile: black,
+		SkillLevel:     ResolveSkillLevel("", profile),
 	}
 	session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 
@@ -103,6 +104,7 @@ func UpdateGameConfigByID(gameID string, mode GameMode, gameType GameType, human
 		return GameSession{}, err
 	}
 	defer unlockRuntimeStateByID(game)
+	prevSkill := game.Session.Config.SkillLevel
 	game.Session.Mode = mode
 	game.Session.Type = gameType
 	game.Session.Config = GameConfig{
@@ -112,7 +114,21 @@ func UpdateGameConfigByID(gameID string, mode GameMode, gameType GameType, human
 		AIProfile:      profile,
 		WhiteAIProfile: white,
 		BlackAIProfile: black,
+		// Keep coach level unless unset (then derive from AI profile).
+		SkillLevel: ResolveSkillLevel(prevSkill, profile),
 	}
+	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	return game.Session, nil
+}
+
+// SetSkillLevelByID sets the coach/explain skill level for a game session.
+func SetSkillLevelByID(gameID, skillLevel string) (GameSession, error) {
+	game, err := lockRuntimeStateByID(gameID)
+	if err != nil {
+		return GameSession{}, err
+	}
+	defer unlockRuntimeStateByID(game)
+	game.Session.Config.SkillLevel = ResolveSkillLevel(skillLevel, game.Session.Config.AIProfile)
 	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 	return game.Session, nil
 }
