@@ -34,13 +34,27 @@ type analyzerRequest struct {
 
 // explainRequest mirrors the payload expected by Python /explain.
 type explainRequest struct {
-	RequestID  string   `json:"request_id"`
-	FEN        string   `json:"fen"`
-	Color      string   `json:"color"`
-	GameType   string   `json:"game_type"`
-	MoveUCI    string   `json:"move_uci,omitempty"`
-	MoveSAN    string   `json:"move_san,omitempty"`
+	RequestID   string   `json:"request_id"`
+	FEN         string   `json:"fen"`
+	Color       string   `json:"color"`
+	GameType    string   `json:"game_type"`
+	SkillLevel  string   `json:"skill_level,omitempty"`
+	MoveUCI     string   `json:"move_uci,omitempty"`
+	MoveSAN     string   `json:"move_san,omitempty"`
 	MoveHistory []string `json:"move_history,omitempty"`
+}
+
+// explainSkillLevelFromProfile maps AI strength (4 levels) → explain skill_level (3).
+// master has no teacher register yet → advanced. Empty/unknown → intermediate.
+func explainSkillLevelFromProfile(profile string) string {
+	switch strings.ToLower(strings.TrimSpace(profile)) {
+	case "beginner", "intermediate", "advanced":
+		return strings.ToLower(strings.TrimSpace(profile))
+	case "master":
+		return "advanced"
+	default:
+		return "intermediate"
+	}
 }
 
 // explainResponse is the JSON shape returned by Python /explain.
@@ -568,8 +582,12 @@ func recordMoveAnalysis(command string, result analyzerResponse) {
 func enqueueExplanation(gameID, moveUCI, moveSAN string) {
 	go func() {
 		gameType := "chess"
-		if game, err := sessionpkg.GetGameSessionByID(gameID); err == nil && string(game.Type) != "" {
-			gameType = string(game.Type)
+		skillLevel := "intermediate"
+		if game, err := sessionpkg.GetGameSessionByID(gameID); err == nil {
+			if string(game.Type) != "" {
+				gameType = string(game.Type)
+			}
+			skillLevel = explainSkillLevelFromProfile(game.Config.AIProfile)
 		}
 		history, err := sessionpkg.MoveHistoryByID(gameID)
 		if err != nil {
@@ -590,6 +608,7 @@ func enqueueExplanation(gameID, moveUCI, moveSAN string) {
 			FEN:         fen,
 			Color:       color,
 			GameType:    gameType,
+			SkillLevel:  skillLevel,
 			MoveUCI:     moveUCI,
 			MoveSAN:     moveSAN,
 			MoveHistory: history,

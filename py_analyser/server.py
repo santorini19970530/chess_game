@@ -33,6 +33,19 @@ app = Flask(__name__)
 # History/Policy/Value stay chess-only. Coach (/analyze, /explain) accepts variants.
 SUPPORTED_GAME_TYPES = {"chess"}
 COACH_GAME_TYPES = {"chess", "xianqi", "shogi"}
+SKILL_LEVELS = frozenset({"beginner", "intermediate", "advanced"})
+DEFAULT_SKILL_LEVEL = "intermediate"
+
+
+def _parse_skill_level(payload: dict[str, Any]) -> str:
+    """Missing → intermediate. Invalid → clamp to intermediate (keep old clients working)."""
+    raw = payload.get("skill_level", None)
+    if raw is None or str(raw).strip() == "":
+        return DEFAULT_SKILL_LEVEL
+    level = str(raw).strip().lower()
+    if level in SKILL_LEVELS:
+        return level
+    return DEFAULT_SKILL_LEVEL
 
 
 def _error_response(
@@ -249,7 +262,12 @@ def value() -> tuple:
 
 @app.post("/explain")
 def explain() -> tuple:
-    payload = request.get_json(silent=True) or {}
+    payload = dict(request.get_json(silent=True) or {})
+    # Optional `game` alias + default chess (loader can later key chess_* / xiangqi_* / shogi_*).
+    if not str(payload.get("game_type", "")).strip():
+        game_alias = str(payload.get("game", "")).strip().lower()
+        payload["game_type"] = game_alias or "chess"
+
     common, err = _parse_common_payload(payload, allowed_game_types=COACH_GAME_TYPES)
     if err is not None:
         return err
@@ -259,6 +277,7 @@ def explain() -> tuple:
     if merr is not None:
         return merr
 
+    skill_level = _parse_skill_level(payload)
     started_at = time.perf_counter()
     provider = get_llm_provider()
     history = common.get("move_history", [])
@@ -274,6 +293,7 @@ def explain() -> tuple:
             move_san=move_san,
             move_history=history,
             game_type=game_type,
+            skill_level=skill_level,
         )
     except Exception:
         # Any failure (Ollama down, timeout, bad response, etc.) → heuristic
@@ -300,6 +320,7 @@ def explain() -> tuple:
                 "move_san": move_san,
                 "latency_ms": latency_ms,
                 "game_type": game_type,
+                "skill_level": skill_level,
             }
         ),
         200,

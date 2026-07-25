@@ -149,10 +149,35 @@ func TestEmitAnalysisLog_JSONShape(t *testing.T) {
 	}
 }
 
+func TestExplainSkillLevelFromProfile(t *testing.T) {
+	cases := map[string]string{
+		"":             "intermediate",
+		"beginner":     "beginner",
+		"intermediate": "intermediate",
+		"advanced":     "advanced",
+		"master":       "advanced",
+		"MASTER":       "advanced",
+		"n00b":         "intermediate",
+	}
+	for in, want := range cases {
+		if got := explainSkillLevelFromProfile(in); got != want {
+			t.Fatalf("explainSkillLevelFromProfile(%q)=%q, want %q", in, got, want)
+		}
+	}
+}
+
 func TestExplainByRequest_Success(t *testing.T) {
+	var gotSkill string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/explain" {
 			t.Errorf("expected path /explain, got %s", r.URL.Path)
+		}
+		var body map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Errorf("decode body: %v", err)
+		}
+		if v, ok := body["skill_level"].(string); ok {
+			gotSkill = v
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
@@ -170,12 +195,13 @@ func TestExplainByRequest_Success(t *testing.T) {
 	t.Setenv("PY_ANALYSER_URL", srv.URL)
 
 	res, err := explainByRequest(explainRequest{
-		RequestID: "test-1",
-		FEN:       "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
-		Color:     "black",
-		GameType:  "chess",
-		MoveUCI:   "e2e4",
-		MoveSAN:   "e4",
+		RequestID:  "test-1",
+		FEN:        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+		Color:      "black",
+		GameType:   "chess",
+		SkillLevel: "beginner",
+		MoveUCI:    "e2e4",
+		MoveSAN:    "e4",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -185,6 +211,9 @@ func TestExplainByRequest_Success(t *testing.T) {
 	}
 	if res.Explanation == "" {
 		t.Fatalf("expected non-empty explanation")
+	}
+	if gotSkill != "beginner" {
+		t.Fatalf("expected skill_level beginner in request body, got %q", gotSkill)
 	}
 }
 

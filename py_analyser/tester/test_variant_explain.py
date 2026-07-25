@@ -91,7 +91,37 @@ class TestVariantExplain(unittest.TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json()["status"], "ok")
+        body = response.get_json()
+        self.assertEqual(body["status"], "ok")
+        self.assertEqual(body["skill_level"], "intermediate")
+
+    def test_skill_level_defaults_and_clamps(self) -> None:
+        fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        base = {
+            "fen": fen,
+            "color": "white",
+            "move_uci": "e2e4",
+            "move_history": [],
+        }
+        # Missing skill_level + missing game_type → defaults
+        r0 = self.client.post("/explain", json={**base, "request_id": "sl-0"})
+        self.assertEqual(r0.status_code, 200, r0.get_json())
+        self.assertEqual(r0.get_json()["skill_level"], "intermediate")
+        self.assertEqual(r0.get_json()["game_type"], "chess")
+
+        r1 = self.client.post(
+            "/explain",
+            json={**base, "request_id": "sl-1", "game_type": "chess", "skill_level": "beginner"},
+        )
+        self.assertEqual(r1.status_code, 200)
+        self.assertEqual(r1.get_json()["skill_level"], "beginner")
+
+        r2 = self.client.post(
+            "/explain",
+            json={**base, "request_id": "sl-2", "game": "chess", "skill_level": "n00b"},
+        )
+        self.assertEqual(r2.status_code, 200)
+        self.assertEqual(r2.get_json()["skill_level"], "intermediate")
 
     def test_history_still_rejects_xianqi(self) -> None:
         # HPV stay chess-only; coach pipe is separate.
