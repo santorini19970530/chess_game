@@ -4,21 +4,60 @@
  * (junction pieces would otherwise clip at top/bottom/side ranks & files).
  */
 
-.chess_board_wrapper[data-game-type="xianqi"] .chess_board.xianqi_board {
+.chess_board_wrapper[data-game-type="xianqi"] {
   --xq-line: #2b1a0e;
   --xq-pad: 7%;
+  --xq-border: 2px;
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .chess_board.xianqi_board {
   position: relative;
-  width: auto;
-  height: 100%;
-  max-width: 100%;
+  /* Fill the board column so file labels share the same width (no tiny aspect-ratio trap). */
+  width: 100%;
+  height: auto;
+  max-height: 100%;
   aspect-ratio: 8 / 9;
   display: block;
   margin: 0 auto;
-  border: 2px solid var(--xq-line);
+  border: var(--xq-border) solid var(--xq-line);
   background-color: #efd8a0;
   overflow: visible;
   padding: var(--xq-pad);
   box-sizing: border-box;
+}
+
+/* Point-board labels: match the board box (JS sets --xq-board-* / --xq-label-pad-*).
+ * Rank padding-% would be % of the narrow gutter width — not the board — so ranks
+ * must use pixel pads copied from the board (see syncXiangqiCoordGutters). */
+.chess_board_wrapper[data-game-type="xianqi"] .board_files {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
+  justify-self: center;
+  width: var(--xq-board-w, 100%);
+  padding-left: var(--xq-label-pad-x, calc(var(--xq-border) + var(--xq-pad)));
+  padding-right: var(--xq-label-pad-x, calc(var(--xq-border) + var(--xq-pad)));
+  grid-template-columns: unset;
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .board_ranks {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
+  align-self: center;
+  width: 100%;
+  height: var(--xq-board-h, 100%);
+  padding-top: var(--xq-label-pad-y, calc(var(--xq-border) + var(--xq-pad)));
+  padding-bottom: var(--xq-label-pad-y, calc(var(--xq-border) + var(--xq-pad)));
+  grid-template-rows: unset;
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .board_files .board_label,
+.chess_board_wrapper[data-game-type="xianqi"] .board_ranks .board_label {
+  flex: 0 0 auto;
 }
 
 /* Line grid + points live here; edge pieces may paint into --xq-pad */
@@ -177,5 +216,14 @@
   right: 8%;
   background: #1e3a8a;
   color: #eff6ff;
+  font-size: 0.65rem;
+}
+
+.chess_board_wrapper[data-game-type="xianqi"] .chess_board_square_suggested_from[data-hint-rank]::after {
+  top: 8%;
+  left: 8%;
+  right: auto;
+  background: #9a3412;
+  color: #fff7ed;
   font-size: 0.65rem;
 }

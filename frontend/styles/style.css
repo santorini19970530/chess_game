@@ -253,10 +253,6 @@
     --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor);
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }
-  .invert {
-    --tw-invert: invert(100%);
-    filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
-  }
   .transition {
     transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
@@ -640,6 +636,26 @@ main {
   line-height: 1.15;
   text-align: center;
   pointer-events: none;
+  white-space: nowrap;
+}
+.chess_board_square_suggested_from[data-hint-rank]::after {
+  content: attr(data-hint-rank);
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  right: auto;
+  z-index: 3;
+  min-width: 1rem;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #92400e;
+  color: #fffbeb;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  pointer-events: none;
+  white-space: nowrap;
 }
 @media (min-width: 1100px) {
   .chess_board_wrapper {
@@ -647,21 +663,51 @@ main {
     max-height: 100%;
   }
 }
-.chess_board_wrapper[data-game-type="xianqi"] .chess_board.xianqi_board {
+.chess_board_wrapper[data-game-type="xianqi"] {
   --xq-line: #2b1a0e;
   --xq-pad: 7%;
+  --xq-border: 2px;
+}
+.chess_board_wrapper[data-game-type="xianqi"] .chess_board.xianqi_board {
   position: relative;
-  width: auto;
-  height: 100%;
-  max-width: 100%;
+  width: 100%;
+  height: auto;
+  max-height: 100%;
   aspect-ratio: 8 / 9;
   display: block;
   margin: 0 auto;
-  border: 2px solid var(--xq-line);
+  border: var(--xq-border) solid var(--xq-line);
   background-color: #efd8a0;
   overflow: visible;
   padding: var(--xq-pad);
   box-sizing: border-box;
+}
+.chess_board_wrapper[data-game-type="xianqi"] .board_files {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
+  justify-self: center;
+  width: var(--xq-board-w, 100%);
+  padding-left: var(--xq-label-pad-x, calc(var(--xq-border) + var(--xq-pad)));
+  padding-right: var(--xq-label-pad-x, calc(var(--xq-border) + var(--xq-pad)));
+  grid-template-columns: unset;
+}
+.chess_board_wrapper[data-game-type="xianqi"] .board_ranks {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
+  align-self: center;
+  width: 100%;
+  height: var(--xq-board-h, 100%);
+  padding-top: var(--xq-label-pad-y, calc(var(--xq-border) + var(--xq-pad)));
+  padding-bottom: var(--xq-label-pad-y, calc(var(--xq-border) + var(--xq-pad)));
+  grid-template-rows: unset;
+}
+.chess_board_wrapper[data-game-type="xianqi"] .board_files .board_label, .chess_board_wrapper[data-game-type="xianqi"] .board_ranks .board_label {
+  flex: 0 0 auto;
 }
 .chess_board_wrapper[data-game-type="xianqi"] .xianqi_field {
   position: relative;
@@ -792,6 +838,14 @@ main {
   color: #eff6ff;
   font-size: 0.65rem;
 }
+.chess_board_wrapper[data-game-type="xianqi"] .chess_board_square_suggested_from[data-hint-rank]::after {
+  top: 8%;
+  left: 8%;
+  right: auto;
+  background: #9a3412;
+  color: #fff7ed;
+  font-size: 0.65rem;
+}
 .chess_board_wrapper[data-game-type="shogi"] .chess_board {
   --shogi-line: #3d2a1a;
   --shogi-wood: #e0c9a0;
@@ -837,6 +891,10 @@ main {
 .chess_board_wrapper[data-game-type="shogi"] .chess_board_square_suggested[data-hint-rank]::after {
   background: #1e3a8a;
   color: #eff6ff;
+}
+.chess_board_wrapper[data-game-type="shogi"] .chess_board_square_suggested_from[data-hint-rank]::after {
+  background: #9a3412;
+  color: #fff7ed;
 }
 .chess_board_wrapper[data-game-type="shogi"] .chess_board_square_suggested_drop {
   outline: 3px dashed #1d4ed8;
@@ -1405,59 +1463,6 @@ span.shogi_hand_piece {
   inherits: false;
   initial-value: 0 0 #0000;
 }
-@property --tw-blur {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-brightness {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-contrast {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-grayscale {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-hue-rotate {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-invert {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-opacity {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-saturate {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-sepia {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-drop-shadow {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-drop-shadow-color {
-  syntax: "*";
-  inherits: false;
-}
-@property --tw-drop-shadow-alpha {
-  syntax: "<percentage>";
-  inherits: false;
-  initial-value: 100%;
-}
-@property --tw-drop-shadow-size {
-  syntax: "*";
-  inherits: false;
-}
 @layer properties {
   @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
     *, ::before, ::after, ::backdrop {
@@ -1480,19 +1485,6 @@ span.shogi_hand_piece {
       --tw-ring-offset-width: 0px;
       --tw-ring-offset-color: #fff;
       --tw-ring-offset-shadow: 0 0 #0000;
-      --tw-blur: initial;
-      --tw-brightness: initial;
-      --tw-contrast: initial;
-      --tw-grayscale: initial;
-      --tw-hue-rotate: initial;
-      --tw-invert: initial;
-      --tw-opacity: initial;
-      --tw-saturate: initial;
-      --tw-sepia: initial;
-      --tw-drop-shadow: initial;
-      --tw-drop-shadow-color: initial;
-      --tw-drop-shadow-alpha: 100%;
-      --tw-drop-shadow-size: initial;
     }
   }
 }

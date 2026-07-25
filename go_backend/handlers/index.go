@@ -504,9 +504,7 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 				log.Printf("human_vs_ai: background AI move applied %s command=%s", gameIDLabel(gameID), aiMove)
 
 				// Broadcast via WebSocket so frontend updates
-				gameSocketHub.Broadcast(gameID, socketEventMoveApplied, map[string]interface{}{
-					"command": aiMove,
-				})
+				gameSocketHub.Broadcast(gameID, socketEventMoveApplied, moveAppliedPayload(gameID, aiMove))
 
 				// Enqueue analysis
 				enqueueCurrentPositionAnalysis(gameID, aiMove)

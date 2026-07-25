@@ -107,8 +107,6 @@
     } catch (_) {}
   };
 
-  // Future: pass isCapture / isCheckmate from snapshot or move result
-  // Example: playMoveSound(result.wasCapture, result.wasCheckmate);
   let gameSocketGameId = "";
   let gameSocketReconnectAttempts = 0;
   let gameSocketReconnectTimer = null;
@@ -283,6 +281,20 @@
     }
   };
 
+  const setCatchStatus = (error, networkMsg = "Network error. Please try again.") => {
+    console.error(error);
+    const msg = String(error?.message || "");
+    const isNetwork =
+      error instanceof TypeError &&
+      (/failed to fetch|networkerror|load failed|network request failed/i.test(msg) ||
+        msg === "Failed to fetch");
+    if (isNetwork) {
+      setStatus(networkMsg, "error");
+      return;
+    }
+    setStatus(msg ? `Error: ${msg}` : "Something went wrong. Check the console.", "error");
+  };
+
   const syncGameIdFromResult = (result) => {
     const nextId = String(result?.game?.id || "").trim();
     if (!nextId) return;
@@ -380,8 +392,8 @@
       void refreshGameSnapshotFromAPI(gameId);
       // Also refresh FS suggestions directly (in case snapshot path is delayed)
       void refreshSuggestedMoves();
-      // Play sound at the same time the piece starts moving
-      playMoveSound(false);
+      // Play sound at the same time the piece starts moving (capture vs quiet from history)
+      playMoveSound(Boolean(data?.isCapture));
       return;
     }
     if (event === "turn_changed") {
@@ -815,6 +827,24 @@
     boardElement.replaceChildren(...squares);
   };
 
+  const syncXiangqiCoordGutters = () => {
+    if (!boardWrapper || !boardElement) return;
+    if (String(boardWrapper.dataset.gameType || "") !== "xianqi") {
+      boardWrapper.style.removeProperty("--xq-board-w");
+      boardWrapper.style.removeProperty("--xq-board-h");
+      boardWrapper.style.removeProperty("--xq-label-pad-x");
+      boardWrapper.style.removeProperty("--xq-label-pad-y");
+      return;
+    }
+    const cs = window.getComputedStyle(boardElement);
+    const padX = (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.paddingLeft) || 0);
+    const padY = (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.paddingTop) || 0);
+    boardWrapper.style.setProperty("--xq-board-w", `${boardElement.offsetWidth}px`);
+    boardWrapper.style.setProperty("--xq-board-h", `${boardElement.offsetHeight}px`);
+    boardWrapper.style.setProperty("--xq-label-pad-x", `${padX}px`);
+    boardWrapper.style.setProperty("--xq-label-pad-y", `${padY}px`);
+  };
+
   const rebuildBoardGrid = () => {
     if (!boardElement || !boardWrapper) return;
     boardWrapper.dataset.gameType = boardGameType;
@@ -823,6 +853,8 @@
     rebuildBoardLabels();
     if (boardGameType === "xianqi") rebuildXiangqiBoard();
     else rebuildSquareGridBoard();
+    // After layout: copy board size/padding so a..i / 10..1 sit on the grid lines.
+    window.requestAnimationFrame(() => syncXiangqiCoordGutters());
   };
 
   const ensureBoardGeometry = (type) => {
@@ -1613,6 +1645,33 @@
     lastHandHints = [];
   };
 
+  const appendHintRank = (el, rankLabel) => {
+    if (!el) return;
+    const label = String(rankLabel || "").trim();
+    if (!label) return;
+    const prev = el.getAttribute("data-hint-rank");
+    if (!prev) {
+      el.setAttribute("data-hint-rank", label);
+      return;
+    }
+    const parts = prev.split(/[·,/]/).map((s) => s.trim()).filter(Boolean);
+    if (!parts.includes(label)) parts.push(label);
+    parts.sort((a, b) => Number(a) - Number(b));
+    el.setAttribute("data-hint-rank", parts.join("·"));
+  };
+
+  const mergeHandHintRank = (side, kind, rankLabel) => {
+    const hit = lastHandHints.find((h) => h.side === side && h.kind === kind);
+    if (!hit) {
+      lastHandHints.push({ side, kind, rank: String(rankLabel) });
+      return;
+    }
+    const parts = String(hit.rank).split(/[·,/]/).map((s) => s.trim()).filter(Boolean);
+    if (!parts.includes(String(rankLabel))) parts.push(String(rankLabel));
+    parts.sort((a, b) => Number(a) - Number(b));
+    hit.rank = parts.join("·");
+  };
+
   const applyHandHintToNode = (node, side, kind) => {
     const hit = lastHandHints.find((h) => h.side === side && h.kind === kind);
     if (!hit) return;
@@ -1686,21 +1745,24 @@
         const kind = SHOGI_DROP_KIND_FROM_CHAR[parsed.dropKind.toLowerCase()];
         const side = String(currentTurn || "white").toLowerCase();
         if (kind) {
-          lastHandHints.push({ side, kind, rank: rankLabel });
+          mergeHandHintRank(side, kind, rankLabel);
           document
             .querySelectorAll(`.shogi_hand_piece[data-side="${side}"][data-kind="${kind}"]`)
             .forEach((el) => applyHandHintToNode(el, side, kind));
         }
       } else if (parsed.from) {
         const fromSq = squareAt(parsed.from.file, parsed.from.rank);
-        if (fromSq) fromSq.classList.add(SUGGESTED_FROM_CLASS);
+        if (fromSq) {
+          fromSq.classList.add(SUGGESTED_FROM_CLASS);
+          appendHintRank(fromSq, rankLabel);
+        }
       }
 
       const toSq = squareAt(parsed.to.file, parsed.to.rank);
       if (toSq) {
         toSq.classList.add(SUGGESTED_MOVE_CLASS);
         if (parsed.dropKind) toSq.classList.add(SUGGESTED_DROP_CLASS);
-        toSq.setAttribute("data-hint-rank", rankLabel);
+        appendHintRank(toSq, rankLabel);
         selectedSuggestedMoves.push({
           sequence: Number(toSq.getAttribute("data-sequence")),
           move,
@@ -1915,8 +1977,8 @@
       void refreshSuggestedMoves();
       input.focus();
       return true;
-    } catch (_error) {
-      setStatus("Network error. Please try again.", "error");
+    } catch (error) {
+      setCatchStatus(error);
       input.focus();
       return false;
     } finally {
@@ -1991,8 +2053,8 @@
       gameOver = false;
       setStatus("Game session ready.", "success");
       input.focus();
-    } catch (_) {
-      setStatus("Network error. Please try again.", "error");
+    } catch (error) {
+      setCatchStatus(error);
     }
   };
 
@@ -2057,6 +2119,28 @@
       piece.classList.add("piece_img_dragging");
       event.dataTransfer?.setData("text/plain", String(sourceSequence));
       if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+      // Shogi black uses CSS rotate(180deg); native drag ghost often drops that transform.
+      // Use a pixel-sized canvas — cloning the <img> into body makes % width explode.
+      if (
+        event.dataTransfer &&
+        piece instanceof HTMLImageElement &&
+        String(boardWrapper?.dataset?.gameType || "").toLowerCase() === "shogi" &&
+        String(piece.getAttribute("data-color") || "").toLowerCase() === "black"
+      ) {
+        const rect = piece.getBoundingClientRect();
+        const w = Math.max(1, Math.round(rect.width));
+        const h = Math.max(1, Math.round(rect.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.translate(w / 2, h / 2);
+          ctx.rotate(Math.PI);
+          ctx.drawImage(piece, -w / 2, -h / 2, w, h);
+          event.dataTransfer.setDragImage(canvas, w / 2, h / 2);
+        }
+      }
     });
 
     boardElement.addEventListener("dragover", (event) => {
@@ -2200,8 +2284,8 @@
         }
 
         setStatus("Game setup applied. Click New Game to start.", "success");
-      } catch (_error) {
-        setStatus("Network error. Please try again.", "error");
+      } catch (error) {
+        setCatchStatus(error);
       }
     });
   }
@@ -2278,10 +2362,10 @@
         ensureSimulationControls();
         startNextSimulationGame();
         setStatus(`Simulation loaded (${n} game${n > 1 ? "s" : ""}).`, "success");
-      } catch (_e) {
+      } catch (error) {
         simulationRequestInFlight = false;
         updateSetupControlState();
-        setStatus("Network error while loading simulation.", "error");
+        setCatchStatus(error, "Network error while loading simulation.");
         cleanupSimulationControls();
       }
     });
@@ -2328,8 +2412,8 @@
         stopAnalysisPolling();
         resolvePromotionChoice("");
         clearSelectedSquare();
-      } catch (_error) {
-        setStatus("Network error. Please try again.", "error");
+      } catch (error) {
+        setCatchStatus(error);
       }
     });
   }
@@ -2346,11 +2430,11 @@
         }
         // Send current dropdown values so the new game respects type/mode/side/profile
         const mode = String(gameModeSelect?.value || "human_vs_human");
-        const humanColor = String(humanSideSelect?.value || "white");
+        const selectedHumanColor = String(humanSideSelect?.value || "white");
         const body = new URLSearchParams({
           type: String(gameTypeSelect?.value || "chess"),
           mode,
-          humanColor,
+          humanColor: selectedHumanColor,
           aiProfile: String(aiStrengthSelect?.value || "intermediate"),
         });
 
@@ -2402,8 +2486,8 @@
         cleanupSimulationControls();
         setStatus("New game started.", "success");
         input.focus();
-      } catch (_error) {
-        setStatus("Network error. Please try again.", "error");
+      } catch (error) {
+        setCatchStatus(error);
       }
     });
   }
@@ -2676,6 +2760,10 @@
   });
   initPromotionPicker();
   initMouseMoveControls();
+  if (typeof ResizeObserver !== "undefined" && boardElement) {
+    const xqGutterRo = new ResizeObserver(() => syncXiangqiCoordGutters());
+    xqGutterRo.observe(boardElement);
+  }
   window.addEventListener("beforeunload", () => closeGameSocket(false));
 
   renderGameInfo(null, null);

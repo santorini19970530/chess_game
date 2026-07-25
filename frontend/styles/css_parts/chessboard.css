@@ -173,6 +173,28 @@
   line-height: 1.15;
   text-align: center;
   pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Origin rank (amber); top-left so it does not collide with dest top-right. */
+.chess_board_square_suggested_from[data-hint-rank]::after {
+  content: attr(data-hint-rank);
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  right: auto;
+  z-index: 3;
+  min-width: 1rem;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #92400e;
+  color: #fffbeb;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 /* Must stay after base --board-size so desktop fills .game_panel_left (original behavior). */

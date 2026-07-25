@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -76,7 +77,18 @@ func main() {
 		start := time.Now()
 		res, err := simulation.RunSingleAIGame(game.ID, handlers.SelectAIMove)
 		if err != nil {
-			log.Fatalf("simulation failed: %v", err)
+			// Xiangqi/Shogi can loop past the ply cap; count as draw and keep the batch alive
+			// so -format json still writes a summary (empty file = this Fatal used to fire).
+			if errors.Is(err, simulation.ErrMaxPliesReached) {
+				moves := 0
+				if hist, hErr := session.MoveHistoryByID(game.ID); hErr == nil {
+					moves = len(hist)
+				}
+				log.Printf("=== Game %d/%d max plies → draw (moves=%d) ===", gameNum, *games, moves)
+				res = simulation.Result{Result: session.GameResultDraw, MoveCount: moves}
+			} else {
+				log.Fatalf("simulation failed: %v", err)
+			}
 		}
 		durationMs := time.Since(start).Milliseconds()
 		avgMoveMs := simulation.ComputeAvgMoveMs(durationMs, res.MoveCount)

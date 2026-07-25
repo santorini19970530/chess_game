@@ -45,7 +45,6 @@ Add next variant with same backend pattern.
 Keep feature parity minimal first.
 Stabilize before adding more.
 
-**Variant parity + smoke (issue0038):** see [`documentation/variant_parity.md`](documentation/variant_parity.md).  
 Coach pipe for Xiangqi/Shogi (`/analyze` + `/explain`) is Done (issue0049; logs 129–130), including FS hints, captured icons, and White-POV win%.
 
 ### Phase 5: Quality and polish

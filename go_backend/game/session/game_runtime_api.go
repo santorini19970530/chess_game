@@ -320,6 +320,19 @@ func MoveHistoryByID(gameID string) ([]string, error) {
 	return GetMoveHistory(), nil
 }
 
+// LastMoveIsCaptureByID reports whether the latest history entry was a capture.
+func LastMoveIsCaptureByID(gameID string) (bool, error) {
+	game, err := lockRuntimeStateByID(gameID)
+	if err != nil {
+		return false, err
+	}
+	defer unlockRuntimeStateByID(game)
+	if len(moveHistoryDetailed) == 0 {
+		return false, nil
+	}
+	return moveHistoryDetailed[len(moveHistoryDetailed)-1].IsCapture, nil
+}
+
 func LegalMovesForSquareByID(gameID string, file, rank int) ([]LegalDestination, error) {
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
