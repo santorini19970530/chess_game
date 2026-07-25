@@ -93,6 +93,8 @@
   let cachedAnalysis = null;
   let cachedCapturedSummary = null;
   let lastExplanationText = "";
+  let lastSuggestionsText = "";
+  let lastThreatSummary = "";
   let currentGameId = "";
   let gameSocket = null;
 
@@ -129,6 +131,29 @@
     if (!gameInfoNotesBox) return;
     gameInfoNotesBox.value = String(text || "");
     gameInfoNotesBox.scrollTop = gameInfoNotesBox.scrollHeight;
+  };
+
+  // Keep suggested moves + threat + latest coach note as one composition.
+  // Analysis/explain updates must not wipe the suggestions block.
+  const composeNotesText = () => {
+    const parts = [];
+    if (lastSuggestionsText) parts.push(lastSuggestionsText);
+    if (lastThreatSummary) parts.push(lastThreatSummary);
+    if (lastExplanationText) parts.push(lastExplanationText);
+    return parts.join("\n\n");
+  };
+
+  const refreshNotesBox = () => {
+    if (!gameInfoNotesBox) return;
+    setNotesText(composeNotesText());
+    if (lastSuggestionsText) gameInfoNotesBox.dataset.fsSuggestions = "1";
+    else delete gameInfoNotesBox.dataset.fsSuggestions;
+  };
+
+  const clearCoachNotesState = () => {
+    lastExplanationText = "";
+    lastSuggestionsText = "";
+    lastThreatSummary = "";
   };
 
   const appendNotesLine = (line) => {
@@ -436,14 +461,7 @@
       if (data?.source === "heuristic_fallback") bits.push("heuristic");
       const prefix = bits.length ? `[${bits.join(" · ")}] ` : "";
       lastExplanationText = prefix + expl;
-      const current = String(gameInfoNotesBox.value || "").trim();
-      if (current && current !== "Analyzing...") {
-        if (!current.includes(lastExplanationText)) {
-          setNotesText(current + "\n\n" + lastExplanationText);
-        }
-      } else {
-        setNotesText(lastExplanationText);
-      }
+      refreshNotesBox();
     }
 
     // Optional live socket simulation stream (kept for observers).
@@ -1071,11 +1089,8 @@
 
     if (gameInfoNotesBox && effectiveAnalysis) {
       const threatSummary = String(effectiveAnalysis?.threat_summary || "").trim();
-      let notesText = threatSummary || "No analysis summary yet.";
-      if (lastExplanationText) {
-        notesText += `\n\n${lastExplanationText}`;
-      }
-      setNotesText(notesText);
+      lastThreatSummary = threatSummary || "No analysis summary yet.";
+      refreshNotesBox();
     }
   };
 
@@ -1635,7 +1650,7 @@
     if (parsed.dropKind) {
       const kind =
         SHOGI_DROP_KIND_FROM_CHAR[parsed.dropKind.toLowerCase()] || parsed.dropKind;
-      return `${rank}. DROP (relife) ${kind} from hand → ${toLab}${sc}`;
+      return `${rank}. drop ${kind} from hand → ${toLab}${sc}`;
     }
     const fromLab = `${String.fromCharCode(96 + parsed.from.file)}${parsed.from.rank}`;
     const kind = pieceKindAt(parsed.from.file, parsed.from.rank);
@@ -1733,20 +1748,12 @@
     const top = Array.isArray(suggestions) ? suggestions.slice(0, 3) : [];
 
     if (!top.length) {
-      if (gameInfoNotesBox) {
-        if (gameInfoNotesBox.dataset.fsSuggestions === "1") {
-          if (lastExplanationText) {
-            setNotesText(lastExplanationText);
-          } else {
-            setNotesText("");
-          }
-          delete gameInfoNotesBox.dataset.fsSuggestions;
-        }
-      }
+      lastSuggestionsText = "";
+      refreshNotesBox();
       return;
     }
 
-    // Board move: amber origin + blue dest. Drop/relife: highlight hand chip + dashed dest.
+    // Board move: amber origin + blue dest. Drop: highlight hand chip + dashed dest.
     top.forEach((sug, idx) => {
       const parsed = parseUciMove(sug?.move || "");
       if (!parsed) return;
@@ -1782,17 +1789,17 @@
       }
     });
 
-    if (gameInfoNotesBox) {
-      let text = "FS suggestions (board move, or DROP/relife from hand):\n";
-      top.forEach((sug, idx) => {
-        text += `${formatHintLine(idx + 1, parseUciMove(sug?.move || ""), sug.score_cp)}\n`;
-      });
-      if (lastExplanationText) {
-        text += "\n" + lastExplanationText;
-      }
-      setNotesText(text.trim());
-      gameInfoNotesBox.dataset.fsSuggestions = "1";
-    }
+    const gt = String(boardGameType || gameTypeSelect?.value || "chess").toLowerCase();
+    const header =
+      gt === "shogi"
+        ? "Suggested moves (including drops from hand):\n"
+        : "Suggested moves:\n";
+    let text = header;
+    top.forEach((sug, idx) => {
+      text += `${formatHintLine(idx + 1, parseUciMove(sug?.move || ""), sug.score_cp)}\n`;
+    });
+    lastSuggestionsText = text.trim();
+    refreshNotesBox();
   };
 
   const loadSuggestedMovesForSelection = async (sequence) => {
@@ -2056,6 +2063,7 @@
       renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
       renderGameOutcome(result.game);
       cachedAnalysis = null;
+      clearCoachNotesState();
       renderGameInfo(result.captured, result.analysis);
       stopAnalysisPolling();
       clearSelectedSquare();
@@ -2456,6 +2464,7 @@
         }
 
         cachedAnalysis = null;
+        clearCoachNotesState();
         renderGameInfo(result.captured, result.analysis);
         stopAnalysisPolling();
         resolvePromotionChoice("");
@@ -2514,6 +2523,7 @@
 
         cachedAnalysis = null;
         cachedCapturedSummary = null;
+        clearCoachNotesState();
 
         renderGameInfo(result.captured, null);
         stopAnalysisPolling();

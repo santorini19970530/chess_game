@@ -440,7 +440,7 @@ def build_explanation_fallback(
     sign = "ahead" if material > 50 else ("behind" if material < -50 else "level")
     return (
         f"{move_text} keeps material {sign}. {threat} "
-        "It is a reasonable choice given the current threats and balance."
+        "Next: check the suggested moves for replies, and watch checks, captures, and loose pieces."
     )
 
 

@@ -90,8 +90,9 @@ def build_teacher_prompt(
         f"You are a {voice}.",
         f"This is {game} — use the correct piece names and rules.",
         f"Skill level: {level}.",
-        f"Explain the move {move_text} for the side that just played it.",
-        f"FEN: {fen}. Recent moves: {history_str}.",
+        f"In 2-4 short sentences: (1) briefly explain what move {move_text} did, "
+        f"(2) say what the side to move should watch or try next (threats, ideas, not a full PV).",
+        f"FEN after the move: {fen}. Recent moves: {history_str}.",
         "Cover threats, material, or safety when relevant.",
     ]
     if style_line:
