@@ -62,6 +62,9 @@ type GameConfig struct {
 	AIProfile      string `json:"aiProfile"`
 	WhiteAIProfile string `json:"whiteAIProfile,omitempty"`
 	BlackAIProfile string `json:"blackAIProfile,omitempty"`
+	// SkillLevel is coach/explain register: beginner|intermediate|advanced.
+	// Independent of AIProfile (master AI still maps to advanced when unset).
+	SkillLevel string `json:"skillLevel,omitempty"`
 }
 
 type ArchivedSession struct {
@@ -173,6 +176,36 @@ func profilesFromSingle(aiProfile string) (profile, white, black string) {
 	return profile, profile, profile
 }
 
+// NormalizeSkillLevel accepts beginner|intermediate|advanced.
+func NormalizeSkillLevel(level string) (string, bool) {
+	switch strings.ToLower(strings.TrimSpace(level)) {
+	case "beginner", "intermediate", "advanced":
+		return strings.ToLower(strings.TrimSpace(level)), true
+	default:
+		return "", false
+	}
+}
+
+// SkillLevelFromAIProfile maps AI strength (4) → explain skill (3). master → advanced.
+func SkillLevelFromAIProfile(profile string) string {
+	switch normalizeAIProfile(profile) {
+	case "beginner", "intermediate", "advanced":
+		return normalizeAIProfile(profile)
+	case "master":
+		return "advanced"
+	default:
+		return "intermediate"
+	}
+}
+
+// ResolveSkillLevel prefers an explicit coach level; otherwise derives from AI profile.
+func ResolveSkillLevel(explicit, aiProfile string) string {
+	if level, ok := NormalizeSkillLevel(explicit); ok {
+		return level
+	}
+	return SkillLevelFromAIProfile(aiProfile)
+}
+
 func newGameSession(mode GameMode, gameType GameType) GameSession {
 	now := time.Now().UTC().Format(time.RFC3339)
 	return GameSession{
@@ -186,6 +219,7 @@ func newGameSession(mode GameMode, gameType GameType) GameSession {
 			AIProfile:      "intermediate",
 			WhiteAIProfile: "intermediate",
 			BlackAIProfile: "intermediate",
+			SkillLevel:     "intermediate",
 		},
 		Result:    GameResultInProgress,
 		Outcome:   GameOutcome{Status: "in_progress"},

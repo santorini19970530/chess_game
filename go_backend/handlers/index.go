@@ -83,6 +83,8 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`<input id="ai_game_count" type="number" min="1" value="1" />`)
 	mainHTMLCode.WriteString(`<label for="ai_strength">AI strength</label>`)
 	mainHTMLCode.WriteString(`<select id="ai_strength"><option value="beginner">Beginner</option><option value="intermediate" selected>Intermediate</option><option value="advanced">Advanced</option><option value="master">Master</option></select>`)
+	mainHTMLCode.WriteString(`<label for="coach_level">Coach level</label>`)
+	mainHTMLCode.WriteString(`<select id="coach_level" title="Explanation skill level (independent of AI strength)"><option value="beginner">Beginner</option><option value="intermediate" selected>Intermediate</option><option value="advanced">Advanced</option></select>`)
 	mainHTMLCode.WriteString(`<label for="fen_input">Starting FEN (optional)</label>`)
 	mainHTMLCode.WriteString(`<textarea id="fen_input" rows="3" placeholder="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>`)
 	mainHTMLCode.WriteString(`<button id="game_config_apply" type="button">Apply Setup</button>`)
@@ -318,11 +320,20 @@ func (h *Handler) UpdateGameConfig(w http.ResponseWriter, r *http.Request) {
 	if profile == "" {
 		profile = strings.TrimSpace(r.FormValue("profile"))
 	}
+	skillLevel := strings.TrimSpace(r.FormValue("skillLevel"))
+	if skillLevel == "" {
+		skillLevel = strings.TrimSpace(r.FormValue("coachLevel"))
+	}
 
 	game, err := sessionpkg.UpdateGameConfigByID(gameID, mode, gameType, humanColor, aiGameCount, fen, profile)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+	if skillLevel != "" {
+		if updated, setErr := sessionpkg.SetSkillLevelByID(gameID, skillLevel); setErr == nil {
+			game = updated
+		}
 	}
 	log.Printf("game config updated %s mode=%s type=%s", gameIDLabel(gameID), game.Mode, game.Type)
 
@@ -609,4 +620,24 @@ func readGameConfigFromRequest(r *http.Request) (sessionpkg.GameMode, sessionpkg
 		profile = strings.TrimSpace(r.FormValue("profile")) // fallback name
 	}
 	return mode, gameType, humanColor, aiGameCount, fen, profile, nil
+}
+
+func readSkillLevelFromRequest(r *http.Request) string {
+	skillLevel := strings.TrimSpace(r.FormValue("skillLevel"))
+	if skillLevel == "" {
+		skillLevel = strings.TrimSpace(r.FormValue("coachLevel"))
+	}
+	return skillLevel
+}
+
+func applySkillLevelFromRequest(gameID string, r *http.Request, game sessionpkg.GameSession) sessionpkg.GameSession {
+	skillLevel := readSkillLevelFromRequest(r)
+	if skillLevel == "" {
+		return game
+	}
+	updated, err := sessionpkg.SetSkillLevelByID(gameID, skillLevel)
+	if err != nil {
+		return game
+	}
+	return updated
 }

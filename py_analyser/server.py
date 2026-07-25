@@ -278,6 +278,11 @@ def explain() -> tuple:
         return merr
 
     skill_level = _parse_skill_level(payload)
+    human_color = str(payload.get("human_color", "")).strip().lower() or None
+    if human_color not in {"white", "black", "w", "b"}:
+        human_color = None
+    elif human_color in {"w", "b"}:
+        human_color = "white" if human_color == "w" else "black"
     started_at = time.perf_counter()
     provider = get_llm_provider()
     history = common.get("move_history", [])
@@ -294,6 +299,7 @@ def explain() -> tuple:
             move_history=history,
             game_type=game_type,
             skill_level=skill_level,
+            human_color=human_color,
         )
     except Exception:
         # Any failure (Ollama down, timeout, bad response, etc.) → heuristic

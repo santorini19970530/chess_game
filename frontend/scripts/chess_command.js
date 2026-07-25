@@ -28,6 +28,7 @@
   const aiGameCountInput = document.getElementById("ai_game_count");
   const fenInput = document.getElementById("fen_input");
   const aiStrengthSelect = document.getElementById("ai_strength");
+  const coachLevelSelect = document.getElementById("coach_level");
   const configApplyButton = document.getElementById("game_config_apply");
   const boardElement = document.querySelector(".chess_board");
   const boardWrapper = document.querySelector(".chess_board_wrapper");
@@ -92,6 +93,8 @@
   let cachedAnalysis = null;
   let cachedCapturedSummary = null;
   let lastExplanationText = "";
+  let lastSuggestionsText = "";
+  let lastThreatSummary = "";
   let currentGameId = "";
   let gameSocket = null;
 
@@ -128,6 +131,29 @@
     if (!gameInfoNotesBox) return;
     gameInfoNotesBox.value = String(text || "");
     gameInfoNotesBox.scrollTop = gameInfoNotesBox.scrollHeight;
+  };
+
+  // Keep suggested moves + threat + latest coach note as one composition.
+  // Analysis/explain updates must not wipe the suggestions block.
+  const composeNotesText = () => {
+    const parts = [];
+    if (lastSuggestionsText) parts.push(lastSuggestionsText);
+    if (lastThreatSummary) parts.push(lastThreatSummary);
+    if (lastExplanationText) parts.push(lastExplanationText);
+    return parts.join("\n\n");
+  };
+
+  const refreshNotesBox = () => {
+    if (!gameInfoNotesBox) return;
+    setNotesText(composeNotesText());
+    if (lastSuggestionsText) gameInfoNotesBox.dataset.fsSuggestions = "1";
+    else delete gameInfoNotesBox.dataset.fsSuggestions;
+  };
+
+  const clearCoachNotesState = () => {
+    lastExplanationText = "";
+    lastSuggestionsText = "";
+    lastThreatSummary = "";
   };
 
   const appendNotesLine = (line) => {
@@ -429,16 +455,13 @@
       if (!gameInfoNotesBox) return;
       const expl = String(data?.explanation || data?.analysis_explanation || "").trim();
       if (!expl) return;
-      const prefix = data?.source === "heuristic_fallback" ? "(heuristic) " : "";
+      const skill = String(data?.skill_level || "").trim().toLowerCase();
+      const bits = [];
+      if (skill) bits.push(`coach:${skill}`);
+      if (data?.source === "heuristic_fallback") bits.push("heuristic");
+      const prefix = bits.length ? `[${bits.join(" · ")}] ` : "";
       lastExplanationText = prefix + expl;
-      const current = String(gameInfoNotesBox.value || "").trim();
-      if (current && current !== "Analyzing...") {
-        if (!current.includes(lastExplanationText)) {
-          setNotesText(current + "\n\n" + lastExplanationText);
-        }
-      } else {
-        setNotesText(lastExplanationText);
-      }
+      refreshNotesBox();
     }
 
     // Optional live socket simulation stream (kept for observers).
@@ -900,6 +923,13 @@
     if (aiGameCountInput) aiGameCountInput.value = String(cfg.aiGameCount || 1);
     if (fenInput) fenInput.value = String(cfg.startFen || "");
     if (aiStrengthSelect) aiStrengthSelect.value = String(cfg.aiProfile || cfg.aiStrength || "intermediate");
+    if (coachLevelSelect) {
+      const skill = String(cfg.skillLevel || "").toLowerCase();
+      coachLevelSelect.value =
+        skill === "beginner" || skill === "intermediate" || skill === "advanced"
+          ? skill
+          : "intermediate";
+    }
     humanColor = String(cfg.humanColor || "white").toLowerCase();
     updateSetupControlState();
   };
@@ -1059,11 +1089,8 @@
 
     if (gameInfoNotesBox && effectiveAnalysis) {
       const threatSummary = String(effectiveAnalysis?.threat_summary || "").trim();
-      let notesText = threatSummary || "No analysis summary yet.";
-      if (lastExplanationText) {
-        notesText += `\n\n${lastExplanationText}`;
-      }
-      setNotesText(notesText);
+      lastThreatSummary = threatSummary || "No analysis summary yet.";
+      refreshNotesBox();
     }
   };
 
@@ -1623,7 +1650,7 @@
     if (parsed.dropKind) {
       const kind =
         SHOGI_DROP_KIND_FROM_CHAR[parsed.dropKind.toLowerCase()] || parsed.dropKind;
-      return `${rank}. DROP (relife) ${kind} from hand → ${toLab}${sc}`;
+      return `${rank}. drop ${kind} from hand → ${toLab}${sc}`;
     }
     const fromLab = `${String.fromCharCode(96 + parsed.from.file)}${parsed.from.rank}`;
     const kind = pieceKindAt(parsed.from.file, parsed.from.rank);
@@ -1721,20 +1748,12 @@
     const top = Array.isArray(suggestions) ? suggestions.slice(0, 3) : [];
 
     if (!top.length) {
-      if (gameInfoNotesBox) {
-        if (gameInfoNotesBox.dataset.fsSuggestions === "1") {
-          if (lastExplanationText) {
-            setNotesText(lastExplanationText);
-          } else {
-            setNotesText("");
-          }
-          delete gameInfoNotesBox.dataset.fsSuggestions;
-        }
-      }
+      lastSuggestionsText = "";
+      refreshNotesBox();
       return;
     }
 
-    // Board move: amber origin + blue dest. Drop/relife: highlight hand chip + dashed dest.
+    // Board move: amber origin + blue dest. Drop: highlight hand chip + dashed dest.
     top.forEach((sug, idx) => {
       const parsed = parseUciMove(sug?.move || "");
       if (!parsed) return;
@@ -1770,17 +1789,17 @@
       }
     });
 
-    if (gameInfoNotesBox) {
-      let text = "FS suggestions (board move, or DROP/relife from hand):\n";
-      top.forEach((sug, idx) => {
-        text += `${formatHintLine(idx + 1, parseUciMove(sug?.move || ""), sug.score_cp)}\n`;
-      });
-      if (lastExplanationText) {
-        text += "\n" + lastExplanationText;
-      }
-      setNotesText(text.trim());
-      gameInfoNotesBox.dataset.fsSuggestions = "1";
-    }
+    const gt = String(boardGameType || gameTypeSelect?.value || "chess").toLowerCase();
+    const header =
+      gt === "shogi"
+        ? "Suggested moves (including drops from hand):\n"
+        : "Suggested moves:\n";
+    let text = header;
+    top.forEach((sug, idx) => {
+      text += `${formatHintLine(idx + 1, parseUciMove(sug?.move || ""), sug.score_cp)}\n`;
+    });
+    lastSuggestionsText = text.trim();
+    refreshNotesBox();
   };
 
   const loadSuggestedMovesForSelection = async (sequence) => {
@@ -2019,6 +2038,7 @@
       humanColor: String(humanSideSelect?.value || "white"),
       aiGameCount: aiCount,
       aiProfile: String(aiStrengthSelect?.value || "intermediate"),
+      skillLevel: String(coachLevelSelect?.value || "intermediate"),
       fen,
     });
 
@@ -2043,6 +2063,7 @@
       renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
       renderGameOutcome(result.game);
       cachedAnalysis = null;
+      clearCoachNotesState();
       renderGameInfo(result.captured, result.analysis);
       stopAnalysisPolling();
       clearSelectedSquare();
@@ -2203,10 +2224,52 @@
     });
   };
 
+  const setupConfigBody = () => {
+    const mode = String(gameModeSelect?.value || "human_vs_human");
+    const fen = String(fenInput?.value || "").trim();
+    const aiCount = fen ? "1" : String(aiGameCountInput?.value || "1");
+    return new URLSearchParams({
+      type: String(gameTypeSelect?.value || "chess"),
+      mode,
+      humanColor: String(humanSideSelect?.value || "white"),
+      aiGameCount: aiCount,
+      aiProfile: String(aiStrengthSelect?.value || "intermediate"),
+      skillLevel: String(coachLevelSelect?.value || "intermediate"),
+      fen,
+    });
+  };
+
+  // Quiet config POST so the next /explain sees AI strength / coach level without Apply.
+  const syncSetupToSession = async () => {
+    if (!currentGameId || simulationRequestInFlight || isSimulationPlayback) return;
+    try {
+      const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/config`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: setupConfigBody().toString(),
+      });
+      if (!response.ok) return;
+      const result = await response.json();
+      if (result?.game) renderGameConfig(result.game);
+    } catch (_) {
+      // non-blocking
+    }
+  };
+
   button.addEventListener("click", submitCommand);
   if (gameModeSelect) gameModeSelect.addEventListener("change", updateSetupControlState);
   if (fenInput) fenInput.addEventListener("input", updateSetupControlState);
-  if (aiStrengthSelect) aiStrengthSelect.addEventListener("change", updateSetupControlState);
+  if (aiStrengthSelect) {
+    aiStrengthSelect.addEventListener("change", () => {
+      updateSetupControlState();
+      void syncSetupToSession();
+    });
+  }
+  if (coachLevelSelect) {
+    coachLevelSelect.addEventListener("change", () => {
+      void syncSetupToSession();
+    });
+  }
   if (gameTypeSelect) {
     gameTypeSelect.addEventListener("change", () => {
       previewBoardForGameType(gameTypeSelect.value);
@@ -2255,14 +2318,7 @@
           setStatus("Missing game session. Start a new game first.", "error");
           return;
         }
-        const body = new URLSearchParams({
-          type: String(gameTypeSelect?.value || "chess"),
-          mode,
-          humanColor: String(humanSideSelect?.value || "white"),
-          aiGameCount: aiCount,
-          aiProfile: String(aiStrengthSelect?.value || "intermediate"),
-          fen,
-        });
+        const body = setupConfigBody();
         const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/config`, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -2408,6 +2464,7 @@
         }
 
         cachedAnalysis = null;
+        clearCoachNotesState();
         renderGameInfo(result.captured, result.analysis);
         stopAnalysisPolling();
         resolvePromotionChoice("");
@@ -2436,6 +2493,7 @@
           mode,
           humanColor: selectedHumanColor,
           aiProfile: String(aiStrengthSelect?.value || "intermediate"),
+          skillLevel: String(coachLevelSelect?.value || "intermediate"),
         });
 
         const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/new`, {
@@ -2465,6 +2523,7 @@
 
         cachedAnalysis = null;
         cachedCapturedSummary = null;
+        clearCoachNotesState();
 
         renderGameInfo(result.captured, null);
         stopAnalysisPolling();

@@ -32,6 +32,7 @@ func (h *Handler) APIGames(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	game = applySkillLevelFromRequest(game.ID, r, game)
 	log.Printf("api create game %s mode=%s type=%s", gameIDLabel(game.ID), game.Mode, game.Type)
 
 	// If human is Black in Human vs AI mode, let the AI (White) play the first move immediately
@@ -460,6 +461,7 @@ func (h *Handler) postAPIGameConfig(w http.ResponseWriter, r *http.Request, game
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	game = applySkillLevelFromRequest(gameID, r, game)
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(struct {
 		Game sessionpkg.GameSession `json:"game"`
@@ -552,6 +554,7 @@ func (h *Handler) postAPIGameNew(w http.ResponseWriter, r *http.Request, gameID 
 	gameType := currentGame.Type
 	humanColor := currentGame.Config.HumanColor
 	aiProfile := currentGame.Config.AIProfile
+	skillLevel := currentGame.Config.SkillLevel
 	if err := r.ParseForm(); err == nil {
 		if m := r.FormValue("mode"); m != "" {
 			mode = sessionpkg.GameMode(m)
@@ -564,6 +567,9 @@ func (h *Handler) postAPIGameNew(w http.ResponseWriter, r *http.Request, gameID 
 		}
 		if p := strings.TrimSpace(r.FormValue("aiProfile")); p != "" {
 			aiProfile = p
+		}
+		if s := readSkillLevelFromRequest(r); s != "" {
+			skillLevel = s
 		}
 	}
 
@@ -582,6 +588,11 @@ func (h *Handler) postAPIGameNew(w http.ResponseWriter, r *http.Request, gameID 
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
+	}
+	if skillLevel != "" {
+		if updated, setErr := sessionpkg.SetSkillLevelByID(game.ID, skillLevel); setErr == nil {
+			game = updated
+		}
 	}
 
 	// Auto-play first AI move if human is Black — run in background so "New Game" returns instantly.
