@@ -166,6 +166,33 @@ func TestExplainSkillLevelFromProfile(t *testing.T) {
 	}
 }
 
+func TestConceptHintsFromAnalysis(t *testing.T) {
+	hints := conceptHintsFromAnalysis(analyzerResponse{
+		ThreatSummary: "White is in check.",
+		EvalCPWhite:   180,
+		SuggestedMoves: []analyzerSuggestedMove{
+			{Rank: 1, UCI: "e7e5", SAN: "e5", Score: 20},
+		},
+	})
+	if len(hints) != 3 {
+		t.Fatalf("want 3 hints, got %v", hints)
+	}
+	if hints[0] != "White is in check." {
+		t.Fatalf("threat hint: %q", hints[0])
+	}
+	if !strings.Contains(hints[1], "White is ahead") {
+		t.Fatalf("material hint: %q", hints[1])
+	}
+	if !strings.Contains(hints[2], "e5") {
+		t.Fatalf("top-move hint: %q", hints[2])
+	}
+
+	empty := conceptHintsFromAnalysis(analyzerResponse{})
+	if len(empty) != 0 {
+		t.Fatalf("empty analysis should yield no hints, got %v", empty)
+	}
+}
+
 func TestExplainByRequest_Success(t *testing.T) {
 	var gotSkill string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

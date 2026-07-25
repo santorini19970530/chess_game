@@ -53,6 +53,28 @@ class TestTeacherPrompt(unittest.TestCase):
         self.assertIn("at most 2 short sentences", prompt)
         self.assertIn("under 45 words", prompt)
 
+    def test_prompt_injects_concept_hints(self) -> None:
+        fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+        with_cues = build_teacher_prompt(
+            fen=fen,
+            move_uci="e2e4",
+            move_san="e4",
+            move_history=["e2e4"],
+            skill_level="intermediate",
+            concept_hints=["Black king is in check.", "Top suggestion for the side to move: e7e5."],
+        )
+        bare = build_teacher_prompt(
+            fen=fen,
+            move_uci="e2e4",
+            move_san="e4",
+            move_history=["e2e4"],
+            skill_level="intermediate",
+        )
+        self.assertIn("Position cues", with_cues)
+        self.assertIn("Black king is in check.", with_cues)
+        self.assertIn("e7e5", with_cues)
+        self.assertNotIn("Position cues", bare)
+
     def test_heuristic_still_works(self) -> None:
         text = HeuristicProvider().explain(
             fen=self.FEN,

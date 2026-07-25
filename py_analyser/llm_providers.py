@@ -68,6 +68,7 @@ def build_teacher_prompt(
     skill_level: str = "intermediate",
     side_to_move: str = "white",
     human_color: str | None = None,
+    concept_hints: list[str] | None = None,
 ) -> str:
     """Assemble Ollama prompt from chess_terms.json + chess_tone.json by skill_level."""
     level = normalize_skill_level(skill_level)
@@ -81,6 +82,7 @@ def build_teacher_prompt(
     to_move = _side_to_move_from_fen(fen, side_to_move)
     last_mover = "black" if to_move == "white" else "white"
     human = _normalize_side(human_color) if human_color else ""
+    cues = [str(h).strip() for h in (concept_hints or []) if str(h).strip()][:3]
 
     voice = str(tone.get("voice") or f"{game} coach").strip()
     style_rules = tone.get("style_rules") or []
@@ -115,6 +117,12 @@ def build_teacher_prompt(
         "Only mention pieces/squares that match the FEN; do not invent pieces.",
         f"FEN after the move: {fen}. Recent moves: {history_str}.",
     ]
+    if cues:
+        parts.append(
+            "Position cues (use lightly; do not quote this label or dump them all): "
+            + " | ".join(cues)
+            + "."
+        )
     if human in {"white", "black"}:
         if last_mover == human:
             parts.append(
@@ -158,6 +166,7 @@ class LLMProvider(Protocol):
         game_type: str = "chess",
         skill_level: str = "intermediate",
         human_color: str | None = None,
+        concept_hints: list[str] | None = None,
     ) -> str:
         ...
 
@@ -188,6 +197,7 @@ class OllamaProvider:
         game_type: str = "chess",
         skill_level: str = "intermediate",
         human_color: str | None = None,
+        concept_hints: list[str] | None = None,
     ) -> str:
         prompt = build_teacher_prompt(
             fen=fen,
@@ -198,6 +208,7 @@ class OllamaProvider:
             skill_level=skill_level,
             side_to_move=color,
             human_color=human_color,
+            concept_hints=concept_hints,
         )
 
         req = urllib.request.Request(
@@ -232,9 +243,11 @@ class HeuristicProvider:
         game_type: str = "chess",
         skill_level: str = "intermediate",
         human_color: str | None = None,
+        concept_hints: list[str] | None = None,
     ) -> str:
         _ = skill_level
         _ = human_color
+        _ = concept_hints
         return build_explanation_fallback(
             fen=fen,
             color=color,

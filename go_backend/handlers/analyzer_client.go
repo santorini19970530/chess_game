@@ -34,20 +34,77 @@ type analyzerRequest struct {
 
 // explainRequest mirrors the payload expected by Python /explain.
 type explainRequest struct {
-	RequestID   string   `json:"request_id"`
-	FEN         string   `json:"fen"`
-	Color       string   `json:"color"` // side to move AFTER the explained move
-	GameType    string   `json:"game_type"`
-	SkillLevel  string   `json:"skill_level,omitempty"`
-	HumanColor  string   `json:"human_color,omitempty"` // human seat in HvAI (white|black)
-	MoveUCI     string   `json:"move_uci,omitempty"`
-	MoveSAN     string   `json:"move_san,omitempty"`
-	MoveHistory []string `json:"move_history,omitempty"`
+	RequestID    string   `json:"request_id"`
+	FEN          string   `json:"fen"`
+	Color        string   `json:"color"` // side to move AFTER the explained move
+	GameType     string   `json:"game_type"`
+	SkillLevel   string   `json:"skill_level,omitempty"`
+	HumanColor   string   `json:"human_color,omitempty"` // human seat in HvAI (white|black)
+	ConceptHints []string `json:"concept_hints,omitempty"`
+	MoveUCI      string   `json:"move_uci,omitempty"`
+	MoveSAN      string   `json:"move_san,omitempty"`
+	MoveHistory  []string `json:"move_history,omitempty"`
 }
 
 // explainSkillLevelFromProfile maps AI strength (4 levels) → explain skill_level (3).
 func explainSkillLevelFromProfile(profile string) string {
 	return sessionpkg.SkillLevelFromAIProfile(profile)
+}
+
+// conceptHintsFromAnalysis builds at most 3 short cues for the explain prompt (issue0047).
+// Missing fields are skipped; never blocks explain.
+func conceptHintsFromAnalysis(a analyzerResponse) []string {
+	hints := make([]string, 0, 3)
+	if t := strings.TrimSpace(a.ThreatSummary); t != "" {
+		hints = append(hints, t)
+	}
+
+	balanceOK := false
+	if a.HealthSummary != nil {
+		if raw, ok := a.HealthSummary["material_balance_white_minus_black"]; ok {
+			switch v := raw.(type) {
+			case float64:
+				balanceOK = true
+				if v >= 100 {
+					hints = append(hints, "White is ahead on material / evaluation.")
+				} else if v <= -100 {
+					hints = append(hints, "Black is ahead on material / evaluation.")
+				}
+			case int:
+				balanceOK = true
+				if v >= 100 {
+					hints = append(hints, "White is ahead on material / evaluation.")
+				} else if v <= -100 {
+					hints = append(hints, "Black is ahead on material / evaluation.")
+				}
+			}
+		}
+	}
+	if !balanceOK {
+		if a.EvalCPWhite >= 100 {
+			hints = append(hints, "White is ahead on material / evaluation.")
+		} else if a.EvalCPWhite <= -100 {
+			hints = append(hints, "Black is ahead on material / evaluation.")
+		}
+	}
+
+	top := ""
+	if len(a.SuggestedMoves) > 0 {
+		top = strings.TrimSpace(a.SuggestedMoves[0].SAN)
+		if top == "" {
+			top = strings.TrimSpace(a.SuggestedMoves[0].UCI)
+		}
+	}
+	if top == "" {
+		top = strings.TrimSpace(a.BestMoveUCI)
+	}
+	if top != "" {
+		hints = append(hints, "Top suggestion for the side to move: "+top+".")
+	}
+	if len(hints) > 3 {
+		hints = hints[:3]
+	}
+	return hints
 }
 
 // explainResponse is the JSON shape returned by Python /explain.
@@ -608,6 +665,10 @@ func enqueueExplanation(gameID, moveUCI, moveSAN string) {
 			MoveUCI:     moveUCI,
 			MoveSAN:     moveSAN,
 			MoveHistory: history,
+		}
+		// Optional cues from latest analysis if already ready; never wait on analysis.
+		if latest, ok := getLatestAnalysisByGameID(gameID); ok {
+			req.ConceptHints = conceptHintsFromAnalysis(latest.Analysis)
 		}
 
 		result, err := explainByRequest(req)

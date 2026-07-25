@@ -414,6 +414,76 @@ def build_threat_summary(board: chess.Board, eval_cp_white: int) -> str:
     return "Position is roughly balanced."
 
 
+def build_concept_hints(
+    analysis: Optional[Dict[str, object]] = None,
+    *,
+    max_hints: int = 3,
+) -> List[str]:
+    """Tiny human-readable cues from an /analyze-shaped dict (issue0047 step 1).
+
+    Order (at most ``max_hints``):
+      1. threat / check / mate note
+      2. material note (when clearly unbalanced)
+      3. top suggested reply (SAN preferred, else UCI)
+
+    Missing or empty analysis → []. Never raises on bad shape.
+    """
+    if not analysis or max_hints <= 0:
+        return []
+
+    hints: List[str] = []
+
+    threat = str(analysis.get("threat_summary") or "").strip()
+    if threat:
+        hints.append(threat)
+
+    balance = analysis.get("health_summary")
+    material_cp: Optional[int] = None
+    if isinstance(balance, dict):
+        raw = balance.get("material_balance_white_minus_black")
+        try:
+            material_cp = int(raw)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            material_cp = None
+    if material_cp is None:
+        raw_eval = analysis.get("eval_cp_white")
+        try:
+            material_cp = int(raw_eval)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            material_cp = None
+    if material_cp is not None and abs(material_cp) >= 100:
+        if material_cp > 0:
+            hints.append("White is ahead on material / evaluation.")
+        else:
+            hints.append("Black is ahead on material / evaluation.")
+
+    suggestions = analysis.get("suggested_moves")
+    top_label = ""
+    if isinstance(suggestions, list) and suggestions:
+        top = suggestions[0]
+        if isinstance(top, dict):
+            top_label = str(top.get("san") or top.get("uci") or "").strip()
+        else:
+            top_label = str(getattr(top, "san", None) or getattr(top, "uci", "") or "").strip()
+    if not top_label:
+        top_label = str(analysis.get("best_move_uci") or "").strip()
+    if top_label:
+        hints.append(f"Top suggestion for the side to move: {top_label}.")
+
+    # Dedupe while preserving order (threat can repeat material idea).
+    seen: set[str] = set()
+    unique: List[str] = []
+    for h in hints:
+        key = h.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(h)
+        if len(unique) >= max_hints:
+            break
+    return unique
+
+
 def build_explanation_fallback(
     fen: str,
     color: str,
