@@ -281,6 +281,20 @@
     }
   };
 
+  const setCatchStatus = (error, networkMsg = "Network error. Please try again.") => {
+    console.error(error);
+    const msg = String(error?.message || "");
+    const isNetwork =
+      error instanceof TypeError &&
+      (/failed to fetch|networkerror|load failed|network request failed/i.test(msg) ||
+        msg === "Failed to fetch");
+    if (isNetwork) {
+      setStatus(networkMsg, "error");
+      return;
+    }
+    setStatus(msg ? `Error: ${msg}` : "Something went wrong. Check the console.", "error");
+  };
+
   const syncGameIdFromResult = (result) => {
     const nextId = String(result?.game?.id || "").trim();
     if (!nextId) return;
@@ -813,6 +827,24 @@
     boardElement.replaceChildren(...squares);
   };
 
+  const syncXiangqiCoordGutters = () => {
+    if (!boardWrapper || !boardElement) return;
+    if (String(boardWrapper.dataset.gameType || "") !== "xianqi") {
+      boardWrapper.style.removeProperty("--xq-board-w");
+      boardWrapper.style.removeProperty("--xq-board-h");
+      boardWrapper.style.removeProperty("--xq-label-pad-x");
+      boardWrapper.style.removeProperty("--xq-label-pad-y");
+      return;
+    }
+    const cs = window.getComputedStyle(boardElement);
+    const padX = (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.paddingLeft) || 0);
+    const padY = (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.paddingTop) || 0);
+    boardWrapper.style.setProperty("--xq-board-w", `${boardElement.offsetWidth}px`);
+    boardWrapper.style.setProperty("--xq-board-h", `${boardElement.offsetHeight}px`);
+    boardWrapper.style.setProperty("--xq-label-pad-x", `${padX}px`);
+    boardWrapper.style.setProperty("--xq-label-pad-y", `${padY}px`);
+  };
+
   const rebuildBoardGrid = () => {
     if (!boardElement || !boardWrapper) return;
     boardWrapper.dataset.gameType = boardGameType;
@@ -821,6 +853,8 @@
     rebuildBoardLabels();
     if (boardGameType === "xianqi") rebuildXiangqiBoard();
     else rebuildSquareGridBoard();
+    // After layout: copy board size/padding so a..i / 10..1 sit on the grid lines.
+    window.requestAnimationFrame(() => syncXiangqiCoordGutters());
   };
 
   const ensureBoardGeometry = (type) => {
@@ -1943,8 +1977,8 @@
       void refreshSuggestedMoves();
       input.focus();
       return true;
-    } catch (_error) {
-      setStatus("Network error. Please try again.", "error");
+    } catch (error) {
+      setCatchStatus(error);
       input.focus();
       return false;
     } finally {
@@ -2019,8 +2053,8 @@
       gameOver = false;
       setStatus("Game session ready.", "success");
       input.focus();
-    } catch (_) {
-      setStatus("Network error. Please try again.", "error");
+    } catch (error) {
+      setCatchStatus(error);
     }
   };
 
@@ -2250,8 +2284,8 @@
         }
 
         setStatus("Game setup applied. Click New Game to start.", "success");
-      } catch (_error) {
-        setStatus("Network error. Please try again.", "error");
+      } catch (error) {
+        setCatchStatus(error);
       }
     });
   }
@@ -2328,10 +2362,10 @@
         ensureSimulationControls();
         startNextSimulationGame();
         setStatus(`Simulation loaded (${n} game${n > 1 ? "s" : ""}).`, "success");
-      } catch (_e) {
+      } catch (error) {
         simulationRequestInFlight = false;
         updateSetupControlState();
-        setStatus("Network error while loading simulation.", "error");
+        setCatchStatus(error, "Network error while loading simulation.");
         cleanupSimulationControls();
       }
     });
@@ -2378,8 +2412,8 @@
         stopAnalysisPolling();
         resolvePromotionChoice("");
         clearSelectedSquare();
-      } catch (_error) {
-        setStatus("Network error. Please try again.", "error");
+      } catch (error) {
+        setCatchStatus(error);
       }
     });
   }
@@ -2396,11 +2430,11 @@
         }
         // Send current dropdown values so the new game respects type/mode/side/profile
         const mode = String(gameModeSelect?.value || "human_vs_human");
-        const humanColor = String(humanSideSelect?.value || "white");
+        const selectedHumanColor = String(humanSideSelect?.value || "white");
         const body = new URLSearchParams({
           type: String(gameTypeSelect?.value || "chess"),
           mode,
-          humanColor,
+          humanColor: selectedHumanColor,
           aiProfile: String(aiStrengthSelect?.value || "intermediate"),
         });
 
@@ -2452,8 +2486,8 @@
         cleanupSimulationControls();
         setStatus("New game started.", "success");
         input.focus();
-      } catch (_error) {
-        setStatus("Network error. Please try again.", "error");
+      } catch (error) {
+        setCatchStatus(error);
       }
     });
   }
@@ -2726,6 +2760,10 @@
   });
   initPromotionPicker();
   initMouseMoveControls();
+  if (typeof ResizeObserver !== "undefined" && boardElement) {
+    const xqGutterRo = new ResizeObserver(() => syncXiangqiCoordGutters());
+    xqGutterRo.observe(boardElement);
+  }
   window.addEventListener("beforeunload", () => closeGameSocket(false));
 
   renderGameInfo(null, null);
