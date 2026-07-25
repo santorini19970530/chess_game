@@ -416,16 +416,17 @@
     if (event === "move_applied") {
       // Update board immediately — the CSS transition on .piece_img (400ms) gives the slide animation
       void refreshGameSnapshotFromAPI(gameId);
-      // Also refresh FS suggestions directly (in case snapshot path is delayed)
-      void refreshSuggestedMoves();
       // Play sound at the same time the piece starts moving (capture vs quiet from history)
       playMoveSound(Boolean(data?.isCapture));
+      // Coach text arrives later (Ollama); show placeholder now so notes don't jump from empty → wall of text.
+      // Do NOT refresh Suggested moves here — top-moves races the new position and clears/flickers the list.
+      lastExplanationText = "[coach] Thinking…";
+      refreshNotesBox();
       return;
     }
     if (event === "turn_changed") {
       renderCurrentTurn(data?.current_turn);
       renderCheckState(data?.checked_side);
-      void refreshSuggestedMoves();
       return;
     }
     if (event === "game_outcome") {
@@ -438,17 +439,23 @@
     if (event === "analysis_status_update") {
       const statusText = String(data?.status || "").toLowerCase();
       if (statusText === "pending") {
-        setNotesText("Analyzing...");
+        // Do not wipe Suggested moves / coach placeholder with a bare "Analyzing...".
         return;
       }
       if (statusText === "ready" && data?.analysis) {
         renderGameInfo(pendingAnalysisCapturedSnapshot || cachedCapturedSummary, data.analysis);
         stopAnalysisPolling();
+        // Refresh hints once analysis/position is settled (avoids mid-move flicker).
+        void refreshSuggestedMoves();
         return;
       }
       if (statusText === "error") {
         const safeMessage = String(data?.last_error || "").trim();
-        if (safeMessage) setNotesText(safeMessage);
+        if (safeMessage) {
+          lastThreatSummary = safeMessage;
+          refreshNotesBox();
+        }
+        void refreshSuggestedMoves();
       }
     }
     if (event === "explanation_ready" || event === "explanationReady") {
@@ -1096,7 +1103,7 @@
 
   const startAnalysisPolling = (targetMoveNumber, capturedSnapshot) => {
     stopAnalysisPolling();
-    setNotesText("Analyzing...");
+    // Keep composed notes (suggestions + coach Thinking…); analysis will refresh threat/suggestions.
     const target = Number(targetMoveNumber) || 0;
     pendingAnalysisTargetMove = target;
     pendingAnalysisCapturedSnapshot = capturedSnapshot || cachedCapturedSummary;
@@ -1717,26 +1724,25 @@
       const url = `/api/games/${encodeURIComponent(currentGameId)}/top-moves?profile=${encodeURIComponent(profile)}&k=3`;
       const resp = await fetch(url);
       if (!resp.ok) {
-        // Transient 503 (engine starting) or 404/500 — retry once after a short delay
+        // Transient 503 (engine starting) or 404/500 — retry once; keep previous suggestions (no clear/flicker).
         if (retry) {
           window.setTimeout(() => {
             void refreshSuggestedMoves(false);
           }, 1200);
-        } else {
-          highlightSuggestedMoves([]);
         }
         return;
       }
       const data = await resp.json();
       const suggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
-      highlightSuggestedMoves(suggestions);
+      if (suggestions.length) {
+        highlightSuggestedMoves(suggestions);
+      }
+      // Empty payload: keep lastSuggestionsText until a non-empty update arrives.
     } catch (_) {
       if (retry) {
         window.setTimeout(() => {
           void refreshSuggestedMoves(false);
         }, 1200);
-      } else {
-        highlightSuggestedMoves([]);
       }
     }
   };
@@ -1748,7 +1754,7 @@
     const top = Array.isArray(suggestions) ? suggestions.slice(0, 3) : [];
 
     if (!top.length) {
-      lastSuggestionsText = "";
+      // Keep prior notes text; clearing here made Suggested moves jump/blank between plies.
       refreshNotesBox();
       return;
     }

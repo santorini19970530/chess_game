@@ -34,15 +34,17 @@ type analyzerRequest struct {
 
 // explainRequest mirrors the payload expected by Python /explain.
 type explainRequest struct {
-	RequestID   string   `json:"request_id"`
-	FEN         string   `json:"fen"`
-	Color       string   `json:"color"` // side to move AFTER the explained move
-	GameType    string   `json:"game_type"`
-	SkillLevel  string   `json:"skill_level,omitempty"`
-	HumanColor  string   `json:"human_color,omitempty"` // human seat in HvAI (white|black)
-	MoveUCI     string   `json:"move_uci,omitempty"`
-	MoveSAN     string   `json:"move_san,omitempty"`
-	MoveHistory []string `json:"move_history,omitempty"`
+	RequestID    string   `json:"request_id"`
+	FEN          string   `json:"fen"`
+	Color        string   `json:"color"` // side to move AFTER the explained move
+	GameType     string   `json:"game_type"`
+	SkillLevel   string   `json:"skill_level,omitempty"`
+	HumanColor   string   `json:"human_color,omitempty"` // human seat in HvAI (white|black)
+	ConceptHints []string `json:"concept_hints,omitempty"`
+	MoveUCI      string   `json:"move_uci,omitempty"`
+	MoveSAN      string   `json:"move_san,omitempty"`
+	MoveHistory  []string `json:"move_history,omitempty"`
+	Quick        bool     `json:"quick,omitempty"` // instant ground-truth line (no Ollama)
 }
 
 // explainSkillLevelFromProfile maps AI strength (4 levels) → explain skill_level (3).
@@ -50,15 +52,134 @@ func explainSkillLevelFromProfile(profile string) string {
 	return sessionpkg.SkillLevelFromAIProfile(profile)
 }
 
+// conceptHintsFromAnalysis builds at most 3 short cues for the explain prompt (issue0047).
+// Missing fields are skipped; never blocks explain.
+func conceptHintsFromAnalysis(a analyzerResponse) []string {
+	hints := make([]string, 0, 3)
+	if t := strings.TrimSpace(a.ThreatSummary); t != "" {
+		hints = append(hints, t)
+	}
+
+	balanceOK := false
+	if a.HealthSummary != nil {
+		if raw, ok := a.HealthSummary["material_balance_white_minus_black"]; ok {
+			switch v := raw.(type) {
+			case float64:
+				balanceOK = true
+				if v >= 100 {
+					hints = append(hints, "White is ahead on material / evaluation.")
+				} else if v <= -100 {
+					hints = append(hints, "Black is ahead on material / evaluation.")
+				}
+			case int:
+				balanceOK = true
+				if v >= 100 {
+					hints = append(hints, "White is ahead on material / evaluation.")
+				} else if v <= -100 {
+					hints = append(hints, "Black is ahead on material / evaluation.")
+				}
+			}
+		}
+	}
+	if !balanceOK {
+		if a.EvalCPWhite >= 100 {
+			hints = append(hints, "White is ahead on material / evaluation.")
+		} else if a.EvalCPWhite <= -100 {
+			hints = append(hints, "Black is ahead on material / evaluation.")
+		}
+	}
+
+	labels := make([]string, 0, 3)
+	for i, sm := range a.SuggestedMoves {
+		if i >= 3 {
+			break
+		}
+		lab := strings.TrimSpace(sm.SAN)
+		if lab == "" {
+			lab = strings.TrimSpace(sm.UCI)
+		}
+		if lab != "" {
+			labels = append(labels, lab)
+		}
+	}
+	if len(labels) == 0 {
+		if best := strings.TrimSpace(a.BestMoveUCI); best != "" {
+			labels = append(labels, best)
+		}
+	}
+	if len(labels) > 0 {
+		hints = append(hints, "Engine suggested replies (side to move): "+strings.Join(labels, ", ")+".")
+	}
+	if len(hints) > 3 {
+		hints = hints[:3]
+	}
+	return hints
+}
+
+// conceptHintsForExplain only uses analysis for this exact FEN.
+// Stale MultiPV from the previous ply must not cue the coach (mismatch with Suggested moves).
+func conceptHintsForExplain(latest latestAnalysisState, fen string) []string {
+	analysisFEN := strings.TrimSpace(latest.Analysis.FEN)
+	if analysisFEN == "" || analysisFEN != strings.TrimSpace(fen) {
+		return nil
+	}
+	return conceptHintsFromAnalysis(latest.Analysis)
+}
+
+// explainHintWait returns how long explain may wait for same-FEN analysis cues.
+// Default 0: do not delay coach for MultiPV (moves stay snappy; ground truth still in Python).
+// Set EXPLAIN_HINT_WAIT_MS (e.g. 3000) if you prefer cues over speed.
+func explainHintWait() time.Duration {
+	raw := strings.TrimSpace(os.Getenv("EXPLAIN_HINT_WAIT_MS"))
+	if raw == "" {
+		return 0
+	}
+	ms, err := strconv.Atoi(raw)
+	if err != nil || ms <= 0 {
+		return 0
+	}
+	if ms > 15000 {
+		ms = 15000
+	}
+	return time.Duration(ms) * time.Millisecond
+}
+
+// waitConceptHintsForFEN peeks (and optionally polls) for same-FEN analysis cues.
+// Never blocks the game HTTP thread — only the explain goroutine.
+func waitConceptHintsForFEN(gameID, fen string, timeout time.Duration) []string {
+	fen = strings.TrimSpace(fen)
+	peek := func() []string {
+		latest, ok := getLatestAnalysisByGameID(gameID)
+		if !ok {
+			return nil
+		}
+		return conceptHintsForExplain(latest, fen)
+	}
+	if timeout <= 0 {
+		return peek()
+	}
+	deadline := time.Now().Add(timeout)
+	for {
+		if hints := peek(); hints != nil {
+			return hints
+		}
+		if time.Now().After(deadline) {
+			return nil
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
 // explainResponse is the JSON shape returned by Python /explain.
 type explainResponse struct {
-	RequestID   string `json:"request_id"`
-	Status      string `json:"status"`
-	Source      string `json:"source"`
-	Explanation string `json:"explanation"`
-	MoveUCI     string `json:"move_uci"`
-	MoveSAN     string `json:"move_san"`
-	LatencyMS   int    `json:"latency_ms"`
+	RequestID    string   `json:"request_id"`
+	Status       string   `json:"status"`
+	Source       string   `json:"source"`
+	Explanation  string   `json:"explanation"`
+	MoveUCI      string   `json:"move_uci"`
+	MoveSAN      string   `json:"move_san"`
+	LatencyMS    int      `json:"latency_ms"`
+	ConceptHints []string `json:"concept_hints,omitempty"`
 }
 
 type analysisJob struct {
@@ -99,6 +220,20 @@ type moveAnalysisRecord struct {
 	MoveNumber int              `json:"move_number"`
 	Command    string           `json:"command"`
 	Analysis   analyzerResponse `json:"analysis"`
+}
+
+// moveExplanationRecord is coach evidence for report / QA (issue0047–0048).
+type moveExplanationRecord struct {
+	MoveNumber   int      `json:"move_number"`
+	MoveUCI      string   `json:"move_uci"`
+	MoveSAN      string   `json:"move_san,omitempty"`
+	FEN          string   `json:"fen"`
+	SkillLevel   string   `json:"skill_level"`
+	Source       string   `json:"source"`
+	Explanation  string   `json:"explanation"`
+	ConceptHints []string `json:"concept_hints,omitempty"`
+	LatencyMS    int      `json:"latency_ms"`
+	RecordedAt   string   `json:"recorded_at"`
 }
 
 type latestAnalysisState struct {
@@ -160,6 +295,7 @@ type analysisLogEvent struct {
 
 var (
 	moveAnalysisByGame      = map[string][]moveAnalysisRecord{}
+	moveExplanationByGame   = map[string][]moveExplanationRecord{}
 	latestAnalysisByGame    = map[string]latestAnalysisState{}
 	latestRequestedByGame   = map[string]int{}
 	analysisPendingByGame   = map[string]bool{}
@@ -413,9 +549,16 @@ func analysisWorkerLoop() {
 				HTTPStatus:          httpStatus,
 			})
 			log.Printf("warning: analyzer job failed game_id=%s move=%d: %v", job.GameID, job.MoveNumber, err)
+			// Still coach the move (without MultiPV cues) so notes are not silent on analyzer failure.
+			if shouldExplainCommand(job.Command) {
+				enqueueExplanation(job.GameID, job.Command, job.Command)
+			}
 			continue
 		}
 		if result == nil {
+			if shouldExplainCommand(job.Command) {
+				enqueueExplanation(job.GameID, job.Command, job.Command)
+			}
 			continue
 		}
 		if job.MoveNumber < latestRequestedMove {
@@ -440,6 +583,10 @@ func analysisWorkerLoop() {
 			continue
 		}
 		recordMoveAnalysisForGame(job.GameID, job.MoveNumber, job.Command, *result)
+		// Explain after MultiPV is cached for this FEN → non-empty concept_hints aligned with Suggested moves.
+		if shouldExplainCommand(job.Command) {
+			enqueueExplanation(job.GameID, job.Command, job.Command)
+		}
 		gameSocketHub.Broadcast(job.GameID, socketEventAnalysisStatus, map[string]interface{}{
 			"status":                "ready",
 			"pending":               false,
@@ -569,7 +716,13 @@ func recordMoveAnalysis(command string, result analyzerResponse) {
 	recordMoveAnalysisForGame(game.ID, moveNumber, command, result)
 }
 
+func shouldExplainCommand(command string) bool {
+	c := strings.TrimSpace(strings.ToLower(command))
+	return c != "" && c != "flag"
+}
+
 // enqueueExplanation calls the Python /explain endpoint asynchronously (non-blocking).
+// Prefer calling this after analysis is recorded so concept_hints match Suggested moves.
 // On success it broadcasts a dedicated "explanation_ready" socket event.
 // Any failure (Ollama down, timeout, etc.) is silently ignored so the game is never affected.
 func enqueueExplanation(gameID, moveUCI, moveSAN string) {
@@ -598,33 +751,78 @@ func enqueueExplanation(gameID, moveUCI, moveSAN string) {
 		}
 		moveNumber := len(history)
 
-		req := explainRequest{
-			RequestID:   fmt.Sprintf("%s-explain-%d", gameID, moveNumber),
-			FEN:         fen,
-			Color:       color,
-			GameType:    gameType,
-			SkillLevel:  skillLevel,
-			HumanColor:  humanColor,
-			MoveUCI:     moveUCI,
-			MoveSAN:     moveSAN,
-			MoveHistory: history,
+		hints := waitConceptHintsForFEN(gameID, fen, explainHintWait())
+		base := explainRequest{
+			FEN:          fen,
+			Color:        color,
+			GameType:     gameType,
+			SkillLevel:   skillLevel,
+			HumanColor:   humanColor,
+			ConceptHints: hints,
+			MoveUCI:      moveUCI,
+			MoveSAN:      moveSAN,
+			MoveHistory:  history,
 		}
 
+		// 1) Instant ground-truth line (no Ollama) so notes are not stuck on "Thinking…" for ~8s.
+		quickReq := base
+		quickReq.RequestID = fmt.Sprintf("%s-explain-quick-%d", gameID, moveNumber)
+		quickReq.Quick = true
+		if quick, qerr := explainByRequest(quickReq); qerr == nil && quick != nil && strings.TrimSpace(quick.Explanation) != "" {
+			gameSocketHub.Broadcast(gameID, socketEventExplanationReady, map[string]interface{}{
+				"move_number":   moveNumber,
+				"move_uci":      quick.MoveUCI,
+				"move_san":      quick.MoveSAN,
+				"explanation":   quick.Explanation,
+				"source":        quick.Source,
+				"latency_ms":    quick.LatencyMS,
+				"skill_level":   skillLevel,
+				"concept_hints": hints,
+				"quick":         true,
+			})
+		}
+
+		// 2) Full Ollama coach (slower); replaces the quick line when ready.
+		req := base
+		req.RequestID = fmt.Sprintf("%s-explain-%d", gameID, moveNumber)
 		result, err := explainByRequest(req)
 		if err != nil || result == nil || strings.TrimSpace(result.Explanation) == "" {
-			return // graceful: do not emit anything on failure
+			return // graceful: keep quick line if any
 		}
 
+		if len(result.ConceptHints) > 0 {
+			hints = result.ConceptHints
+		}
+		recordMoveExplanationForGame(gameID, moveExplanationRecord{
+			MoveNumber:   moveNumber,
+			MoveUCI:      result.MoveUCI,
+			MoveSAN:      result.MoveSAN,
+			FEN:          fen,
+			SkillLevel:   skillLevel,
+			Source:       result.Source,
+			Explanation:  result.Explanation,
+			ConceptHints: append([]string(nil), hints...),
+			LatencyMS:    result.LatencyMS,
+			RecordedAt:   time.Now().UTC().Format(time.RFC3339),
+		})
+
 		gameSocketHub.Broadcast(gameID, socketEventExplanationReady, map[string]interface{}{
-			"move_number":  moveNumber,
-			"move_uci":     result.MoveUCI,
-			"move_san":     result.MoveSAN,
-			"explanation":  result.Explanation,
-			"source":       result.Source,
-			"latency_ms":   result.LatencyMS,
-			"skill_level":  skillLevel,
+			"move_number":   moveNumber,
+			"move_uci":      result.MoveUCI,
+			"move_san":      result.MoveSAN,
+			"explanation":   result.Explanation,
+			"source":        result.Source,
+			"latency_ms":    result.LatencyMS,
+			"skill_level":   skillLevel,
+			"concept_hints": hints,
 		})
 	}()
+}
+
+func recordMoveExplanationForGame(gameID string, entry moveExplanationRecord) {
+	analysisStoreMu.Lock()
+	defer analysisStoreMu.Unlock()
+	moveExplanationByGame[gameID] = append(moveExplanationByGame[gameID], entry)
 }
 
 func recordMoveAnalysisForGame(gameID string, moveNumber int, command string, result analyzerResponse) {
@@ -680,22 +878,25 @@ func exportGameAnalysisIfNeeded(game sessionpkg.GameSession) {
 		return
 	}
 	records := append([]moveAnalysisRecord(nil), moveAnalysisByGame[game.ID]...)
+	explains := append([]moveExplanationRecord(nil), moveExplanationByGame[game.ID]...)
 	exportedGames[game.ID] = true
 	analysisStoreMu.Unlock()
 
 	payload := struct {
-		GameID       string                 `json:"game_id"`
-		Result       sessionpkg.GameResult  `json:"result"`
-		Game         sessionpkg.GameSession `json:"game"`
-		History      []string               `json:"history"`
-		MoveAnalysis []moveAnalysisRecord   `json:"move_analysis"`
-		ExportedAt   string                 `json:"exported_at"`
+		GameID        string                   `json:"game_id"`
+		Result        sessionpkg.GameResult    `json:"result"`
+		Game          sessionpkg.GameSession   `json:"game"`
+		History       []string                 `json:"history"`
+		MoveAnalysis  []moveAnalysisRecord     `json:"move_analysis"`
+		Explanations  []moveExplanationRecord  `json:"explanations"`
+		ExportedAt    string                   `json:"exported_at"`
 	}{
 		GameID:       game.ID,
 		Result:       game.Result,
 		Game:         game,
 		History:      historyByGameID(game.ID),
 		MoveAnalysis: records,
+		Explanations: explains,
 		ExportedAt:   time.Now().UTC().Format(time.RFC3339),
 	}
 
