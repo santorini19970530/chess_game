@@ -32,6 +32,7 @@ class LLMProvider(Protocol):
         move_san: str | None,
         move_history: list[str] | None,
         game_type: str = "chess",
+        skill_level: str = "intermediate",
     ) -> str:
         ...
 
@@ -60,7 +61,9 @@ class OllamaProvider:
         move_san: str | None,
         move_history: list[str] | None,
         game_type: str = "chess",
+        skill_level: str = "intermediate",
     ) -> str:
+        _ = skill_level
         move_text = move_san or move_uci or ""
         history = move_history or []
         history_str = " ".join(history[-6:]) if history else "(no prior moves)"
@@ -105,7 +108,9 @@ class HeuristicProvider:
         move_san: str | None,
         move_history: list[str] | None = None,
         game_type: str = "chess",
+        skill_level: str = "intermediate",
     ) -> str:
+        _ = skill_level
         return build_explanation_fallback(
             fen=fen,
             color=color,
