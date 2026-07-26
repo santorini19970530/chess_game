@@ -361,6 +361,7 @@ func BuildSnapshotByID(gameID string) (GameSnapshot, error) {
 		return GameSnapshot{}, err
 	}
 	defer unlockRuntimeStateByID(game)
+	syncClockLocked(game, time.Now().UTC())
 	checked := CheckedSideLabel()
 	captured := GetCapturedSummary()
 	switch game.Session.Type {
@@ -380,6 +381,35 @@ func BuildSnapshotByID(gameID string) (GameSnapshot, error) {
 		HistoryDetailed: GetMoveHistoryDetailed(),
 		State:           GetBoardState(),
 	}, nil
+}
+
+// syncClockLocked updates remaining for reads/snapshots; may end the game on flag.
+func syncClockLocked(game *RuntimeGame, now time.Time) {
+	if game == nil || game.Session.Result != GameResultInProgress {
+		return
+	}
+	clk := game.Session.Clock
+	if clk == nil || !clk.Enabled {
+		return
+	}
+	clk.Settle(now)
+	if side, ok := clk.Flagged(); ok {
+		applyFlagLossLocked(game, side)
+	}
+}
+
+// AdjustClockLastTickByID sets LastTick (tests / controlled settle scenarios).
+func AdjustClockLastTickByID(gameID string, when time.Time) error {
+	game, err := lockRuntimeStateByID(gameID)
+	if err != nil {
+		return err
+	}
+	defer unlockRuntimeStateByID(game)
+	if game.Session.Clock == nil {
+		return fmt.Errorf("clock not configured")
+	}
+	game.Session.Clock.LastTickUnixMs = when.UnixMilli()
+	return nil
 }
 
 func CurrentFENByID(gameID string) (string, error) {

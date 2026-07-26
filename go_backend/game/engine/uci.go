@@ -434,7 +434,31 @@ func parseInfoLine(line string) *UCIResult {
 	return res
 }
 
+// GoCommand formats the UCI `go` line for limit (tests / diagnostics).
+func GoCommand(limit Limit) string {
+	return (&FairyStockfish{}).buildGoCmd(limit)
+}
+
 func (fs *FairyStockfish) buildGoCmd(limit Limit) string {
+	// Clock-on: wtime/btime (+ optional winc/binc). Optional movetime caps wall wait.
+	if limit.WhiteTime > 0 || limit.BlackTime > 0 {
+		cmd := fmt.Sprintf(
+			"go wtime %d btime %d",
+			limit.WhiteTime.Milliseconds(),
+			limit.BlackTime.Milliseconds(),
+		)
+		if limit.WhiteInc > 0 || limit.BlackInc > 0 {
+			cmd += fmt.Sprintf(
+				" winc %d binc %d",
+				limit.WhiteInc.Milliseconds(),
+				limit.BlackInc.Milliseconds(),
+			)
+		}
+		if limit.MoveTime > 0 {
+			cmd += fmt.Sprintf(" movetime %d", limit.MoveTime.Milliseconds())
+		}
+		return cmd
+	}
 	// Prefer movetime when set so searches finish before waitForBestMove's deadline.
 	// (Depth-only go depth 20 routinely exceeds the 10s bestmove wait on master.)
 	if limit.MoveTime > 0 {
@@ -448,7 +472,11 @@ func (fs *FairyStockfish) buildGoCmd(limit Limit) string {
 
 // Limit mirrors chess/engine.Limit style for compatibility.
 type Limit struct {
-	Depth    int
-	MoveTime time.Duration
-	Nodes    int64
+	Depth     int
+	MoveTime  time.Duration
+	Nodes     int64
+	WhiteTime time.Duration // remaining (clock-on)
+	BlackTime time.Duration
+	WhiteInc  time.Duration
+	BlackInc  time.Duration
 }

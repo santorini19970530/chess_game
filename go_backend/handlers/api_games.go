@@ -125,22 +125,21 @@ func (h *Handler) getAPIGameByID(w http.ResponseWriter, r *http.Request, gameID 
 		writeJSONError(w, http.StatusNotFound, "Game session not found")
 		return
 	}
-	game, err := sessionpkg.RefreshGameSessionOutcomeByID(gameID)
-	if err != nil {
+	if _, err := sessionpkg.RefreshGameSessionOutcomeByID(gameID); err != nil {
 		writeJSONError(w, http.StatusNotFound, "Game session not found")
 		return
 	}
-	log.Printf("api get game %s result=%s", gameIDLabel(gameID), game.Result)
 	snapshot, err := sessionpkg.BuildSnapshotByID(gameID)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "Failed to load game state")
 		return
 	}
+	log.Printf("api get game %s result=%s", gameIDLabel(gameID), snapshot.Game.Result)
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(gameStateResponse{
 		CurrentTurn:     snapshot.CurrentTurn,
 		CheckedSide:     snapshot.CheckedSide,
-		Game:            game,
+		Game:            snapshot.Game, // includes settled clock
 		Captured:        snapshot.Captured,
 		History:         snapshot.History,
 		HistoryDetailed: snapshot.HistoryDetailed,
@@ -396,7 +395,7 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 		Command:         normalizedMove,
 		CurrentTurn:     snapshot.CurrentTurn,
 		CheckedSide:     snapshot.CheckedSide,
-		Game:            finalGame,
+		Game:            snapshot.Game, // post-move clock (increment / active side)
 		Captured:        snapshot.Captured,
 		History:         snapshot.History,
 		HistoryDetailed: snapshot.HistoryDetailed,
@@ -415,26 +414,28 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 	payload["to_rank"] = response.To.Rank
 	payload["history_len"] = len(snapshot.History)
 	gameSocketHub.Broadcast(gameID, socketEventMoveApplied, payload)
-	gameSocketHub.Broadcast(gameID, socketEventTurnChanged, map[string]interface{}{
+	turnPayload := map[string]interface{}{
 		"current_turn": response.CurrentTurn,
 		"checked_side": response.CheckedSide,
-	})
-	if finalGame.Result != sessionpkg.GameResultInProgress {
+	}
+	attachClockFields(turnPayload, gameID, response.Game.Clock)
+	gameSocketHub.Broadcast(gameID, socketEventTurnChanged, turnPayload)
+	if snapshot.Game.Result != sessionpkg.GameResultInProgress {
 		gameSocketHub.Broadcast(gameID, socketEventGameOutcome, map[string]interface{}{
-			"result": finalGame.Result,
+			"result": snapshot.Game.Result,
 			"outcome": map[string]interface{}{
-				"status":       finalGame.Outcome.Status,
-				"winner":       finalGame.Outcome.Winner,
-				"loser":        finalGame.Outcome.Loser,
-				"checked_side": finalGame.Outcome.CheckedSide,
-				"message":      finalGame.Outcome.Message,
+				"status":       snapshot.Game.Outcome.Status,
+				"winner":       snapshot.Game.Outcome.Winner,
+				"loser":        snapshot.Game.Outcome.Loser,
+				"checked_side": snapshot.Game.Outcome.CheckedSide,
+				"message":      snapshot.Game.Outcome.Message,
 			},
 		})
 	}
 
 	enqueueCurrentPositionAnalysis(gameID, normalizedMove)
-	if finalGame.Result != sessionpkg.GameResultInProgress {
-		exportGameAnalysisIfNeeded(finalGame)
+	if snapshot.Game.Result != sessionpkg.GameResultInProgress {
+		exportGameAnalysisIfNeeded(snapshot.Game)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -519,10 +520,12 @@ func (h *Handler) postAPIGameFlag(w http.ResponseWriter, r *http.Request, gameID
 		HistoryDetailed: snapshot.HistoryDetailed,
 		State:           snapshot.State,
 	}
-	gameSocketHub.Broadcast(gameID, socketEventTurnChanged, map[string]interface{}{
+	flagTurn := map[string]interface{}{
 		"current_turn": response.CurrentTurn,
 		"checked_side": response.CheckedSide,
-	})
+	}
+	attachClockFields(flagTurn, gameID, response.Game.Clock)
+	gameSocketHub.Broadcast(gameID, socketEventTurnChanged, flagTurn)
 	gameSocketHub.Broadcast(gameID, socketEventGameOutcome, map[string]interface{}{
 		"result": game.Result,
 		"outcome": map[string]interface{}{
@@ -634,10 +637,12 @@ func (h *Handler) postAPIGameNew(w http.ResponseWriter, r *http.Request, gameID 
 		return
 	}
 	exportGameAnalysisIfNeeded(game)
-	gameSocketHub.Broadcast(game.ID, socketEventTurnChanged, map[string]interface{}{
+	newTurn := map[string]interface{}{
 		"current_turn": snapshot.CurrentTurn,
 		"checked_side": snapshot.CheckedSide,
-	})
+	}
+	attachClockFields(newTurn, game.ID, snapshot.Game.Clock)
+	gameSocketHub.Broadcast(game.ID, socketEventTurnChanged, newTurn)
 	gameSocketHub.Broadcast(game.ID, socketEventGameOutcome, map[string]interface{}{
 		"result": game.Result,
 		"outcome": map[string]interface{}{
