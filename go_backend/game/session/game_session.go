@@ -432,23 +432,7 @@ func FlagCurrentTurn() GameSession {
 		return GameSession{}
 	}
 	defer unlockActiveRuntimeState(game)
-	side := CurrentTurnColor()
-	winner := opponentOf(side)
-
-	game.Session.Outcome = GameOutcome{
-		Status:     "resigned",
-		Winner:     string(winner),
-		Loser:      string(side),
-		LegalMoves: 0,
-		Message:    sideLabel(side) + " flagged. " + sideLabel(winner) + " wins.",
-	}
-	if winner == "white" {
-		game.Session.Result = GameResultWhiteWin
-	} else {
-		game.Session.Result = GameResultBlackWin
-	}
-	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-	game.Session.Archived = false
+	applyFlagLossLocked(game, string(CurrentTurnColor()))
 	return game.Session
 }
 
