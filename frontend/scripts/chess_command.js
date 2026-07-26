@@ -30,6 +30,15 @@
   const aiStrengthSelect = document.getElementById("ai_strength");
   const coachLevelSelect = document.getElementById("coach_level");
   const configApplyButton = document.getElementById("game_config_apply");
+  const clockEnabledInput = document.getElementById("clock_enabled");
+  const clockPresetSelect = document.getElementById("clock_preset");
+  const clockBaseSecInput = document.getElementById("clock_base_sec");
+  const clockIncrementSecInput = document.getElementById("clock_increment_sec");
+  const clockHumanBaseSecInput = document.getElementById("clock_human_base_sec");
+  const clockAiBaseSecInput = document.getElementById("clock_ai_base_sec");
+  const clockHvAIFields = document.getElementById("clock_hvai_fields");
+  const timeWhiteValue = document.getElementById("game_info_time_white");
+  const timeBlackValue = document.getElementById("game_info_time_black");
   const boardElement = document.querySelector(".chess_board");
   const boardWrapper = document.querySelector(".chess_board_wrapper");
   let boardFiles = 8;
@@ -70,6 +79,13 @@
   let gameOver = false;
   let currentTurn = "white";
   let humanColor = "white";           // human's chosen color in Human vs AI mode
+  let clockEnabledLocal = false;
+  let clockWhiteMs = 0;
+  let clockBlackMs = 0;
+  let clockActiveSide = "white";
+  let clockTickTimer = null;
+  let clockLastTickAt = 0;
+  let clockFlagInFlight = false;
   let selectedSquareSequence = null;
   let selectedDropKind = null; // shogi hand: { side, kind } or null
   let dragSourceSequence = null;
@@ -154,6 +170,14 @@
     lastExplanationText = "";
     lastSuggestionsText = "";
     lastThreatSummary = "";
+  };
+
+  const showGameEndedNotes = (message) => {
+    clearCoachNotesState();
+    clearSuggestedHighlights();
+    selectedSuggestedMoves = [];
+    lastSuggestionsText = String(message || "Game has ended.").trim();
+    refreshNotesBox();
   };
 
   const appendNotesLine = (line) => {
@@ -389,8 +413,13 @@
       renderCurrentTurn(result.currentTurn);
       renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
       renderGameOutcome(result.game);
-      renderGameInfo(result.captured, result.analysis);
+      renderClocks(result.game);
+      renderGameInfo(result.captured, gameOver ? null : result.analysis);
       clearSelectedSquare();
+      if (gameOver) {
+        stopAnalysisPolling();
+        return;
+      }
       void refreshSuggestedMoves();
       const historyArray = Array.isArray(result.history) ? result.history : [];
       const detailedArray = Array.isArray(result.historyDetailed) ? result.historyDetailed : [];
@@ -414,6 +443,9 @@
     const data = payload?.data || {};
 
     if (event === "move_applied") {
+      if (data?.clock || data?.remaining) {
+        applyServerClock(data.clock, data.remaining);
+      }
       // Update board immediately — the CSS transition on .piece_img (400ms) gives the slide animation
       void refreshGameSnapshotFromAPI(gameId);
       // Play sound at the same time the piece starts moving (capture vs quiet from history)
@@ -427,6 +459,12 @@
     if (event === "turn_changed") {
       renderCurrentTurn(data?.current_turn);
       renderCheckState(data?.checked_side);
+      if (data?.clock || data?.remaining) {
+        applyServerClock(data.clock, data.remaining);
+      } else if (data?.current_turn && clockEnabledLocal) {
+        clockActiveSide = String(data.current_turn).toLowerCase();
+        clockLastTickAt = Date.now();
+      }
       return;
     }
     if (event === "game_outcome") {
@@ -434,6 +472,7 @@
         result: data?.result,
         outcome: data?.outcome || {},
       });
+      if (gameOver) stopClockTick();
       return;
     }
     if (event === "analysis_status_update") {
@@ -445,11 +484,13 @@
       if (statusText === "ready" && data?.analysis) {
         renderGameInfo(pendingAnalysisCapturedSnapshot || cachedCapturedSummary, data.analysis);
         stopAnalysisPolling();
+        if (gameOver) return;
         // Refresh hints once analysis/position is settled (avoids mid-move flicker).
         void refreshSuggestedMoves();
         return;
       }
       if (statusText === "error") {
+        if (gameOver) return;
         const safeMessage = String(data?.last_error || "").trim();
         if (safeMessage) {
           lastThreatSummary = safeMessage;
@@ -459,7 +500,7 @@
       }
     }
     if (event === "explanation_ready" || event === "explanationReady") {
-      if (!gameInfoNotesBox) return;
+      if (!gameInfoNotesBox || gameOver) return;
       const expl = String(data?.explanation || data?.analysis_explanation || "").trim();
       if (!expl) return;
       const skill = String(data?.skill_level || "").trim().toLowerCase();
@@ -550,6 +591,8 @@
       ws.addEventListener("open", () => {
         gameSocketReconnectAttempts = 0;
         clearSocketReconnectTimer();
+        // Resync clocks/board after connect or reconnect (do not trust stale local remaining).
+        void refreshGameSnapshotFromAPI(targetGameId);
       });
 
       ws.addEventListener("message", (evt) => {
@@ -670,7 +713,9 @@
       button.disabled = true;
       if (flagButton) flagButton.disabled = true;
       gameOver = true;
-      highlightSuggestedMoves([]);
+      stopClockTick();
+      showGameEndedNotes(`Game has ended. Checkmate — ${winner} wins.`);
+      updateSetupControlState();
       return;
     }
 
@@ -680,7 +725,9 @@
       button.disabled = true;
       if (flagButton) flagButton.disabled = true;
       gameOver = true;
-      highlightSuggestedMoves([]);
+      stopClockTick();
+      showGameEndedNotes("Game has ended. Draw by stalemate.");
+      updateSetupControlState();
       return;
     }
     if (statusValue.startsWith("draw_")) {
@@ -689,6 +736,9 @@
       button.disabled = true;
       if (flagButton) flagButton.disabled = true;
       gameOver = true;
+      stopClockTick();
+      showGameEndedNotes(outcome?.message || "Game has ended. Draw.");
+      updateSetupControlState();
       return;
     }
 
@@ -698,7 +748,9 @@
       button.disabled = true;
       if (flagButton) flagButton.disabled = true;
       gameOver = true;
-      highlightSuggestedMoves([]);
+      stopClockTick();
+      showGameEndedNotes(outcome?.message || "Game has ended (flag / resign).");
+      updateSetupControlState();
       return;
     }
 
@@ -717,9 +769,198 @@
     setStatus("", "success");
   };
 
+  const CLOCK_PRESETS = {
+    "5|0": { baseSec: 300, incrementSec: 0 },
+    "10|0": { baseSec: 600, incrementSec: 0 },
+    "15|10": { baseSec: 900, incrementSec: 10 },
+    "5|30": { baseSec: 300, incrementSec: 30 },
+  };
+
+  const formatClockMs = (ms) => {
+    const totalSec = Math.max(0, Math.floor(Number(ms) / 1000) || 0);
+    const minutes = Math.floor(totalSec / 60);
+    const seconds = totalSec % 60;
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+  };
+
+  const stopClockTick = () => {
+    if (clockTickTimer != null) {
+      window.clearInterval(clockTickTimer);
+      clockTickTimer = null;
+    }
+    clockLastTickAt = 0;
+  };
+
+  const paintClockLabels = () => {
+    if (!timeWhiteValue || !timeBlackValue) return;
+    if (!clockEnabledLocal) {
+      timeWhiteValue.textContent = "⏱ --:--";
+      timeBlackValue.textContent = "⏱ --:--";
+      return;
+    }
+    timeWhiteValue.textContent = `⏱ ${formatClockMs(clockWhiteMs)}`;
+    timeBlackValue.textContent = `⏱ ${formatClockMs(clockBlackMs)}`;
+  };
+
+  const startClockTick = () => {
+    if (!clockEnabledLocal || gameOver || simulationRequestInFlight || isSimulationPlayback) {
+      stopClockTick();
+      return;
+    }
+    if (clockTickTimer != null) return;
+    clockLastTickAt = Date.now();
+    clockTickTimer = window.setInterval(() => {
+      if (!clockEnabledLocal || gameOver) {
+        stopClockTick();
+        return;
+      }
+      const now = Date.now();
+      const elapsed = now - clockLastTickAt;
+      clockLastTickAt = now;
+      if (elapsed > 0) {
+        if (clockActiveSide === "black") {
+          clockBlackMs = Math.max(0, clockBlackMs - elapsed);
+        } else {
+          clockWhiteMs = Math.max(0, clockWhiteMs - elapsed);
+        }
+      }
+      paintClockLabels();
+      const remaining = clockActiveSide === "black" ? clockBlackMs : clockWhiteMs;
+      if (remaining <= 0) {
+        stopClockTick();
+        void flagOnLocalTimeout();
+      }
+    }, 250);
+  };
+
+  const applyServerClock = (clk, remaining) => {
+    if (!clk || !clk.enabled) {
+      clockEnabledLocal = false;
+      clockFlagInFlight = false;
+      stopClockTick();
+      paintClockLabels();
+      return;
+    }
+    clockEnabledLocal = true;
+    if (remaining && remaining.white != null && remaining.black != null) {
+      clockWhiteMs = Math.max(0, Number(remaining.white) || 0);
+      clockBlackMs = Math.max(0, Number(remaining.black) || 0);
+    } else {
+      clockWhiteMs = Math.max(0, Number(clk.whiteRemainingMs) || 0);
+      clockBlackMs = Math.max(0, Number(clk.blackRemainingMs) || 0);
+    }
+    const active = String(clk.active || currentTurn || "white").toLowerCase();
+    clockActiveSide = active === "black" ? "black" : "white";
+    clockFlagInFlight = false;
+    clockLastTickAt = Date.now();
+    paintClockLabels();
+    if (!gameOver) startClockTick();
+    else stopClockTick();
+  };
+
+  const renderClocks = (game) => {
+    applyServerClock(game?.clock, null);
+  };
+
+  const flagOnLocalTimeout = async () => {
+    if (clockFlagInFlight || gameOver || !currentGameId) return;
+    if (simulationRequestInFlight || isSimulationPlayback) return;
+    clockFlagInFlight = true;
+    try {
+      const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/flag`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        clockFlagInFlight = false;
+        void refreshGameSnapshotFromAPI(currentGameId);
+        return;
+      }
+      const result = await response.json();
+      syncGameIdFromResult(result);
+      renderMoveHistory(result.history, result.historyDetailed);
+      renderCurrentTurn(result.currentTurn);
+      renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
+      renderGameOutcome(result.game);
+      renderClocks(result.game);
+      renderGameConfig(result.game);
+      if (result.game?.config?.humanColor) {
+        humanColor = String(result.game.config.humanColor).toLowerCase();
+      }
+      cachedAnalysis = null;
+      renderGameInfo(result.captured, null);
+      stopAnalysisPolling();
+      resolvePromotionChoice("");
+      clearSelectedSquare();
+      if (gameOver) {
+        showGameEndedNotes(result?.game?.outcome?.message || "Game has ended (flag / resign).");
+      }
+    } catch (_) {
+      clockFlagInFlight = false;
+      void refreshGameSnapshotFromAPI(currentGameId);
+    }
+  };
+
+  const applyClockPresetToInputs = () => {
+    const key = String(clockPresetSelect?.value || "");
+    const preset = CLOCK_PRESETS[key];
+    if (!preset) return;
+    if (clockBaseSecInput) clockBaseSecInput.value = String(preset.baseSec);
+    if (clockIncrementSecInput) clockIncrementSecInput.value = String(preset.incrementSec);
+    if (clockHumanBaseSecInput) clockHumanBaseSecInput.value = String(preset.baseSec);
+  };
+
+  const appendClockFields = (params) => {
+    const enabled = Boolean(clockEnabledInput?.checked);
+    params.set("clockEnabled", enabled ? "true" : "false");
+    if (!enabled) return params;
+    const mode = String(gameModeSelect?.value || "human_vs_human");
+    const incMs = String(Math.max(0, Math.round(Number(clockIncrementSecInput?.value || 0) * 1000)));
+    params.set("incrementMs", incMs);
+    if (mode === "human_vs_ai") {
+      params.set(
+        "humanInitialMs",
+        String(Math.max(0, Math.round(Number(clockHumanBaseSecInput?.value || 0) * 1000)))
+      );
+      params.set(
+        "aiInitialMs",
+        String(Math.max(0, Math.round(Number(clockAiBaseSecInput?.value || 0) * 1000)))
+      );
+      return params;
+    }
+    const baseMs = String(Math.max(0, Math.round(Number(clockBaseSecInput?.value || 0) * 1000)));
+    params.set("whiteInitialMs", baseMs);
+    params.set("blackInitialMs", baseMs);
+    return params;
+  };
+
+  const syncClockControlsFromGame = (game) => {
+    const clk = game?.clock;
+    if (!clockEnabledInput || !clk) return;
+    clockEnabledInput.checked = Boolean(clk.enabled);
+    if (!clk.enabled) return;
+    const whiteSec = Math.max(0, Math.round(Number(clk.whiteInitialMs || 0) / 1000));
+    const blackSec = Math.max(0, Math.round(Number(clk.blackInitialMs || 0) / 1000));
+    const incSec = Math.max(0, Math.round(Number(clk.incrementMs || 0) / 1000));
+    if (clockIncrementSecInput) clockIncrementSecInput.value = String(incSec);
+    if (clockBaseSecInput) clockBaseSecInput.value = String(whiteSec);
+    const side = String(game?.config?.humanColor || humanColor || "white").toLowerCase();
+    if (side === "black") {
+      if (clockHumanBaseSecInput) clockHumanBaseSecInput.value = String(blackSec);
+      if (clockAiBaseSecInput) clockAiBaseSecInput.value = String(whiteSec);
+    } else {
+      if (clockHumanBaseSecInput) clockHumanBaseSecInput.value = String(whiteSec);
+      if (clockAiBaseSecInput) clockAiBaseSecInput.value = String(blackSec);
+    }
+    const matched = Object.entries(CLOCK_PRESETS).find(
+      ([, preset]) => preset.baseSec === whiteSec && preset.incrementSec === incSec
+    );
+    if (clockPresetSelect) clockPresetSelect.value = matched ? matched[0] : "custom";
+  };
+
   const updateSetupControlState = () => {
     const mode = String(gameModeSelect?.value || "human_vs_human");
     const isAIVsAI = mode === "ai_vs_ai";
+    const isHvAI = mode === "human_vs_ai";
     const simulationBusy = simulationRequestInFlight || isSimulationPlayback;
     const fenProvided = Boolean(String(fenInput?.value || "").trim());
     if (humanSideSelect) humanSideSelect.disabled = isAIVsAI || simulationBusy;
@@ -739,6 +980,15 @@
     if (input) input.disabled = simulationBusy || gameOver;
     if (button) button.disabled = simulationBusy || gameOver;
     if (flagButton) flagButton.disabled = simulationBusy || gameOver;
+
+    const clockOn = Boolean(clockEnabledInput?.checked);
+    if (clockEnabledInput) clockEnabledInput.disabled = simulationBusy;
+    if (clockPresetSelect) clockPresetSelect.disabled = !clockOn || simulationBusy;
+    if (clockIncrementSecInput) clockIncrementSecInput.disabled = !clockOn || simulationBusy;
+    if (clockBaseSecInput) clockBaseSecInput.disabled = !clockOn || isHvAI || simulationBusy;
+    if (clockHumanBaseSecInput) clockHumanBaseSecInput.disabled = !clockOn || !isHvAI || simulationBusy;
+    if (clockAiBaseSecInput) clockAiBaseSecInput.disabled = !clockOn || !isHvAI || simulationBusy;
+    if (clockHvAIFields) clockHvAIFields.style.display = isHvAI ? "" : "none";
 
     // Keep simulation controls sane when user leaves AI vs AI mode.
     if (!isAIVsAI && !simulationBusy && simulationData) {
@@ -915,7 +1165,9 @@
     renderBoardFromState(initialChessState(), "chess");
   };
 
-  const renderGameConfig = (game) => {
+  // syncClockSetup: only after create / Apply / New Game. Mid-game GET/flag must not
+  // overwrite the setup form (blocks editing TC for the next game after an ending).
+  const renderGameConfig = (game, opts = {}) => {
     if (!game) return;
     // Always sync board geometry from game type (config may be sparse).
     if (gameTypeSelect) gameTypeSelect.value = String(game.type || "chess");
@@ -938,6 +1190,7 @@
           : "intermediate";
     }
     humanColor = String(cfg.humanColor || "white").toLowerCase();
+    if (opts.syncClockSetup) syncClockControlsFromGame(game);
     updateSetupControlState();
   };
 
@@ -1094,7 +1347,7 @@
     if (winProbWhiteBar) winProbWhiteBar.classList.toggle("game_info_winprob_segment_tiny", whiteTiny);
     if (winProbBlackBar) winProbBlackBar.classList.toggle("game_info_winprob_segment_tiny", blackTiny);
 
-    if (gameInfoNotesBox && effectiveAnalysis) {
+    if (gameInfoNotesBox && effectiveAnalysis && !gameOver) {
       const threatSummary = String(effectiveAnalysis?.threat_summary || "").trim();
       // Skip empty / stub lines that looked like Fairy-Stockfish authored the coach note.
       const stubThreat = new Set([
@@ -1722,7 +1975,6 @@
   const refreshSuggestedMoves = async (retry = true) => {
     if (isSimulationPlayback) return;
     if (!currentGameId || gameOver) {
-      highlightSuggestedMoves([]);
       return;
     }
     try {
@@ -1731,21 +1983,23 @@
       const resp = await fetch(url);
       if (!resp.ok) {
         // Transient 503 (engine starting) or 404/500 — retry once; keep previous suggestions (no clear/flicker).
-        if (retry) {
+        if (retry && !gameOver) {
           window.setTimeout(() => {
             void refreshSuggestedMoves(false);
           }, 1200);
         }
         return;
       }
+      if (gameOver) return;
       const data = await resp.json();
+      if (gameOver) return;
       const suggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
       if (suggestions.length) {
         highlightSuggestedMoves(suggestions);
       }
       // Empty payload: keep lastSuggestionsText until a non-empty update arrives.
     } catch (_) {
-      if (retry) {
+      if (retry && !gameOver) {
         window.setTimeout(() => {
           void refreshSuggestedMoves(false);
         }, 1200);
@@ -1815,7 +2069,7 @@
   };
 
   const loadSuggestedMovesForSelection = async (sequence) => {
-    if (isSimulationPlayback) return; // Suppress during simulation
+    if (isSimulationPlayback || gameOver) return; // Suppress during simulation / after end
     if (!currentGameId) {
       highlightSuggestedMoves([]);
       return;
@@ -1996,6 +2250,7 @@
       renderCurrentTurn(result.currentTurn);
       renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
       renderGameOutcome(result.game);
+      renderClocks(result.game);
       renderGameConfig(result.game);
       renderGameInfo(result.captured, result.analysis);
       clearSelectedSquare();
@@ -2041,18 +2296,7 @@
   };
 
   const createSessionOnLoad = async () => {
-    const mode = String(gameModeSelect?.value || "human_vs_human");
-    const fen = String(fenInput?.value || "").trim();
-    const aiCount = fen ? "1" : String(aiGameCountInput?.value || "1");
-    const body = new URLSearchParams({
-      type: String(gameTypeSelect?.value || "chess"),
-      mode,
-      humanColor: String(humanSideSelect?.value || "white"),
-      aiGameCount: aiCount,
-      aiProfile: String(aiStrengthSelect?.value || "intermediate"),
-      skillLevel: String(coachLevelSelect?.value || "intermediate"),
-      fen,
-    });
+    const body = setupConfigBody();
 
     try {
       setStatus("Creating game session...", "success");
@@ -2068,12 +2312,13 @@
       }
       const result = await response.json();
       syncGameIdFromResult(result);
-      renderGameConfig(result.game);
+      renderGameConfig(result.game, { syncClockSetup: true });
       renderBoardFromState(result.state, result.game?.type);
       renderMoveHistory(result.history, result.historyDetailed);
       renderCurrentTurn(result.currentTurn);
       renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
       renderGameOutcome(result.game);
+      renderClocks(result.game);
       cachedAnalysis = null;
       clearCoachNotesState();
       renderGameInfo(result.captured, result.analysis);
@@ -2240,7 +2485,7 @@
     const mode = String(gameModeSelect?.value || "human_vs_human");
     const fen = String(fenInput?.value || "").trim();
     const aiCount = fen ? "1" : String(aiGameCountInput?.value || "1");
-    return new URLSearchParams({
+    const params = new URLSearchParams({
       type: String(gameTypeSelect?.value || "chess"),
       mode,
       humanColor: String(humanSideSelect?.value || "white"),
@@ -2249,6 +2494,7 @@
       skillLevel: String(coachLevelSelect?.value || "intermediate"),
       fen,
     });
+    return appendClockFields(params);
   };
 
   // Quiet config POST so the next /explain sees AI strength / coach level without Apply.
@@ -2271,6 +2517,21 @@
   button.addEventListener("click", submitCommand);
   if (gameModeSelect) gameModeSelect.addEventListener("change", updateSetupControlState);
   if (fenInput) fenInput.addEventListener("input", updateSetupControlState);
+  if (clockEnabledInput) {
+    clockEnabledInput.addEventListener("change", updateSetupControlState);
+  }
+  if (clockPresetSelect) {
+    clockPresetSelect.addEventListener("change", () => {
+      applyClockPresetToInputs();
+    });
+  }
+  const markClockPresetCustom = () => {
+    if (clockPresetSelect) clockPresetSelect.value = "custom";
+  };
+  if (clockBaseSecInput) clockBaseSecInput.addEventListener("input", markClockPresetCustom);
+  if (clockIncrementSecInput) clockIncrementSecInput.addEventListener("input", markClockPresetCustom);
+  if (clockHumanBaseSecInput) clockHumanBaseSecInput.addEventListener("input", markClockPresetCustom);
+  if (clockAiBaseSecInput) clockAiBaseSecInput.addEventListener("input", markClockPresetCustom);
   if (aiStrengthSelect) {
     aiStrengthSelect.addEventListener("change", () => {
       updateSetupControlState();
@@ -2343,7 +2604,8 @@
         }
         const result = await response.json();
         syncGameIdFromResult(result);
-        renderGameConfig(result.game);
+        renderGameConfig(result.game, { syncClockSetup: true });
+        renderClocks(result.game);
         previewBoardForGameType(result.game?.type || gameTypeSelect?.value);
 
         // Immediately store the human color from the applied config
@@ -2468,6 +2730,7 @@
         renderCurrentTurn(result.currentTurn);
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
         renderGameOutcome(result.game);
+        renderClocks(result.game);
         renderGameConfig(result.game);
 
         // Store the human color from the game config for Human vs AI mode
@@ -2476,11 +2739,13 @@
         }
 
         cachedAnalysis = null;
-        clearCoachNotesState();
-        renderGameInfo(result.captured, result.analysis);
+        renderGameInfo(result.captured, null);
         stopAnalysisPolling();
         resolvePromotionChoice("");
         clearSelectedSquare();
+        if (gameOver) {
+          showGameEndedNotes(result?.game?.outcome?.message || "Game has ended (flag / resign).");
+        }
       } catch (error) {
         setCatchStatus(error);
       }
@@ -2497,16 +2762,8 @@
           setStatus("Missing game session. Start a new game first.", "error");
           return;
         }
-        // Send current dropdown values so the new game respects type/mode/side/profile
-        const mode = String(gameModeSelect?.value || "human_vs_human");
-        const selectedHumanColor = String(humanSideSelect?.value || "white");
-        const body = new URLSearchParams({
-          type: String(gameTypeSelect?.value || "chess"),
-          mode,
-          humanColor: selectedHumanColor,
-          aiProfile: String(aiStrengthSelect?.value || "intermediate"),
-          skillLevel: String(coachLevelSelect?.value || "intermediate"),
-        });
+        // Send current dropdown values so the new game respects type/mode/side/profile/clock
+        const body = setupConfigBody();
 
         const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/new`, {
           method: "POST",
@@ -2521,12 +2778,13 @@
         const result = await response.json();
         syncGameIdFromResult(result);
         // Config first so geometry / data-game-type match server type before placing pieces.
-        renderGameConfig(result.game);
+        renderGameConfig(result.game, { syncClockSetup: true });
         renderBoardFromState(result.state, result.game?.type);
         renderMoveHistory(result.history, result.historyDetailed);
         renderCurrentTurn(result.currentTurn);
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
         renderGameOutcome(result.game);
+        renderClocks(result.game);
 
         // Store the human color from the game config for Human vs AI mode
         if (result.game?.config?.humanColor) {
@@ -2841,11 +3099,14 @@
   clearSimulationSummary();
   renderCheckState("");
   renderGameOutcome({ status: "in_progress", result: "in_progress" });
+  renderClocks(null);
+  applyClockPresetToInputs();
   renderGameConfig({
     type: "chess",
     mode: "human_vs_human",
     config: { humanColor: "white", aiGameCount: 1, startFen: "" },
   });
+  updateSetupControlState();
   void createSessionOnLoad();
 
   // Apply AI move when the backend returns it together with the human move
