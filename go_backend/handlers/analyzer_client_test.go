@@ -341,3 +341,21 @@ func TestEnqueueCurrentPositionAnalysis_PassesXiangqiGameType(t *testing.T) {
 		t.Fatal("timed out waiting for /analyze with xianqi game_type")
 	}
 }
+
+func TestExplainStaleCoalesce(t *testing.T) {
+	id := "test-explain-stale"
+	noteExplainRequest(id, 10)
+	if isExplainStale(id, 10) {
+		t.Fatal("current latest must not be stale")
+	}
+	if !isExplainStale(id, 9) {
+		t.Fatal("older ply must be stale")
+	}
+	noteExplainRequest(id, 12)
+	if !isExplainStale(id, 10) {
+		t.Fatal("superseded ply must be stale")
+	}
+	if isExplainStale(id, 12) {
+		t.Fatal("newest ply must not be stale")
+	}
+}

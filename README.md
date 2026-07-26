@@ -1,21 +1,33 @@
 # UoLCS CM3070 Final Project
 
-Chess game players with Orchestrating AI models
+Multi-variant board game platform with explainable AI coaching (Template 4.1 — orchestrating AI agents).
+
+## Theme lock (issue0052)
+
+**Primary story:** the Go backend **orchestrates** three Fairy-Stockfish **playing agents** at different strengths (Beginner / Intermediate / Master ≈ Easy / Medium / Hard) plus a separate **LLM analyst/coach** (Python `/analyze` + `/explain` via Ollama, with heuristic fallback). Playing and explaining stay separate; Go owns sessions, legality, and routing.
+
+**Supporting tools only (not the “three playing agents”):** History / Policy / Value remain Chess decision helpers / fallback when Fairy-Stockfish is off. Do not describe HPV as the three playing agents.
+
+**Demo path:** Human vs AI → select strength profile → make a move → AI replies → notes / win% / explain update.
+
+Locked wording also lives in `IMPLEMENTATION_ISSUES.md` (Main theme lock) and `report/documentation/theme_lock.md`.  
+AI move path (FS vs History/Policy/Value): `report/documentation/fs_vs_hpv_decision_path.md` (issue0055).
 
 ## Project Goal
 
-1. Build a web app for board game AI play.
-2. Start with Chess.
-3. Add more variants after Chess is stable.
-4. Use short, clear move input.
-5. Support Human vs AI.
-6. Support AI vs AI evaluation.
+1. Build a web app for board game AI play and coaching.
+2. Support Chess, Xiangqi, and Shogi with the same mode set (HvH / HvAI / AI vs AI).
+3. Use short, clear move input (plus board interaction).
+4. Support Human vs AI with selectable strength.
+5. Support AI vs AI evaluation.
+6. Deliver plain-language explanations via the analyst service.
 
 ## System Parts
 
 1. Frontend web app.
-2. Go backend API and game flow.
-3. Python analyst service for text feedback.
+2. Go backend API, sessions, and orchestration.
+3. Fairy-Stockfish playing agents (strength profiles).
+4. Python analyst service (`/analyze` + `/explain`).
 
 ## Main Phases
 
