@@ -121,6 +121,23 @@ func UpdateGameConfigByID(gameID string, mode GameMode, gameType GameType, human
 	return game.Session, nil
 }
 
+// SetClockByID configures the session clock (Fischer). Bases 0/0 disables (unlimited).
+// When enabled, starts the clock on the side to move.
+func SetClockByID(gameID string, whiteInitialMs, blackInitialMs, incrementMs int64) (GameSession, error) {
+	game, err := lockRuntimeStateByID(gameID)
+	if err != nil {
+		return GameSession{}, err
+	}
+	defer unlockRuntimeStateByID(game)
+	clk := NewClock(whiteInitialMs, blackInitialMs, incrementMs)
+	if clk.Enabled {
+		clk.Start(string(CurrentTurnColor()), time.Now().UTC())
+	}
+	game.Session.Clock = clk
+	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	return game.Session, nil
+}
+
 // SetSkillLevelByID sets the coach/explain skill level for a game session.
 func SetSkillLevelByID(gameID, skillLevel string) (GameSession, error) {
 	game, err := lockRuntimeStateByID(gameID)
