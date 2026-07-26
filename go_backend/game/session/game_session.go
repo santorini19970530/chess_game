@@ -48,6 +48,7 @@ type GameSession struct {
 	Mode      GameMode    `json:"mode"`
 	Type      GameType    `json:"type"`
 	Config    GameConfig  `json:"config"`
+	Clock     *Clock      `json:"clock"`
 	Result    GameResult  `json:"result"`
 	Outcome   GameOutcome `json:"outcome"`
 	CreatedAt string      `json:"createdAt"`
@@ -221,6 +222,7 @@ func newGameSession(mode GameMode, gameType GameType) GameSession {
 			BlackAIProfile: "intermediate",
 			SkillLevel:     "intermediate",
 		},
+		Clock:     NewClock(0, 0, 0), // disabled = unlimited (today's behavior)
 		Result:    GameResultInProgress,
 		Outcome:   GameOutcome{Status: "in_progress"},
 		CreatedAt: now,
@@ -387,6 +389,7 @@ func StartConfiguredNewGame() (GameSession, error) {
 	currentMode := currentGame.Session.Mode
 	currentType := currentGame.Session.Type
 	currentConfig := currentGame.Session.Config
+	prevClock := currentGame.Session.Clock
 	unlockActiveRuntimeState(currentGame)
 
 	newSession := newGameSession(currentMode, currentType)
@@ -410,6 +413,11 @@ func StartConfiguredNewGame() (GameSession, error) {
 	outcome := evaluateOutcomeForGameType(currentType)
 	game.Session.Outcome = outcome
 	game.Session.Result = gameResultFromOutcome(outcome)
+	// Carry time control onto the new game; remaining resets to initial bases.
+	if prevClock != nil && prevClock.Enabled {
+		game.Session.Clock = NewClock(prevClock.WhiteInitialMs, prevClock.BlackInitialMs, prevClock.IncrementMs)
+		game.Session.Clock.Start(string(CurrentTurnColor()), time.Now().UTC())
+	}
 	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 	return game.Session, nil
 }
@@ -424,23 +432,7 @@ func FlagCurrentTurn() GameSession {
 		return GameSession{}
 	}
 	defer unlockActiveRuntimeState(game)
-	side := CurrentTurnColor()
-	winner := opponentOf(side)
-
-	game.Session.Outcome = GameOutcome{
-		Status:     "resigned",
-		Winner:     string(winner),
-		Loser:      string(side),
-		LegalMoves: 0,
-		Message:    sideLabel(side) + " flagged. " + sideLabel(winner) + " wins.",
-	}
-	if winner == "white" {
-		game.Session.Result = GameResultWhiteWin
-	} else {
-		game.Session.Result = GameResultBlackWin
-	}
-	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-	game.Session.Archived = false
+	applyFlagLossLocked(game, string(CurrentTurnColor()))
 	return game.Session
 }
 

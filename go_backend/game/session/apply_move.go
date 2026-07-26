@@ -20,29 +20,42 @@ func ApplyMoveByCommand(commandText string) (string, error) {
 		return "", err
 	}
 	defer unlockActiveRuntimeState(game)
-	if game.Session.Type == GameTypeXiangqi {
-		normalized, err := applyXiangqiUCIMove(commandText)
+	if err := rejectIfGameOverLocked(game); err != nil {
+		return "", err
+	}
+	now := time.Now().UTC()
+	mover := string(CurrentTurnColor())
+	if err := settleClockOrFlagLocked(game, now); err != nil {
+		return "", err
+	}
+
+	var normalized string
+	switch game.Session.Type {
+	case GameTypeXiangqi:
+		normalized, err = applyXiangqiUCIMove(commandText)
 		if err != nil {
 			return "", err
 		}
 		outcome := EvaluateXiangqiGameOutcome()
 		game.Session.Outcome = outcome
 		game.Session.Result = gameResultFromOutcome(outcome)
-		game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-		return normalized, nil
-	}
-	if game.Session.Type == GameTypeShogi {
-		normalized, err := applyShogiUCIMove(commandText)
+	case GameTypeShogi:
+		normalized, err = applyShogiUCIMove(commandText)
 		if err != nil {
 			return "", err
 		}
 		outcome := evaluateOutcomeForGameType(GameTypeShogi)
 		game.Session.Outcome = outcome
 		game.Session.Result = gameResultFromOutcome(outcome)
-		game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-		return normalized, nil
+	default:
+		normalized, err = applyMoveByCommandCurrentLoaded(commandText)
+		if err != nil {
+			return "", err
+		}
 	}
-	return applyMoveByCommandCurrentLoaded(commandText)
+	awardClockAfterMoveLocked(game, mover, now)
+	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	return normalized, nil
 }
 
 func applyMoveByCommandCurrentLoaded(commandText string) (string, error) {

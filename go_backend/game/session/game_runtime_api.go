@@ -121,6 +121,23 @@ func UpdateGameConfigByID(gameID string, mode GameMode, gameType GameType, human
 	return game.Session, nil
 }
 
+// SetClockByID configures the session clock (Fischer). Bases 0/0 disables (unlimited).
+// When enabled, starts the clock on the side to move.
+func SetClockByID(gameID string, whiteInitialMs, blackInitialMs, incrementMs int64) (GameSession, error) {
+	game, err := lockRuntimeStateByID(gameID)
+	if err != nil {
+		return GameSession{}, err
+	}
+	defer unlockRuntimeStateByID(game)
+	clk := NewClock(whiteInitialMs, blackInitialMs, incrementMs)
+	if clk.Enabled {
+		clk.Start(string(CurrentTurnColor()), time.Now().UTC())
+	}
+	game.Session.Clock = clk
+	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	return game.Session, nil
+}
+
 // SetSkillLevelByID sets the coach/explain skill level for a game session.
 func SetSkillLevelByID(gameID, skillLevel string) (GameSession, error) {
 	game, err := lockRuntimeStateByID(gameID)
@@ -178,29 +195,42 @@ func ApplyMoveByCommandByID(gameID, commandText string) (string, error) {
 		return "", err
 	}
 	defer unlockRuntimeStateByID(game)
-	if game.Session.Type == GameTypeXiangqi {
-		normalized, err := applyXiangqiUCIMove(commandText)
+	if err := rejectIfGameOverLocked(game); err != nil {
+		return "", err
+	}
+	now := time.Now().UTC()
+	mover := string(CurrentTurnColor())
+	if err := settleClockOrFlagLocked(game, now); err != nil {
+		return "", err
+	}
+
+	var normalized string
+	switch game.Session.Type {
+	case GameTypeXiangqi:
+		normalized, err = applyXiangqiUCIMove(commandText)
 		if err != nil {
 			return "", err
 		}
 		outcome := EvaluateXiangqiGameOutcome()
 		game.Session.Outcome = outcome
 		game.Session.Result = gameResultFromOutcome(outcome)
-		game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-		return normalized, nil
-	}
-	if game.Session.Type == GameTypeShogi {
-		normalized, err := applyShogiUCIMove(commandText)
+	case GameTypeShogi:
+		normalized, err = applyShogiUCIMove(commandText)
 		if err != nil {
 			return "", err
 		}
 		outcome := evaluateOutcomeForGameType(GameTypeShogi)
 		game.Session.Outcome = outcome
 		game.Session.Result = gameResultFromOutcome(outcome)
-		game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-		return normalized, nil
+	default:
+		normalized, err = applyMoveByCommandCurrentLoaded(commandText)
+		if err != nil {
+			return "", err
+		}
 	}
-	return applyMoveByCommandCurrentLoaded(commandText)
+	awardClockAfterMoveLocked(game, mover, now)
+	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	return normalized, nil
 }
 
 func FlagCurrentTurnByID(gameID string) (GameSession, error) {
@@ -209,7 +239,51 @@ func FlagCurrentTurnByID(gameID string) (GameSession, error) {
 		return GameSession{}, err
 	}
 	defer unlockRuntimeStateByID(game)
-	side := CurrentTurnColor()
+	applyFlagLossLocked(game, string(CurrentTurnColor()))
+	return game.Session, nil
+}
+
+func rejectIfGameOverLocked(game *RuntimeGame) error {
+	if game == nil {
+		return fmt.Errorf("game session not found")
+	}
+	if game.Session.Result != GameResultInProgress {
+		msg := game.Session.Outcome.Message
+		if msg == "" {
+			msg = "game already ended"
+		}
+		return fmt.Errorf("%s", msg)
+	}
+	return nil
+}
+
+// settleClockOrFlagLocked deducts elapsed time; on flag, ends the game and returns an error.
+func settleClockOrFlagLocked(game *RuntimeGame, now time.Time) error {
+	clk := game.Session.Clock
+	if clk == nil || !clk.Enabled {
+		return nil
+	}
+	clk.Settle(now)
+	if side, ok := clk.Flagged(); ok {
+		applyFlagLossLocked(game, side)
+		return fmt.Errorf("%s", game.Session.Outcome.Message)
+	}
+	return nil
+}
+
+func awardClockAfterMoveLocked(game *RuntimeGame, mover string, now time.Time) {
+	clk := game.Session.Clock
+	if clk == nil || !clk.Enabled || game.Session.Result != GameResultInProgress {
+		return
+	}
+	clk.OnMove(mover, now)
+}
+
+func applyFlagLossLocked(game *RuntimeGame, loser string) {
+	side := pieces.PieceColor(normalizeClockSide(loser))
+	if side == "" {
+		side = CurrentTurnColor()
+	}
 	winner := opponentOf(side)
 	game.Session.Outcome = GameOutcome{
 		Status:     "resigned",
@@ -218,14 +292,13 @@ func FlagCurrentTurnByID(gameID string) (GameSession, error) {
 		LegalMoves: 0,
 		Message:    sideLabel(side) + " flagged. " + sideLabel(winner) + " wins.",
 	}
-	if winner == "white" {
+	if winner == pieces.White {
 		game.Session.Result = GameResultWhiteWin
 	} else {
 		game.Session.Result = GameResultBlackWin
 	}
 	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 	game.Session.Archived = false
-	return game.Session, nil
 }
 
 func ArchiveGameIfNeededByID(gameID string) error {
@@ -288,6 +361,7 @@ func BuildSnapshotByID(gameID string) (GameSnapshot, error) {
 		return GameSnapshot{}, err
 	}
 	defer unlockRuntimeStateByID(game)
+	syncClockLocked(game, time.Now().UTC())
 	checked := CheckedSideLabel()
 	captured := GetCapturedSummary()
 	switch game.Session.Type {
@@ -307,6 +381,35 @@ func BuildSnapshotByID(gameID string) (GameSnapshot, error) {
 		HistoryDetailed: GetMoveHistoryDetailed(),
 		State:           GetBoardState(),
 	}, nil
+}
+
+// syncClockLocked updates remaining for reads/snapshots; may end the game on flag.
+func syncClockLocked(game *RuntimeGame, now time.Time) {
+	if game == nil || game.Session.Result != GameResultInProgress {
+		return
+	}
+	clk := game.Session.Clock
+	if clk == nil || !clk.Enabled {
+		return
+	}
+	clk.Settle(now)
+	if side, ok := clk.Flagged(); ok {
+		applyFlagLossLocked(game, side)
+	}
+}
+
+// AdjustClockLastTickByID sets LastTick (tests / controlled settle scenarios).
+func AdjustClockLastTickByID(gameID string, when time.Time) error {
+	game, err := lockRuntimeStateByID(gameID)
+	if err != nil {
+		return err
+	}
+	defer unlockRuntimeStateByID(game)
+	if game.Session.Clock == nil {
+		return fmt.Errorf("clock not configured")
+	}
+	game.Session.Clock.LastTickUnixMs = when.UnixMilli()
+	return nil
 }
 
 func CurrentFENByID(gameID string) (string, error) {

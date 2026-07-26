@@ -641,3 +641,82 @@ func applySkillLevelFromRequest(gameID string, r *http.Request, game sessionpkg.
 	}
 	return updated
 }
+
+func formHasClockFields(r *http.Request) bool {
+	for _, key := range []string{
+		"clockEnabled",
+		"whiteInitialMs", "blackInitialMs",
+		"humanInitialMs", "aiInitialMs",
+		"incrementMs",
+	} {
+		if strings.TrimSpace(r.FormValue(key)) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func parseOptionalNonNegInt64(raw string) (int64, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0, nil
+	}
+	v, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil || v < 0 {
+		return 0, fmt.Errorf("invalid clock value %q", raw)
+	}
+	return v, nil
+}
+
+// readClockFromRequest parses optional TC fields. present=false when omitted (leave session clock alone).
+// Explicit clockEnabled=false/0/off → disabled (0/0 bases). human/ai bases map via humanColor.
+func readClockFromRequest(r *http.Request, humanColor string) (whiteMs, blackMs, incrementMs int64, present bool, err error) {
+	if !formHasClockFields(r) {
+		return 0, 0, 0, false, nil
+	}
+	present = true
+	switch strings.ToLower(strings.TrimSpace(r.FormValue("clockEnabled"))) {
+	case "0", "false", "off", "no":
+		return 0, 0, 0, true, nil
+	}
+
+	whiteMs, err = parseOptionalNonNegInt64(r.FormValue("whiteInitialMs"))
+	if err != nil {
+		return 0, 0, 0, true, err
+	}
+	blackMs, err = parseOptionalNonNegInt64(r.FormValue("blackInitialMs"))
+	if err != nil {
+		return 0, 0, 0, true, err
+	}
+	humanMs, err := parseOptionalNonNegInt64(r.FormValue("humanInitialMs"))
+	if err != nil {
+		return 0, 0, 0, true, err
+	}
+	aiMs, err := parseOptionalNonNegInt64(r.FormValue("aiInitialMs"))
+	if err != nil {
+		return 0, 0, 0, true, err
+	}
+	if strings.TrimSpace(r.FormValue("humanInitialMs")) != "" || strings.TrimSpace(r.FormValue("aiInitialMs")) != "" {
+		whiteMs, blackMs = sessionpkg.ClockSidesFromHumanAI(humanColor, humanMs, aiMs)
+	}
+	incrementMs, err = parseOptionalNonNegInt64(r.FormValue("incrementMs"))
+	if err != nil {
+		return 0, 0, 0, true, err
+	}
+	return whiteMs, blackMs, incrementMs, true, nil
+}
+
+func applyClockFromRequest(gameID string, r *http.Request, humanColor string, game sessionpkg.GameSession) (sessionpkg.GameSession, error) {
+	whiteMs, blackMs, incrementMs, present, err := readClockFromRequest(r, humanColor)
+	if err != nil {
+		return game, err
+	}
+	if !present {
+		return game, nil
+	}
+	updated, err := sessionpkg.SetClockByID(gameID, whiteMs, blackMs, incrementMs)
+	if err != nil {
+		return game, err
+	}
+	return updated, nil
+}

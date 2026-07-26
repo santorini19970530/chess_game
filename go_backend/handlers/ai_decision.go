@@ -131,7 +131,7 @@ func SelectAIMove(gameID string) (string, error) {
 
 	// FS proposes; Go accepts only if in legalByNorm.
 	if useFairyStockfish() {
-		if move, err := selectMoveWithFairyStockfish(fen, profile, color, allowDegrade, gameType); err == nil && move != "" {
+		if move, err := selectMoveWithFairyStockfish(fen, profile, color, allowDegrade, gameType, snapshot.Game.Clock); err == nil && move != "" {
 			if canon, ok := pickGoLegal(move); ok {
 				return canon, nil
 			}
@@ -265,7 +265,8 @@ func normalizeAIMove(gameType, raw string) string {
 // allowDegrade=true (AI vs AI): retry, then step down profiles before failing.
 // allowDegrade=false (Human vs AI): retry same profile only; caller treats failure as AI timeout/loss.
 // gameType is the session type (chess / xianqi / shogi); mapped to UCI_Variant before search.
-func selectMoveWithFairyStockfish(fen, profile, side string, allowDegrade bool, gameType string) (string, error) {
+// clk (when enabled) supplies wtime/btime/winc/binc; profile still sets strength + movetime cap.
+func selectMoveWithFairyStockfish(fen, profile, side string, allowDegrade bool, gameType string, clk *sessionpkg.Clock) (string, error) {
 	var lastErr error
 	chain := []string{strings.ToLower(strings.TrimSpace(profile))}
 	if chain[0] == "" {
@@ -275,7 +276,7 @@ func selectMoveWithFairyStockfish(fen, profile, side string, allowDegrade bool, 
 		chain = fsProfileFallbackChain(profile)
 	}
 	for _, p := range chain {
-		limit := fsLimitForProfile(p)
+		limit := fsLimitForGame(p, clk, side)
 		for attempt := 1; attempt <= 3; attempt++ {
 			fs, err := getFairyStockfish(side)
 			if err != nil {
@@ -342,6 +343,37 @@ func fsLimitForProfile(profile string) engine.Limit {
 	case "master":
 		limit.Depth = 20
 		limit.MoveTime = 1200 * time.Millisecond
+	}
+	return limit
+}
+
+// fsLimitForGame: clock off → profile movetime only; clock on → wtime/btime/inc + capped movetime.
+func fsLimitForGame(profile string, clk *sessionpkg.Clock, side string) engine.Limit {
+	limit := fsLimitForProfile(profile)
+	if clk == nil || !clk.Enabled {
+		return limit
+	}
+	limit.WhiteTime = time.Duration(clk.WhiteRemainingMs) * time.Millisecond
+	limit.BlackTime = time.Duration(clk.BlackRemainingMs) * time.Millisecond
+	inc := time.Duration(clk.IncrementMs) * time.Millisecond
+	limit.WhiteInc = inc
+	limit.BlackInc = inc
+
+	remMs := clk.Remaining(side)
+	if remMs <= 0 {
+		limit.MoveTime = 50 * time.Millisecond
+		return limit
+	}
+	rem := time.Duration(remMs) * time.Millisecond
+	slice := rem / 20
+	if slice < 50*time.Millisecond {
+		slice = 50 * time.Millisecond
+	}
+	if slice < limit.MoveTime {
+		limit.MoveTime = slice
+	}
+	if limit.MoveTime > rem {
+		limit.MoveTime = rem
 	}
 	return limit
 }
