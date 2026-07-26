@@ -13,13 +13,21 @@ func TestFrontendClockSetup_FormAndDisplayMarkers(t *testing.T) {
 		`getElementById("game_info_time_black")`,
 		"const appendClockFields = ",
 		"const renderClocks = ",
+		"const applyServerClock = ",
+		"const startClockTick = ",
+		"const stopClockTick = ",
+		"const flagOnLocalTimeout = ",
 		"const syncClockControlsFromGame = ",
 		`params.set("clockEnabled"`,
 		`"humanInitialMs"`,
 		`params.set("whiteInitialMs"`,
 		"return appendClockFields(params);",
 		"renderClocks(result.game);",
-		"syncClockControlsFromGame(game);",
+		"syncClockControlsFromGame(game)",
+		"syncClockSetup",
+		"void refreshGameSnapshotFromAPI(targetGameId);",
+		"/flag`",
+		"flagOnLocalTimeout",
 	} {
 		if !strings.Contains(source, snippet) {
 			t.Fatalf("chess_command.js missing %q", snippet)

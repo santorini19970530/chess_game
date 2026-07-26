@@ -79,6 +79,13 @@
   let gameOver = false;
   let currentTurn = "white";
   let humanColor = "white";           // human's chosen color in Human vs AI mode
+  let clockEnabledLocal = false;
+  let clockWhiteMs = 0;
+  let clockBlackMs = 0;
+  let clockActiveSide = "white";
+  let clockTickTimer = null;
+  let clockLastTickAt = 0;
+  let clockFlagInFlight = false;
   let selectedSquareSequence = null;
   let selectedDropKind = null; // shogi hand: { side, kind } or null
   let dragSourceSequence = null;
@@ -163,6 +170,14 @@
     lastExplanationText = "";
     lastSuggestionsText = "";
     lastThreatSummary = "";
+  };
+
+  const showGameEndedNotes = (message) => {
+    clearCoachNotesState();
+    clearSuggestedHighlights();
+    selectedSuggestedMoves = [];
+    lastSuggestionsText = String(message || "Game has ended.").trim();
+    refreshNotesBox();
   };
 
   const appendNotesLine = (line) => {
@@ -399,8 +414,12 @@
       renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
       renderGameOutcome(result.game);
       renderClocks(result.game);
-      renderGameInfo(result.captured, result.analysis);
+      renderGameInfo(result.captured, gameOver ? null : result.analysis);
       clearSelectedSquare();
+      if (gameOver) {
+        stopAnalysisPolling();
+        return;
+      }
       void refreshSuggestedMoves();
       const historyArray = Array.isArray(result.history) ? result.history : [];
       const detailedArray = Array.isArray(result.historyDetailed) ? result.historyDetailed : [];
@@ -424,6 +443,9 @@
     const data = payload?.data || {};
 
     if (event === "move_applied") {
+      if (data?.clock || data?.remaining) {
+        applyServerClock(data.clock, data.remaining);
+      }
       // Update board immediately — the CSS transition on .piece_img (400ms) gives the slide animation
       void refreshGameSnapshotFromAPI(gameId);
       // Play sound at the same time the piece starts moving (capture vs quiet from history)
@@ -437,6 +459,12 @@
     if (event === "turn_changed") {
       renderCurrentTurn(data?.current_turn);
       renderCheckState(data?.checked_side);
+      if (data?.clock || data?.remaining) {
+        applyServerClock(data.clock, data.remaining);
+      } else if (data?.current_turn && clockEnabledLocal) {
+        clockActiveSide = String(data.current_turn).toLowerCase();
+        clockLastTickAt = Date.now();
+      }
       return;
     }
     if (event === "game_outcome") {
@@ -444,6 +472,7 @@
         result: data?.result,
         outcome: data?.outcome || {},
       });
+      if (gameOver) stopClockTick();
       return;
     }
     if (event === "analysis_status_update") {
@@ -455,11 +484,13 @@
       if (statusText === "ready" && data?.analysis) {
         renderGameInfo(pendingAnalysisCapturedSnapshot || cachedCapturedSummary, data.analysis);
         stopAnalysisPolling();
+        if (gameOver) return;
         // Refresh hints once analysis/position is settled (avoids mid-move flicker).
         void refreshSuggestedMoves();
         return;
       }
       if (statusText === "error") {
+        if (gameOver) return;
         const safeMessage = String(data?.last_error || "").trim();
         if (safeMessage) {
           lastThreatSummary = safeMessage;
@@ -469,7 +500,7 @@
       }
     }
     if (event === "explanation_ready" || event === "explanationReady") {
-      if (!gameInfoNotesBox) return;
+      if (!gameInfoNotesBox || gameOver) return;
       const expl = String(data?.explanation || data?.analysis_explanation || "").trim();
       if (!expl) return;
       const skill = String(data?.skill_level || "").trim().toLowerCase();
@@ -560,6 +591,8 @@
       ws.addEventListener("open", () => {
         gameSocketReconnectAttempts = 0;
         clearSocketReconnectTimer();
+        // Resync clocks/board after connect or reconnect (do not trust stale local remaining).
+        void refreshGameSnapshotFromAPI(targetGameId);
       });
 
       ws.addEventListener("message", (evt) => {
@@ -680,7 +713,9 @@
       button.disabled = true;
       if (flagButton) flagButton.disabled = true;
       gameOver = true;
-      highlightSuggestedMoves([]);
+      stopClockTick();
+      showGameEndedNotes(`Game has ended. Checkmate — ${winner} wins.`);
+      updateSetupControlState();
       return;
     }
 
@@ -690,7 +725,9 @@
       button.disabled = true;
       if (flagButton) flagButton.disabled = true;
       gameOver = true;
-      highlightSuggestedMoves([]);
+      stopClockTick();
+      showGameEndedNotes("Game has ended. Draw by stalemate.");
+      updateSetupControlState();
       return;
     }
     if (statusValue.startsWith("draw_")) {
@@ -699,6 +736,9 @@
       button.disabled = true;
       if (flagButton) flagButton.disabled = true;
       gameOver = true;
+      stopClockTick();
+      showGameEndedNotes(outcome?.message || "Game has ended. Draw.");
+      updateSetupControlState();
       return;
     }
 
@@ -708,7 +748,9 @@
       button.disabled = true;
       if (flagButton) flagButton.disabled = true;
       gameOver = true;
-      highlightSuggestedMoves([]);
+      stopClockTick();
+      showGameEndedNotes(outcome?.message || "Game has ended (flag / resign).");
+      updateSetupControlState();
       return;
     }
 
@@ -741,16 +783,121 @@
     return `${minutes}:${String(seconds).padStart(2, "0")}`;
   };
 
-  const renderClocks = (game) => {
+  const stopClockTick = () => {
+    if (clockTickTimer != null) {
+      window.clearInterval(clockTickTimer);
+      clockTickTimer = null;
+    }
+    clockLastTickAt = 0;
+  };
+
+  const paintClockLabels = () => {
     if (!timeWhiteValue || !timeBlackValue) return;
-    const clk = game?.clock;
-    if (!clk || !clk.enabled) {
+    if (!clockEnabledLocal) {
       timeWhiteValue.textContent = "⏱ --:--";
       timeBlackValue.textContent = "⏱ --:--";
       return;
     }
-    timeWhiteValue.textContent = `⏱ ${formatClockMs(clk.whiteRemainingMs)}`;
-    timeBlackValue.textContent = `⏱ ${formatClockMs(clk.blackRemainingMs)}`;
+    timeWhiteValue.textContent = `⏱ ${formatClockMs(clockWhiteMs)}`;
+    timeBlackValue.textContent = `⏱ ${formatClockMs(clockBlackMs)}`;
+  };
+
+  const startClockTick = () => {
+    if (!clockEnabledLocal || gameOver || simulationRequestInFlight || isSimulationPlayback) {
+      stopClockTick();
+      return;
+    }
+    if (clockTickTimer != null) return;
+    clockLastTickAt = Date.now();
+    clockTickTimer = window.setInterval(() => {
+      if (!clockEnabledLocal || gameOver) {
+        stopClockTick();
+        return;
+      }
+      const now = Date.now();
+      const elapsed = now - clockLastTickAt;
+      clockLastTickAt = now;
+      if (elapsed > 0) {
+        if (clockActiveSide === "black") {
+          clockBlackMs = Math.max(0, clockBlackMs - elapsed);
+        } else {
+          clockWhiteMs = Math.max(0, clockWhiteMs - elapsed);
+        }
+      }
+      paintClockLabels();
+      const remaining = clockActiveSide === "black" ? clockBlackMs : clockWhiteMs;
+      if (remaining <= 0) {
+        stopClockTick();
+        void flagOnLocalTimeout();
+      }
+    }, 250);
+  };
+
+  const applyServerClock = (clk, remaining) => {
+    if (!clk || !clk.enabled) {
+      clockEnabledLocal = false;
+      clockFlagInFlight = false;
+      stopClockTick();
+      paintClockLabels();
+      return;
+    }
+    clockEnabledLocal = true;
+    if (remaining && remaining.white != null && remaining.black != null) {
+      clockWhiteMs = Math.max(0, Number(remaining.white) || 0);
+      clockBlackMs = Math.max(0, Number(remaining.black) || 0);
+    } else {
+      clockWhiteMs = Math.max(0, Number(clk.whiteRemainingMs) || 0);
+      clockBlackMs = Math.max(0, Number(clk.blackRemainingMs) || 0);
+    }
+    const active = String(clk.active || currentTurn || "white").toLowerCase();
+    clockActiveSide = active === "black" ? "black" : "white";
+    clockFlagInFlight = false;
+    clockLastTickAt = Date.now();
+    paintClockLabels();
+    if (!gameOver) startClockTick();
+    else stopClockTick();
+  };
+
+  const renderClocks = (game) => {
+    applyServerClock(game?.clock, null);
+  };
+
+  const flagOnLocalTimeout = async () => {
+    if (clockFlagInFlight || gameOver || !currentGameId) return;
+    if (simulationRequestInFlight || isSimulationPlayback) return;
+    clockFlagInFlight = true;
+    try {
+      const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/flag`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        clockFlagInFlight = false;
+        void refreshGameSnapshotFromAPI(currentGameId);
+        return;
+      }
+      const result = await response.json();
+      syncGameIdFromResult(result);
+      renderMoveHistory(result.history, result.historyDetailed);
+      renderCurrentTurn(result.currentTurn);
+      renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
+      renderGameOutcome(result.game);
+      renderClocks(result.game);
+      renderGameConfig(result.game);
+      if (result.game?.config?.humanColor) {
+        humanColor = String(result.game.config.humanColor).toLowerCase();
+      }
+      cachedAnalysis = null;
+      renderGameInfo(result.captured, null);
+      stopAnalysisPolling();
+      resolvePromotionChoice("");
+      clearSelectedSquare();
+      if (gameOver) {
+        showGameEndedNotes(result?.game?.outcome?.message || "Game has ended (flag / resign).");
+      }
+    } catch (_) {
+      clockFlagInFlight = false;
+      void refreshGameSnapshotFromAPI(currentGameId);
+    }
   };
 
   const applyClockPresetToInputs = () => {
@@ -1018,7 +1165,9 @@
     renderBoardFromState(initialChessState(), "chess");
   };
 
-  const renderGameConfig = (game) => {
+  // syncClockSetup: only after create / Apply / New Game. Mid-game GET/flag must not
+  // overwrite the setup form (blocks editing TC for the next game after an ending).
+  const renderGameConfig = (game, opts = {}) => {
     if (!game) return;
     // Always sync board geometry from game type (config may be sparse).
     if (gameTypeSelect) gameTypeSelect.value = String(game.type || "chess");
@@ -1041,7 +1190,7 @@
           : "intermediate";
     }
     humanColor = String(cfg.humanColor || "white").toLowerCase();
-    syncClockControlsFromGame(game);
+    if (opts.syncClockSetup) syncClockControlsFromGame(game);
     updateSetupControlState();
   };
 
@@ -1198,7 +1347,7 @@
     if (winProbWhiteBar) winProbWhiteBar.classList.toggle("game_info_winprob_segment_tiny", whiteTiny);
     if (winProbBlackBar) winProbBlackBar.classList.toggle("game_info_winprob_segment_tiny", blackTiny);
 
-    if (gameInfoNotesBox && effectiveAnalysis) {
+    if (gameInfoNotesBox && effectiveAnalysis && !gameOver) {
       const threatSummary = String(effectiveAnalysis?.threat_summary || "").trim();
       // Skip empty / stub lines that looked like Fairy-Stockfish authored the coach note.
       const stubThreat = new Set([
@@ -1826,7 +1975,6 @@
   const refreshSuggestedMoves = async (retry = true) => {
     if (isSimulationPlayback) return;
     if (!currentGameId || gameOver) {
-      highlightSuggestedMoves([]);
       return;
     }
     try {
@@ -1835,21 +1983,23 @@
       const resp = await fetch(url);
       if (!resp.ok) {
         // Transient 503 (engine starting) or 404/500 — retry once; keep previous suggestions (no clear/flicker).
-        if (retry) {
+        if (retry && !gameOver) {
           window.setTimeout(() => {
             void refreshSuggestedMoves(false);
           }, 1200);
         }
         return;
       }
+      if (gameOver) return;
       const data = await resp.json();
+      if (gameOver) return;
       const suggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
       if (suggestions.length) {
         highlightSuggestedMoves(suggestions);
       }
       // Empty payload: keep lastSuggestionsText until a non-empty update arrives.
     } catch (_) {
-      if (retry) {
+      if (retry && !gameOver) {
         window.setTimeout(() => {
           void refreshSuggestedMoves(false);
         }, 1200);
@@ -1919,7 +2069,7 @@
   };
 
   const loadSuggestedMovesForSelection = async (sequence) => {
-    if (isSimulationPlayback) return; // Suppress during simulation
+    if (isSimulationPlayback || gameOver) return; // Suppress during simulation / after end
     if (!currentGameId) {
       highlightSuggestedMoves([]);
       return;
@@ -2162,7 +2312,7 @@
       }
       const result = await response.json();
       syncGameIdFromResult(result);
-      renderGameConfig(result.game);
+      renderGameConfig(result.game, { syncClockSetup: true });
       renderBoardFromState(result.state, result.game?.type);
       renderMoveHistory(result.history, result.historyDetailed);
       renderCurrentTurn(result.currentTurn);
@@ -2454,7 +2604,7 @@
         }
         const result = await response.json();
         syncGameIdFromResult(result);
-        renderGameConfig(result.game);
+        renderGameConfig(result.game, { syncClockSetup: true });
         renderClocks(result.game);
         previewBoardForGameType(result.game?.type || gameTypeSelect?.value);
 
@@ -2589,11 +2739,13 @@
         }
 
         cachedAnalysis = null;
-        clearCoachNotesState();
-        renderGameInfo(result.captured, result.analysis);
+        renderGameInfo(result.captured, null);
         stopAnalysisPolling();
         resolvePromotionChoice("");
         clearSelectedSquare();
+        if (gameOver) {
+          showGameEndedNotes(result?.game?.outcome?.message || "Game has ended (flag / resign).");
+        }
       } catch (error) {
         setCatchStatus(error);
       }
@@ -2626,7 +2778,7 @@
         const result = await response.json();
         syncGameIdFromResult(result);
         // Config first so geometry / data-game-type match server type before placing pieces.
-        renderGameConfig(result.game);
+        renderGameConfig(result.game, { syncClockSetup: true });
         renderBoardFromState(result.state, result.game?.type);
         renderMoveHistory(result.history, result.historyDetailed);
         renderCurrentTurn(result.currentTurn);

@@ -14,6 +14,7 @@ func TestIndexHTML_IncludesClockSetupControls(t *testing.T) {
 	}
 	text := string(source)
 	for _, snippet := range []string{
+		`class="config_clock_enable"`,
 		`id="clock_enabled"`,
 		`id="clock_preset"`,
 		`value="5|0"`,

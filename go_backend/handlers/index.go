@@ -88,8 +88,10 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`<label for="fen_input">Starting FEN (optional)</label>`)
 	mainHTMLCode.WriteString(`<textarea id="fen_input" rows="3" placeholder="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>`)
 	// Clock setup: seconds in the form; JS converts to ms for the API.
+	mainHTMLCode.WriteString(`<div class="config_clock_enable">`)
 	mainHTMLCode.WriteString(`<label for="clock_enabled">Clock</label>`)
 	mainHTMLCode.WriteString(`<input id="clock_enabled" type="checkbox" title="Off = unlimited time" />`)
+	mainHTMLCode.WriteString(`</div>`)
 	mainHTMLCode.WriteString(`<label for="clock_preset">Time control</label>`)
 	mainHTMLCode.WriteString(`<select id="clock_preset" title="Presets are base|increment (minutes|seconds per move)">`)
 	mainHTMLCode.WriteString(`<option value="5|0">5|0</option>`)
