@@ -31,11 +31,19 @@ func TestAPIGamesCreate_AcceptsClockTimeControl(t *testing.T) {
 	if payload.Game.Clock == nil || !payload.Game.Clock.Enabled {
 		t.Fatalf("expected enabled clock, got %+v", payload.Game.Clock)
 	}
-	if payload.Game.Clock.WhiteRemainingMs != 300_000 || payload.Game.Clock.BlackRemainingMs != 60_000 {
-		t.Fatalf("bases white=%d black=%d", payload.Game.Clock.WhiteRemainingMs, payload.Game.Clock.BlackRemainingMs)
+	clk := payload.Game.Clock
+	if clk.WhiteInitialMs != 300_000 || clk.BlackInitialMs != 60_000 {
+		t.Fatalf("initial white=%d black=%d", clk.WhiteInitialMs, clk.BlackInitialMs)
 	}
-	if payload.Game.Clock.IncrementMs != 30_000 {
-		t.Fatalf("increment=%d", payload.Game.Clock.IncrementMs)
+	// Snapshot settle may debit a few ms from the active side between Start and encode.
+	if clk.WhiteRemainingMs > 300_000 || clk.WhiteRemainingMs < 299_000 {
+		t.Fatalf("white remaining=%d want ~300000", clk.WhiteRemainingMs)
+	}
+	if clk.BlackRemainingMs != 60_000 {
+		t.Fatalf("black remaining=%d want 60000", clk.BlackRemainingMs)
+	}
+	if clk.IncrementMs != 30_000 {
+		t.Fatalf("increment=%d", clk.IncrementMs)
 	}
 }
 
