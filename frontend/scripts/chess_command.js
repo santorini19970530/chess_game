@@ -30,6 +30,15 @@
   const aiStrengthSelect = document.getElementById("ai_strength");
   const coachLevelSelect = document.getElementById("coach_level");
   const configApplyButton = document.getElementById("game_config_apply");
+  const clockEnabledInput = document.getElementById("clock_enabled");
+  const clockPresetSelect = document.getElementById("clock_preset");
+  const clockBaseSecInput = document.getElementById("clock_base_sec");
+  const clockIncrementSecInput = document.getElementById("clock_increment_sec");
+  const clockHumanBaseSecInput = document.getElementById("clock_human_base_sec");
+  const clockAiBaseSecInput = document.getElementById("clock_ai_base_sec");
+  const clockHvAIFields = document.getElementById("clock_hvai_fields");
+  const timeWhiteValue = document.getElementById("game_info_time_white");
+  const timeBlackValue = document.getElementById("game_info_time_black");
   const boardElement = document.querySelector(".chess_board");
   const boardWrapper = document.querySelector(".chess_board_wrapper");
   let boardFiles = 8;
@@ -389,6 +398,7 @@
       renderCurrentTurn(result.currentTurn);
       renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
       renderGameOutcome(result.game);
+      renderClocks(result.game);
       renderGameInfo(result.captured, result.analysis);
       clearSelectedSquare();
       void refreshSuggestedMoves();
@@ -717,9 +727,93 @@
     setStatus("", "success");
   };
 
+  const CLOCK_PRESETS = {
+    "5|0": { baseSec: 300, incrementSec: 0 },
+    "10|0": { baseSec: 600, incrementSec: 0 },
+    "15|10": { baseSec: 900, incrementSec: 10 },
+    "5|30": { baseSec: 300, incrementSec: 30 },
+  };
+
+  const formatClockMs = (ms) => {
+    const totalSec = Math.max(0, Math.floor(Number(ms) / 1000) || 0);
+    const minutes = Math.floor(totalSec / 60);
+    const seconds = totalSec % 60;
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+  };
+
+  const renderClocks = (game) => {
+    if (!timeWhiteValue || !timeBlackValue) return;
+    const clk = game?.clock;
+    if (!clk || !clk.enabled) {
+      timeWhiteValue.textContent = "⏱ --:--";
+      timeBlackValue.textContent = "⏱ --:--";
+      return;
+    }
+    timeWhiteValue.textContent = `⏱ ${formatClockMs(clk.whiteRemainingMs)}`;
+    timeBlackValue.textContent = `⏱ ${formatClockMs(clk.blackRemainingMs)}`;
+  };
+
+  const applyClockPresetToInputs = () => {
+    const key = String(clockPresetSelect?.value || "");
+    const preset = CLOCK_PRESETS[key];
+    if (!preset) return;
+    if (clockBaseSecInput) clockBaseSecInput.value = String(preset.baseSec);
+    if (clockIncrementSecInput) clockIncrementSecInput.value = String(preset.incrementSec);
+    if (clockHumanBaseSecInput) clockHumanBaseSecInput.value = String(preset.baseSec);
+  };
+
+  const appendClockFields = (params) => {
+    const enabled = Boolean(clockEnabledInput?.checked);
+    params.set("clockEnabled", enabled ? "true" : "false");
+    if (!enabled) return params;
+    const mode = String(gameModeSelect?.value || "human_vs_human");
+    const incMs = String(Math.max(0, Math.round(Number(clockIncrementSecInput?.value || 0) * 1000)));
+    params.set("incrementMs", incMs);
+    if (mode === "human_vs_ai") {
+      params.set(
+        "humanInitialMs",
+        String(Math.max(0, Math.round(Number(clockHumanBaseSecInput?.value || 0) * 1000)))
+      );
+      params.set(
+        "aiInitialMs",
+        String(Math.max(0, Math.round(Number(clockAiBaseSecInput?.value || 0) * 1000)))
+      );
+      return params;
+    }
+    const baseMs = String(Math.max(0, Math.round(Number(clockBaseSecInput?.value || 0) * 1000)));
+    params.set("whiteInitialMs", baseMs);
+    params.set("blackInitialMs", baseMs);
+    return params;
+  };
+
+  const syncClockControlsFromGame = (game) => {
+    const clk = game?.clock;
+    if (!clockEnabledInput || !clk) return;
+    clockEnabledInput.checked = Boolean(clk.enabled);
+    if (!clk.enabled) return;
+    const whiteSec = Math.max(0, Math.round(Number(clk.whiteInitialMs || 0) / 1000));
+    const blackSec = Math.max(0, Math.round(Number(clk.blackInitialMs || 0) / 1000));
+    const incSec = Math.max(0, Math.round(Number(clk.incrementMs || 0) / 1000));
+    if (clockIncrementSecInput) clockIncrementSecInput.value = String(incSec);
+    if (clockBaseSecInput) clockBaseSecInput.value = String(whiteSec);
+    const side = String(game?.config?.humanColor || humanColor || "white").toLowerCase();
+    if (side === "black") {
+      if (clockHumanBaseSecInput) clockHumanBaseSecInput.value = String(blackSec);
+      if (clockAiBaseSecInput) clockAiBaseSecInput.value = String(whiteSec);
+    } else {
+      if (clockHumanBaseSecInput) clockHumanBaseSecInput.value = String(whiteSec);
+      if (clockAiBaseSecInput) clockAiBaseSecInput.value = String(blackSec);
+    }
+    const matched = Object.entries(CLOCK_PRESETS).find(
+      ([, preset]) => preset.baseSec === whiteSec && preset.incrementSec === incSec
+    );
+    if (clockPresetSelect) clockPresetSelect.value = matched ? matched[0] : "custom";
+  };
+
   const updateSetupControlState = () => {
     const mode = String(gameModeSelect?.value || "human_vs_human");
     const isAIVsAI = mode === "ai_vs_ai";
+    const isHvAI = mode === "human_vs_ai";
     const simulationBusy = simulationRequestInFlight || isSimulationPlayback;
     const fenProvided = Boolean(String(fenInput?.value || "").trim());
     if (humanSideSelect) humanSideSelect.disabled = isAIVsAI || simulationBusy;
@@ -739,6 +833,15 @@
     if (input) input.disabled = simulationBusy || gameOver;
     if (button) button.disabled = simulationBusy || gameOver;
     if (flagButton) flagButton.disabled = simulationBusy || gameOver;
+
+    const clockOn = Boolean(clockEnabledInput?.checked);
+    if (clockEnabledInput) clockEnabledInput.disabled = simulationBusy;
+    if (clockPresetSelect) clockPresetSelect.disabled = !clockOn || simulationBusy;
+    if (clockIncrementSecInput) clockIncrementSecInput.disabled = !clockOn || simulationBusy;
+    if (clockBaseSecInput) clockBaseSecInput.disabled = !clockOn || isHvAI || simulationBusy;
+    if (clockHumanBaseSecInput) clockHumanBaseSecInput.disabled = !clockOn || !isHvAI || simulationBusy;
+    if (clockAiBaseSecInput) clockAiBaseSecInput.disabled = !clockOn || !isHvAI || simulationBusy;
+    if (clockHvAIFields) clockHvAIFields.style.display = isHvAI ? "" : "none";
 
     // Keep simulation controls sane when user leaves AI vs AI mode.
     if (!isAIVsAI && !simulationBusy && simulationData) {
@@ -938,6 +1041,7 @@
           : "intermediate";
     }
     humanColor = String(cfg.humanColor || "white").toLowerCase();
+    syncClockControlsFromGame(game);
     updateSetupControlState();
   };
 
@@ -1996,6 +2100,7 @@
       renderCurrentTurn(result.currentTurn);
       renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
       renderGameOutcome(result.game);
+      renderClocks(result.game);
       renderGameConfig(result.game);
       renderGameInfo(result.captured, result.analysis);
       clearSelectedSquare();
@@ -2041,18 +2146,7 @@
   };
 
   const createSessionOnLoad = async () => {
-    const mode = String(gameModeSelect?.value || "human_vs_human");
-    const fen = String(fenInput?.value || "").trim();
-    const aiCount = fen ? "1" : String(aiGameCountInput?.value || "1");
-    const body = new URLSearchParams({
-      type: String(gameTypeSelect?.value || "chess"),
-      mode,
-      humanColor: String(humanSideSelect?.value || "white"),
-      aiGameCount: aiCount,
-      aiProfile: String(aiStrengthSelect?.value || "intermediate"),
-      skillLevel: String(coachLevelSelect?.value || "intermediate"),
-      fen,
-    });
+    const body = setupConfigBody();
 
     try {
       setStatus("Creating game session...", "success");
@@ -2074,6 +2168,7 @@
       renderCurrentTurn(result.currentTurn);
       renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
       renderGameOutcome(result.game);
+      renderClocks(result.game);
       cachedAnalysis = null;
       clearCoachNotesState();
       renderGameInfo(result.captured, result.analysis);
@@ -2240,7 +2335,7 @@
     const mode = String(gameModeSelect?.value || "human_vs_human");
     const fen = String(fenInput?.value || "").trim();
     const aiCount = fen ? "1" : String(aiGameCountInput?.value || "1");
-    return new URLSearchParams({
+    const params = new URLSearchParams({
       type: String(gameTypeSelect?.value || "chess"),
       mode,
       humanColor: String(humanSideSelect?.value || "white"),
@@ -2249,6 +2344,7 @@
       skillLevel: String(coachLevelSelect?.value || "intermediate"),
       fen,
     });
+    return appendClockFields(params);
   };
 
   // Quiet config POST so the next /explain sees AI strength / coach level without Apply.
@@ -2271,6 +2367,21 @@
   button.addEventListener("click", submitCommand);
   if (gameModeSelect) gameModeSelect.addEventListener("change", updateSetupControlState);
   if (fenInput) fenInput.addEventListener("input", updateSetupControlState);
+  if (clockEnabledInput) {
+    clockEnabledInput.addEventListener("change", updateSetupControlState);
+  }
+  if (clockPresetSelect) {
+    clockPresetSelect.addEventListener("change", () => {
+      applyClockPresetToInputs();
+    });
+  }
+  const markClockPresetCustom = () => {
+    if (clockPresetSelect) clockPresetSelect.value = "custom";
+  };
+  if (clockBaseSecInput) clockBaseSecInput.addEventListener("input", markClockPresetCustom);
+  if (clockIncrementSecInput) clockIncrementSecInput.addEventListener("input", markClockPresetCustom);
+  if (clockHumanBaseSecInput) clockHumanBaseSecInput.addEventListener("input", markClockPresetCustom);
+  if (clockAiBaseSecInput) clockAiBaseSecInput.addEventListener("input", markClockPresetCustom);
   if (aiStrengthSelect) {
     aiStrengthSelect.addEventListener("change", () => {
       updateSetupControlState();
@@ -2344,6 +2455,7 @@
         const result = await response.json();
         syncGameIdFromResult(result);
         renderGameConfig(result.game);
+        renderClocks(result.game);
         previewBoardForGameType(result.game?.type || gameTypeSelect?.value);
 
         // Immediately store the human color from the applied config
@@ -2468,6 +2580,7 @@
         renderCurrentTurn(result.currentTurn);
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
         renderGameOutcome(result.game);
+        renderClocks(result.game);
         renderGameConfig(result.game);
 
         // Store the human color from the game config for Human vs AI mode
@@ -2497,16 +2610,8 @@
           setStatus("Missing game session. Start a new game first.", "error");
           return;
         }
-        // Send current dropdown values so the new game respects type/mode/side/profile
-        const mode = String(gameModeSelect?.value || "human_vs_human");
-        const selectedHumanColor = String(humanSideSelect?.value || "white");
-        const body = new URLSearchParams({
-          type: String(gameTypeSelect?.value || "chess"),
-          mode,
-          humanColor: selectedHumanColor,
-          aiProfile: String(aiStrengthSelect?.value || "intermediate"),
-          skillLevel: String(coachLevelSelect?.value || "intermediate"),
-        });
+        // Send current dropdown values so the new game respects type/mode/side/profile/clock
+        const body = setupConfigBody();
 
         const response = await fetch(`/api/games/${encodeURIComponent(currentGameId)}/new`, {
           method: "POST",
@@ -2527,6 +2632,7 @@
         renderCurrentTurn(result.currentTurn);
         renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
         renderGameOutcome(result.game);
+        renderClocks(result.game);
 
         // Store the human color from the game config for Human vs AI mode
         if (result.game?.config?.humanColor) {
@@ -2841,11 +2947,14 @@
   clearSimulationSummary();
   renderCheckState("");
   renderGameOutcome({ status: "in_progress", result: "in_progress" });
+  renderClocks(null);
+  applyClockPresetToInputs();
   renderGameConfig({
     type: "chess",
     mode: "human_vs_human",
     config: { humanColor: "white", aiGameCount: 1, startFen: "" },
   });
+  updateSetupControlState();
   void createSessionOnLoad();
 
   // Apply AI move when the backend returns it together with the human move
