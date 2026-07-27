@@ -72,7 +72,8 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`<div class="game_panel">`)
 
 	mainHTMLCode.WriteString(`<div class="game_panel_config">`)
-	mainHTMLCode.WriteString(`<h3 class="config_panel_title">Setup New Games</h3>`)
+	mainHTMLCode.WriteString(`<details id="game_config_details" class="game_config_details" open>`)
+	mainHTMLCode.WriteString(`<summary class="config_panel_title">Setup new game</summary>`)
 	mainHTMLCode.WriteString(`<label for="game_type">Game</label>`)
 	mainHTMLCode.WriteString(`<select id="game_type"><option value="chess">Chess</option><option value="xianqi">Xiangqi</option><option value="shogi">Shogi</option></select>`)
 	mainHTMLCode.WriteString(`<label for="game_mode">Mode</label>`)
@@ -111,6 +112,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`<input id="clock_ai_base_sec" type="number" min="0" step="1" value="60" />`)
 	mainHTMLCode.WriteString(`</div>`)
 	mainHTMLCode.WriteString(`<button id="game_config_apply" type="button">Apply Setup</button>`)
+	mainHTMLCode.WriteString(`</details>`)
 	mainHTMLCode.WriteString(`</div>`)
 
 	mainHTMLCode.WriteString(`<div class="game_panel_left">`)

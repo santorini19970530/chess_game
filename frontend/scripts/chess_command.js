@@ -36,6 +36,7 @@
   const aiStrengthSelect = document.getElementById("ai_strength");
   const coachLevelSelect = document.getElementById("coach_level");
   const configApplyButton = document.getElementById("game_config_apply");
+  const configDetails = document.getElementById("game_config_details");
   const clockEnabledInput = document.getElementById("clock_enabled");
   const clockPresetSelect = document.getElementById("clock_preset");
   const clockBaseSecInput = document.getElementById("clock_base_sec");
@@ -360,6 +361,11 @@
     if (changed) {
       connectGameSocket(nextId);
     }
+  };
+
+  // Collapse setup once a session exists; leave open on first paint / failed create.
+  const collapseConfigPanel = () => {
+    if (configDetails) configDetails.open = false;
   };
 
   const stopAnalysisPolling = () => {
@@ -2340,6 +2346,7 @@
       if (flagButton) flagButton.disabled = false;
       gameOver = false;
       setStatus("Game session ready.", "success");
+      collapseConfigPanel();
       input.focus();
     } catch (error) {
       setCatchStatus(error);
@@ -2624,6 +2631,7 @@
         }
 
         setStatus("Game setup applied. Click New Game to start.", "success");
+        collapseConfigPanel();
       } catch (error) {
         setCatchStatus(error);
       }
@@ -2824,6 +2832,7 @@
         clearSelectedSquare();
         cleanupSimulationControls();
         setStatus("New game started.", "success");
+        collapseConfigPanel();
         input.focus();
       } catch (error) {
         setCatchStatus(error);
@@ -2996,6 +3005,7 @@
         reviewPlaybackMoves = moves;
         reviewPlaybackPly = moves.length;
         applyLoadedGameSnapshot(result);
+        collapseConfigPanel();
         setStatus(`Loaded ${moves.length} move(s) for review. Use Back / Forward to step.`, "success");
         input.focus();
       } catch (error) {

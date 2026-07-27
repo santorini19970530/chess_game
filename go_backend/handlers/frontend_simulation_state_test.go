@@ -128,6 +128,17 @@ func TestFrontendShogiBoard_NumericFileLabels(t *testing.T) {
 	requireSnippet(t, jsSrc, "? String(i + 1)")
 }
 
+func TestFrontendConfigPanel_DetailsCollapse(t *testing.T) {
+	indexSrc := loadIndexHandlerSource(t)
+	requireSnippet(t, indexSrc, `id="game_config_details"`)
+	requireSnippet(t, indexSrc, `class="game_config_details"`)
+	requireSnippet(t, indexSrc, `<summary class="config_panel_title">Setup new game</summary>`)
+
+	jsSrc := loadChessCommandSource(t)
+	requireSnippet(t, jsSrc, "collapseConfigPanel")
+	requireSnippet(t, jsSrc, "game_config_details")
+}
+
 func TestFrontendLoadMoves_ReviewMarkers(t *testing.T) {
 	indexSrc := loadIndexHandlerSource(t)
 	requireSnippet(t, indexSrc, `id="review_moves_input"`)
