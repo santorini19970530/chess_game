@@ -66,3 +66,24 @@ main {
   display: flex;
   flex-direction: column;
 }
+
+@media (max-width: 699px) {
+  header,
+  footer {
+    padding: 8px 12px;
+  }
+
+  h1 {
+    font-size: 1.35rem;
+  }
+
+  main {
+    padding: 8px;
+  }
+}
+
+@media (min-width: 700px) and (max-width: 1099px) {
+  main {
+    padding: 10px;
+  }
+}

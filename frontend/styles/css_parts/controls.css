@@ -1,8 +1,54 @@
+.play_chrome {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .command_row {
   display: flex;
   gap: 10px;
   flex-wrap: nowrap;
   align-items: center;
+}
+
+@media (max-width: 699px) {
+  .command_row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .command_row input {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .command_row button {
+    flex: 1 1 auto;
+  }
+
+  .review_moves_row,
+  .review_playback_row {
+    width: 100%;
+  }
+
+  .review_playback_row button {
+    flex: 1 1 0;
+  }
+
+  #review_moves_input {
+    min-height: 2.8em;
+  }
+}
+
+@media (min-width: 700px) and (max-width: 1099px) {
+  .command_row {
+    flex-wrap: wrap;
+  }
+
+  .command_row input {
+    flex: 1 1 140px;
+    max-width: none;
+  }
 }
 
 .command_row input {
