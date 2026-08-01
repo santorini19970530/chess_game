@@ -14,6 +14,7 @@ import (
 	sessionpkg "go_backend/game/session"
 )
 
+// TestAnalyzerRequestTimeout_UsesEnvOverride - checks analyzer request timeout uses env override
 func TestAnalyzerRequestTimeout_UsesEnvOverride(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(200 * time.Millisecond)
@@ -40,6 +41,7 @@ func TestAnalyzerRequestTimeout_UsesEnvOverride(t *testing.T) {
 	}
 }
 
+// TestAnalyzerUserSafeError_ForUnavailableService - checks analyzer user safe error for unavailable service
 func TestAnalyzerUserSafeError_ForUnavailableService(t *testing.T) {
 	t.Setenv("PY_ANALYSER_URL", "http://127.0.0.1:1")
 	t.Setenv("PY_ANALYSER_TIMEOUT_MS", "150")
@@ -59,6 +61,7 @@ func TestAnalyzerUserSafeError_ForUnavailableService(t *testing.T) {
 	}
 }
 
+// TestAnalyzerRequestTimeout_InvalidEnvFallsBackToDefault - checks analyzer request timeout invalid env falls back to default
 func TestAnalyzerRequestTimeout_InvalidEnvFallsBackToDefault(t *testing.T) {
 	t.Setenv("PY_ANALYSER_TIMEOUT_MS", "not-a-number")
 	got := analyzerRequestTimeout()
@@ -67,6 +70,7 @@ func TestAnalyzerRequestTimeout_InvalidEnvFallsBackToDefault(t *testing.T) {
 	}
 }
 
+// TestLatestAnalysisStatus_ContainsLastErrorWhenSet - checks latest analysis status contains last error when set
 func TestLatestAnalysisStatus_ContainsLastErrorWhenSet(t *testing.T) {
 	gameID := fmt.Sprintf("test-game-%d", time.Now().UnixNano())
 
@@ -85,6 +89,7 @@ func TestLatestAnalysisStatus_ContainsLastErrorWhenSet(t *testing.T) {
 	}
 }
 
+// TestEmitAnalysisLog_JSONShape - checks emit analysis log json shape
 func TestEmitAnalysisLog_JSONShape(t *testing.T) {
 	var buffer bytes.Buffer
 	originalWriter := log.Writer()
@@ -149,6 +154,7 @@ func TestEmitAnalysisLog_JSONShape(t *testing.T) {
 	}
 }
 
+// TestExplainSkillLevelFromProfile - checks explain skill level from profile
 func TestExplainSkillLevelFromProfile(t *testing.T) {
 	cases := map[string]string{
 		"":             "intermediate",
@@ -166,6 +172,7 @@ func TestExplainSkillLevelFromProfile(t *testing.T) {
 	}
 }
 
+// TestConceptHintsFromAnalysis - checks concept hints from analysis
 func TestConceptHintsFromAnalysis(t *testing.T) {
 	hints := conceptHintsFromAnalysis(analyzerResponse{
 		ThreatSummary: "White is in check.",
@@ -194,6 +201,7 @@ func TestConceptHintsFromAnalysis(t *testing.T) {
 	}
 }
 
+// TestExplainHintWait_DefaultZero - checks explain hint wait default zero
 func TestExplainHintWait_DefaultZero(t *testing.T) {
 	t.Setenv("EXPLAIN_HINT_WAIT_MS", "")
 	if got := explainHintWait(); got != 0 {
@@ -205,6 +213,7 @@ func TestExplainHintWait_DefaultZero(t *testing.T) {
 	}
 }
 
+// TestConceptHintsForExplain_RequiresMatchingFEN - checks concept hints for explain requires matching fen
 func TestConceptHintsForExplain_RequiresMatchingFEN(t *testing.T) {
 	fen := "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
 	latest := latestAnalysisState{
@@ -227,6 +236,7 @@ func TestConceptHintsForExplain_RequiresMatchingFEN(t *testing.T) {
 	}
 }
 
+// TestExplainByRequest_Success - checks explain by request success
 func TestExplainByRequest_Success(t *testing.T) {
 	var gotSkill string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -278,6 +288,7 @@ func TestExplainByRequest_Success(t *testing.T) {
 	}
 }
 
+// TestExplainByRequest_FallsBackOnError - checks explain by request falls back on error
 func TestExplainByRequest_FallsBackOnError(t *testing.T) {
 	t.Setenv("PY_ANALYSER_URL", "http://127.0.0.1:1") // unreachable
 	t.Setenv("PY_ANALYSER_TIMEOUT_MS", "100")
@@ -294,6 +305,7 @@ func TestExplainByRequest_FallsBackOnError(t *testing.T) {
 	}
 }
 
+// TestEnqueueCurrentPositionAnalysis_PassesXiangqiGameType - checks enqueue current position analysis passes xiangqi game type
 func TestEnqueueCurrentPositionAnalysis_PassesXiangqiGameType(t *testing.T) {
 	got := make(chan map[string]interface{}, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -342,6 +354,7 @@ func TestEnqueueCurrentPositionAnalysis_PassesXiangqiGameType(t *testing.T) {
 	}
 }
 
+// TestExplainStaleCoalesce - checks explain stale coalesce
 func TestExplainStaleCoalesce(t *testing.T) {
 	id := "test-explain-stale"
 	noteExplainRequest(id, 10)

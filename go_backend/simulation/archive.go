@@ -11,8 +11,7 @@ import (
 	session "go_backend/game/session"
 )
 
-// simulationArchiveRoot resolves data/simulations relative to the go.mod directory
-// so archives land in one place whether the server or tests run from subpackages.
+// simulationArchiveRoot - resolves data/simulations from the go.mod directory for stable archive paths
 func simulationArchiveRoot() string {
 	if v := strings.TrimSpace(os.Getenv("SIMULATION_ARCHIVE_DIR")); v != "" {
 		return v
@@ -40,8 +39,7 @@ func simulationArchiveRoot() string {
 	return filepath.Join("data", "simulations")
 }
 
-// ArchiveSimulationRun saves each completed game into its own JSON file
-// inside a timestamped folder for this run. Future runs create new folders.
+// ArchiveSimulationRun - saves each completed game into its own JSON file inside a timestamped folder for this run. future runs create new folders
 func ArchiveSimulationRun(results []ResultWithGameID) error {
 	if len(results) == 0 {
 		return nil
@@ -99,7 +97,7 @@ func ArchiveSimulationRun(results []ResultWithGameID) error {
 	return nil
 }
 
-// ResultWithGameID augments the normal Result with identifiers needed for archiving.
+// resultWithGameID augments the normal Result with identifiers needed for archiving.
 type ResultWithGameID struct {
 	GameID          string
 	GameType        string
@@ -114,7 +112,7 @@ type ResultWithGameID struct {
 	HistoryDetailed []session.MoveHistoryEntry
 }
 
-// AvgMoveMs returns wall-clock ms per move (0 if no moves).
+// ComputeAvgMoveMs - avgMoveMs returns wall-clock ms per move (0 if no moves)
 func ComputeAvgMoveMs(durationMs int64, moveCount int) int64 {
 	if moveCount <= 0 || durationMs < 0 {
 		return 0

@@ -6,6 +6,7 @@ import (
 	session "go_backend/game/session"
 )
 
+// firstLegalMove - returns first legal move
 func firstLegalMove(gameID string) (string, error) {
 	snap, err := session.BuildSnapshotByID(gameID)
 	if err != nil {
@@ -26,6 +27,7 @@ func firstLegalMove(gameID string) (string, error) {
 	return "", nil
 }
 
+// toUCIMove - converts to uci move
 func toUCIMove(ff, fr, tf, tr int, promo bool) string {
 	if ff < 1 || ff > 8 || tf < 1 || tf > 8 || fr < 1 || fr > 8 || tr < 1 || tr > 8 {
 		return ""
@@ -37,6 +39,7 @@ func toUCIMove(ff, fr, tf, tr int, promo bool) string {
 	return m
 }
 
+// TestRunSingleAIGame_MaxPliesGuard - checks run single ai game max plies guard
 func TestRunSingleAIGame_MaxPliesGuard(t *testing.T) {
 	old := maxPlies
 	maxPlies = 3

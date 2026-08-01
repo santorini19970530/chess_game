@@ -11,7 +11,7 @@ import (
 	pieces "go_backend/game/piece"
 )
 
-// ValidateMove checks command-piece consistency and basic board legality
+// ValidateMove - checks command-piece consistency and basic board legality
 func ValidateMove(fromFile, fromRank, toFile, toRank int, pieceCode string) (pieces.PieceColor, error) {
 	sourceIdx := -1
 	targetIdx := -1
@@ -48,7 +48,7 @@ func ValidateMove(fromFile, fromRank, toFile, toRank int, pieceCode string) (pie
 		}
 	}
 
-	// Validate by PieceMovementStrategy registry dispatch.
+	// validate by PieceMovementStrategy registry dispatch.
 	if err := movement.ValidateMoveByStrategy(
 		sourcePiece.Kind,
 		fromFile,

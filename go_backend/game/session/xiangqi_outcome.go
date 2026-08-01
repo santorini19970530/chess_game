@@ -5,8 +5,7 @@ import (
 	pieces "go_backend/game/piece"
 )
 
-// EvaluateXiangqiGameOutcome uses Go legal-move generation.
-// No legal moves → loss for the side to move (checkmate or stalemate; both are losses in Xiangqi).
+// EvaluateXiangqiGameOutcome - uses Go legal-move generation. no legal moves → loss for the side to move (checkmate or stalemate; both are losses in Xiangqi)
 func EvaluateXiangqiGameOutcome() GameOutcome {
 	whiteOK, blackOK := false, false
 	for _, p := range pieces.ChessPieces {
@@ -78,6 +77,7 @@ func EvaluateXiangqiGameOutcome() GameOutcome {
 	}
 }
 
+// evaluateOutcomeForGameType - performs evaluate outcome for game type
 func evaluateOutcomeForGameType(gameType GameType) GameOutcome {
 	switch gameType {
 	case GameTypeXiangqi:

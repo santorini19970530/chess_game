@@ -12,6 +12,7 @@ import (
 	sessionpkg "go_backend/game/session"
 )
 
+// APIGames - dispatches /api/games collection requests
 func (h *Handler) APIGames(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
@@ -40,7 +41,7 @@ func (h *Handler) APIGames(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("api create game %s mode=%s type=%s", gameIDLabel(game.ID), game.Mode, game.Type)
 
-	// If human is Black in Human vs AI mode, let the AI (White) play the first move immediately
+	// if human is Black in Human vs AI mode, let the AI (White) play the first move immediately
 	if mode == sessionpkg.GameModeHumanVsAI && strings.ToLower(humanColor) == "black" && game.Result == sessionpkg.GameResultInProgress {
 		if aiMove, aiErr := SelectAIMove(game.ID); aiErr == nil && aiMove != "" {
 			if _, applyErr := sessionpkg.ApplyMoveByCommandByID(game.ID, aiMove); applyErr != nil {
@@ -71,6 +72,7 @@ func (h *Handler) APIGames(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// APIGameRoutes - routes /api/games/{id}/... to the matching handler
 func (h *Handler) APIGameRoutes(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/games/")
 	path = strings.Trim(path, "/")
@@ -119,6 +121,7 @@ func (h *Handler) APIGameRoutes(w http.ResponseWriter, r *http.Request) {
 	writeJSONError(w, http.StatusNotFound, "API route not found")
 }
 
+// getAPIGameByID - returns a game snapshot for the given id
 func (h *Handler) getAPIGameByID(w http.ResponseWriter, r *http.Request, gameID string) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
@@ -153,7 +156,7 @@ func (h *Handler) getAPIGameByID(w http.ResponseWriter, r *http.Request, gameID 
 	}
 }
 
-// getAPIGameTopMoves returns the top-k moves with scores using Fairy-Stockfish.
+// getAPIGameTopMoves - returns the top-k moves with scores using Fairy-Stockfish
 func (h *Handler) getAPIGameTopMoves(w http.ResponseWriter, r *http.Request, gameID string) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
@@ -193,7 +196,7 @@ func (h *Handler) getAPIGameTopMoves(w http.ResponseWriter, r *http.Request, gam
 		profile = "intermediate"
 	}
 
-	// Only available when Go UCI path is enabled
+	// only available when Go UCI path is enabled
 	if !useFairyStockfish() {
 		writeJSONError(w, http.StatusServiceUnavailable, "Fairy-Stockfish path is disabled (set USE_FAIRY_STOCKFISH=true)")
 		return
@@ -216,7 +219,7 @@ func (h *Handler) getAPIGameTopMoves(w http.ResponseWriter, r *http.Request, gam
 		return
 	}
 
-	// Build set of legal UCI moves for the current position
+	// build set of legal UCI moves for the current position
 	legalSet := make(map[string]struct{})
 	if legalMoves, err := sessionpkg.AllLegalUCIMovesByID(gameID); err == nil {
 		for _, mv := range legalMoves {
@@ -224,7 +227,7 @@ func (h *Handler) getAPIGameTopMoves(w http.ResponseWriter, r *http.Request, gam
 		}
 	}
 
-	// Filter to only legal moves
+	// filter to only legal moves
 	legalResults := make([]engine.UCIResult, 0, len(results))
 	for _, r := range results {
 		if _, ok := legalSet[strings.ToLower(r.Move)]; ok {
@@ -261,6 +264,7 @@ func (h *Handler) getAPIGameTopMoves(w http.ResponseWriter, r *http.Request, gam
 	})
 }
 
+// postAPIGameMove - applies a human move and may start the ai reply
 func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID string) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
@@ -308,13 +312,13 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 		return
 	}
 	log.Printf("api move accepted %s command=%s", gameIDLabel(gameID), normalizedMove)
-	// Prefer squares from the accepted/normalized UCI (handles shogi "+").
+	// prefer squares from the accepted/normalized UCI (handles shogi "+").
 	if ff, fr, tf, tr, parseErr := parseVariantUCISquares(normalizedMove); parseErr == nil {
 		fromFile, fromRank, toFile, toRank = ff, fr, tf, tr
 	}
 
-	// Coach explain runs after /analyze completes (see analysisWorkerLoop) so concept_hints
-	// match Suggested moves. Do not enqueue here — that raced MultiPV and left hints empty.
+	// coach explain runs after /analyze completes (see analysisWorkerLoop) so concept_hints
+	// match Suggested moves. do not enqueue here — that raced MultiPV and left hints empty.
 
 	finalGame, err := sessionpkg.RefreshGameSessionOutcomeByID(gameID)
 	if err != nil {
@@ -324,8 +328,8 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 
 	aiMoveApplied := ""
 
-	// Human vs AI: start AI thinking in background so the human move returns immediately.
-	// The AI move (governed by the selected strength profile) will be applied later.
+	// human vs AI: start AI thinking in background so the human move returns immediately.
+	// the AI move (governed by the selected strength profile) will be applied later.
 	if finalGame.Mode == sessionpkg.GameModeHumanVsAI && finalGame.Result == sessionpkg.GameResultInProgress {
 		go func() {
 			aiMove, aiErr := SelectAIMove(gameID)
@@ -333,7 +337,7 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 				if aiErr != nil {
 					log.Printf("warning: background SelectAIMove failed for %s: %v", gameIDLabel(gameID), aiErr)
 				}
-				// AI may have flagged on thinking timeout — push outcome to the client.
+				// aI may have flagged on thinking timeout — push outcome to the client.
 				if g, gerr := sessionpkg.GetGameSessionByID(gameID); gerr == nil && g.Result != sessionpkg.GameResultInProgress {
 					gameSocketHub.Broadcast(gameID, socketEventGameOutcome, map[string]interface{}{
 						"result":  g.Result,
@@ -348,17 +352,17 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 			}
 			log.Printf("human_vs_ai: background AI move applied %s command=%s", gameIDLabel(gameID), aiMove)
 
-			// Broadcast the AI move via WebSocket so the frontend updates immediately
+			// broadcast the AI move via WebSocket so the frontend updates immediately
 			gameSocketHub.Broadcast(gameID, socketEventMoveApplied, moveAppliedPayload(gameID, aiMove))
 
-			// Enqueue analysis; explain follows when analysis is recorded (same-FEN cues).
+			// enqueue analysis; explain follows when analysis is recorded (same-FEN cues).
 			enqueueCurrentPositionAnalysis(gameID, aiMove)
 
-			// Refresh outcome (may end the game)
+			// refresh outcome (may end the game)
 			if _, refreshErr := sessionpkg.RefreshGameSessionOutcomeByID(gameID); refreshErr != nil {
 				log.Printf("warning: refresh after background AI move failed %s: %v", gameIDLabel(gameID), refreshErr)
 			}
-			// Archive if the game just ended
+			// archive if the game just ended
 			if g, _ := sessionpkg.GetGameSessionByID(gameID); g.Result != sessionpkg.GameResultInProgress {
 				_ = sessionpkg.ArchiveGameIfNeededByID(gameID)
 			}
@@ -448,6 +452,7 @@ func (h *Handler) postAPIGameMove(w http.ResponseWriter, r *http.Request, gameID
 	}
 }
 
+// postAPIGameConfig - updates game setup fields for an existing session
 func (h *Handler) postAPIGameConfig(w http.ResponseWriter, r *http.Request, gameID string) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
@@ -482,6 +487,7 @@ func (h *Handler) postAPIGameConfig(w http.ResponseWriter, r *http.Request, game
 	}
 }
 
+// postAPIGameFlag - flags the side to move and archives if the game ended
 func (h *Handler) postAPIGameFlag(w http.ResponseWriter, r *http.Request, gameID string) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
@@ -548,6 +554,7 @@ func (h *Handler) postAPIGameFlag(w http.ResponseWriter, r *http.Request, gameID
 	}
 }
 
+// postAPIGameNew - creates a new game session from the posted setup
 func (h *Handler) postAPIGameNew(w http.ResponseWriter, r *http.Request, gameID string) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
@@ -563,7 +570,7 @@ func (h *Handler) postAPIGameNew(w http.ResponseWriter, r *http.Request, gameID 
 		writeJSONError(w, http.StatusInternalServerError, "Failed to archive current game")
 		return
 	}
-	// Parse form to allow "New Game" to respect current dropdown selections
+	// parse form to allow "New Game" to respect current dropdown selections
 	mode := currentGame.Mode
 	gameType := currentGame.Type
 	humanColor := currentGame.Config.HumanColor
@@ -614,7 +621,7 @@ func (h *Handler) postAPIGameNew(w http.ResponseWriter, r *http.Request, gameID 
 		return
 	}
 
-	// Auto-play first AI move if human is Black — run in background so "New Game" returns instantly.
+	// auto-play first AI move if human is Black — run in background so "New Game" returns instantly.
 	if game.Mode == sessionpkg.GameModeHumanVsAI && strings.ToLower(game.Config.HumanColor) == "black" && game.Result == sessionpkg.GameResultInProgress {
 		go func() {
 			if aiMove, aiErr := SelectAIMove(game.ID); aiErr == nil && aiMove != "" {
@@ -671,6 +678,7 @@ func (h *Handler) postAPIGameNew(w http.ResponseWriter, r *http.Request, gameID 
 	}
 }
 
+// getAPIGameLegalMoves - returns legal destination squares for a piece or drop
 func (h *Handler) getAPIGameLegalMoves(w http.ResponseWriter, r *http.Request, gameID string) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
@@ -683,7 +691,7 @@ func (h *Handler) getAPIGameLegalMoves(w http.ResponseWriter, r *http.Request, g
 		return
 	}
 
-	// Shogi hand drop: ?dropKind=pawn (no file/rank).
+	// shogi hand drop: ?dropKind=pawn (no file/rank).
 	if dropKind := strings.TrimSpace(r.URL.Query().Get("dropKind")); dropKind != "" {
 		if game.Type != sessionpkg.GameTypeShogi {
 			writeJSONError(w, http.StatusBadRequest, "dropKind only for shogi")
@@ -743,6 +751,7 @@ func (h *Handler) getAPIGameLegalMoves(w http.ResponseWriter, r *http.Request, g
 	}
 }
 
+// getAPIGameLatestAnalysis - returns the latest coach analysis for a game id
 func (h *Handler) getAPIGameLatestAnalysis(w http.ResponseWriter, r *http.Request, gameID string) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)

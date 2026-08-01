@@ -3,7 +3,7 @@
 
 package movement
 
-// KingStrategy handles king movement rules (castling excluded for now)
+// kingStrategy handles king movement rules (castling excluded for now)
 type KingStrategy struct{}
 
 // Name - returns the name of the king strategy

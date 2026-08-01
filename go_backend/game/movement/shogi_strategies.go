@@ -1,11 +1,12 @@
 package movement
 
-// --- Pawn ---
-
+// shogi pawn strategy
 type ShogiPawnStrategy struct{}
 
+// Name - returns the piece strategy name
 func (ShogiPawnStrategy) Name() string { return "ShogiPawn" }
 
+// LegalMoves - returns legal destinations for this piece from the square
 func (ShogiPawnStrategy) LegalMoves(board any, from any) []any {
 	ctx, src, ok := shogiBoardFrom(board, from)
 	if !ok {
@@ -14,12 +15,13 @@ func (ShogiPawnStrategy) LegalMoves(board any, from any) []any {
 	return appendShogiIfEnemyOrEmpty(nil, ctx, src.File, src.Rank+shogiForward(ctx.Color))
 }
 
-// --- Lance ---
-
+// shogi lance strategy
 type ShogiLanceStrategy struct{}
 
+// Name - returns the piece strategy name
 func (ShogiLanceStrategy) Name() string { return "ShogiLance" }
 
+// LegalMoves - returns legal destinations for this piece from the square
 func (ShogiLanceStrategy) LegalMoves(board any, from any) []any {
 	ctx, src, ok := shogiBoardFrom(board, from)
 	if !ok {
@@ -28,12 +30,13 @@ func (ShogiLanceStrategy) LegalMoves(board any, from any) []any {
 	return collectShogiSlidingMoves(ctx, src, [][2]int{{0, shogiForward(ctx.Color)}}, 8)
 }
 
-// --- Knight ---
-
+// shogi knight strategy
 type ShogiKnightStrategy struct{}
 
+// Name - returns the piece strategy name
 func (ShogiKnightStrategy) Name() string { return "ShogiKnight" }
 
+// LegalMoves - returns legal destinations for this piece from the square
 func (ShogiKnightStrategy) LegalMoves(board any, from any) []any {
 	ctx, src, ok := shogiBoardFrom(board, from)
 	if !ok {
@@ -46,12 +49,13 @@ func (ShogiKnightStrategy) LegalMoves(board any, from any) []any {
 	return legal
 }
 
-// --- Silver ---
-
+// shogi silver strategy
 type ShogiSilverStrategy struct{}
 
+// Name - returns the piece strategy name
 func (ShogiSilverStrategy) Name() string { return "ShogiSilver" }
 
+// LegalMoves - returns legal destinations for this piece from the square
 func (ShogiSilverStrategy) LegalMoves(board any, from any) []any {
 	ctx, src, ok := shogiBoardFrom(board, from)
 	if !ok {
@@ -60,12 +64,13 @@ func (ShogiSilverStrategy) LegalMoves(board any, from any) []any {
 	return appendShogiSteps(nil, ctx, src, shogiSilverDeltas(ctx.Color))
 }
 
-// --- Gold (+ promoted pawn/lance/knight/silver) ---
-
+// shogi gold strategy
 type ShogiGoldStrategy struct{}
 
+// Name - returns the piece strategy name
 func (ShogiGoldStrategy) Name() string { return "ShogiGold" }
 
+// LegalMoves - returns legal destinations for this piece from the square
 func (ShogiGoldStrategy) LegalMoves(board any, from any) []any {
 	ctx, src, ok := shogiBoardFrom(board, from)
 	if !ok {
@@ -74,12 +79,13 @@ func (ShogiGoldStrategy) LegalMoves(board any, from any) []any {
 	return appendShogiSteps(nil, ctx, src, shogiGoldDeltas(ctx.Color))
 }
 
-// --- King ---
-
+// shogi king strategy
 type ShogiKingStrategy struct{}
 
+// Name - returns the piece strategy name
 func (ShogiKingStrategy) Name() string { return "ShogiKing" }
 
+// LegalMoves - returns legal destinations for this piece from the square
 func (ShogiKingStrategy) LegalMoves(board any, from any) []any {
 	ctx, src, ok := shogiBoardFrom(board, from)
 	if !ok {
@@ -97,12 +103,13 @@ func (ShogiKingStrategy) LegalMoves(board any, from any) []any {
 	return legal
 }
 
-// --- Bishop ---
-
+// shogi bishop strategy
 type ShogiBishopStrategy struct{}
 
+// Name - returns the piece strategy name
 func (ShogiBishopStrategy) Name() string { return "ShogiBishop" }
 
+// LegalMoves - returns legal destinations for this piece from the square
 func (ShogiBishopStrategy) LegalMoves(board any, from any) []any {
 	ctx, src, ok := shogiBoardFrom(board, from)
 	if !ok {
@@ -111,12 +118,13 @@ func (ShogiBishopStrategy) LegalMoves(board any, from any) []any {
 	return collectShogiSlidingMoves(ctx, src, [][2]int{{-1, -1}, {-1, 1}, {1, -1}, {1, 1}}, 16)
 }
 
-// --- Rook ---
-
+// shogi rook strategy
 type ShogiRookStrategy struct{}
 
+// Name - returns the piece strategy name
 func (ShogiRookStrategy) Name() string { return "ShogiRook" }
 
+// LegalMoves - returns legal destinations for this piece from the square
 func (ShogiRookStrategy) LegalMoves(board any, from any) []any {
 	ctx, src, ok := shogiBoardFrom(board, from)
 	if !ok {
@@ -125,12 +133,13 @@ func (ShogiRookStrategy) LegalMoves(board any, from any) []any {
 	return collectShogiSlidingMoves(ctx, src, [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}}, 16)
 }
 
-// --- Horse (promoted bishop): bishop + orthogonal king steps ---
-
+// shogi horse strategy
 type ShogiHorseStrategy struct{}
 
+// Name - returns the piece strategy name
 func (ShogiHorseStrategy) Name() string { return "ShogiHorse" }
 
+// LegalMoves - returns legal destinations for this piece from the square
 func (ShogiHorseStrategy) LegalMoves(board any, from any) []any {
 	ctx, src, ok := shogiBoardFrom(board, from)
 	if !ok {
@@ -143,12 +152,13 @@ func (ShogiHorseStrategy) LegalMoves(board any, from any) []any {
 	return legal
 }
 
-// --- Dragon (promoted rook): rook + diagonal king steps ---
-
+// shogi dragon strategy
 type ShogiDragonStrategy struct{}
 
+// Name - returns the piece strategy name
 func (ShogiDragonStrategy) Name() string { return "ShogiDragon" }
 
+// LegalMoves - returns legal destinations for this piece from the square
 func (ShogiDragonStrategy) LegalMoves(board any, from any) []any {
 	ctx, src, ok := shogiBoardFrom(board, from)
 	if !ok {
@@ -161,6 +171,7 @@ func (ShogiDragonStrategy) LegalMoves(board any, from any) []any {
 	return legal
 }
 
+// shogiBoardFrom - performs shogi board from
 func shogiBoardFrom(board any, from any) (MovementBoard, Square, bool) {
 	ctx, ok := board.(MovementBoard)
 	if !ok {

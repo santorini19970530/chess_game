@@ -2,8 +2,7 @@ package handlers
 
 import sessionpkg "go_backend/game/session"
 
-// moveAppliedPayload is the WebSocket data for event "move_applied".
-// isCapture comes from the latest history entry so FE can pick capture vs move SFX.
+// moveAppliedPayload - websocket payload for event "move_applied"; isCapture comes from the latest history entry for sfx
 func moveAppliedPayload(gameID, command string) map[string]interface{} {
 	isCapture, _ := sessionpkg.LastMoveIsCaptureByID(gameID)
 	payload := map[string]interface{}{
@@ -14,8 +13,7 @@ func moveAppliedPayload(gameID, command string) map[string]interface{} {
 	return payload
 }
 
-// attachClockFields adds clock + remaining to a socket payload.
-// If clk is nil, loads/settles via snapshot for gameID.
+// attachClockFields - adds clock + remaining to a socket payload. if clk is nil, loads/settles via snapshot for gameID
 func attachClockFields(payload map[string]interface{}, gameID string, clk *sessionpkg.Clock) {
 	if payload == nil {
 		return

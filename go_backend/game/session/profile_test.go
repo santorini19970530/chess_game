@@ -2,6 +2,7 @@ package session
 
 import "testing"
 
+// TestCreateAndUpdateGameConfig_StoresAIProfile - checks create and update game config stores ai profile
 func TestCreateAndUpdateGameConfig_StoresAIProfile(t *testing.T) {
 	game, err := CreateGame(GameModeHumanVsAI, GameTypeChess, "white", 1, "", "master")
 	if err != nil {
@@ -45,6 +46,7 @@ func TestCreateAndUpdateGameConfig_StoresAIProfile(t *testing.T) {
 	}
 }
 
+// TestProfileForSide_PrefersSideProfiles - checks profile for side prefers side profiles
 func TestProfileForSide_PrefersSideProfiles(t *testing.T) {
 	cfg := GameConfig{
 		AIProfile:      "intermediate",
@@ -59,6 +61,7 @@ func TestProfileForSide_PrefersSideProfiles(t *testing.T) {
 	}
 }
 
+// TestProfileForSide_FallsBackToAIProfile - checks profile for side falls back to ai profile
 func TestProfileForSide_FallsBackToAIProfile(t *testing.T) {
 	cfg := GameConfig{AIProfile: "advanced"}
 	if got := ProfileForSide(cfg, "white"); got != "advanced" {
@@ -66,6 +69,7 @@ func TestProfileForSide_FallsBackToAIProfile(t *testing.T) {
 	}
 }
 
+// TestParseAIProfile_RejectsUnknown - checks parse ai profile rejects unknown
 func TestParseAIProfile_RejectsUnknown(t *testing.T) {
 	if _, ok := ParseAIProfile("grandmaster"); ok {
 		t.Fatal("expected reject")

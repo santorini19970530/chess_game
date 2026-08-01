@@ -6,6 +6,7 @@ import (
 	"testing"
 )
 
+// frontendPicDir - returns frontend pic dir
 func frontendPicDir(t *testing.T, sub string) string {
 	t.Helper()
 	candidates := []string{
@@ -22,6 +23,7 @@ func frontendPicDir(t *testing.T, sub string) string {
 	return ""
 }
 
+// TestXiangqiPieceAssetsExist - checks xiangqi piece assets exist
 func TestXiangqiPieceAssetsExist(t *testing.T) {
 	// API kind → xianqi_pic filename stem (same map as FE imagePathFromPiece).
 	kindFile := map[string]string{
@@ -39,6 +41,7 @@ func TestXiangqiPieceAssetsExist(t *testing.T) {
 	}
 }
 
+// TestShogiPieceAssetsExist - checks shogi piece assets exist
 func TestShogiPieceAssetsExist(t *testing.T) {
 	kinds := []string{
 		"pawn", "lance", "knight", "silver", "gold", "bishop", "rook", "king",

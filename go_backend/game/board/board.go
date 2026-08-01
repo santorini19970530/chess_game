@@ -10,19 +10,19 @@ import (
 	"strings"
 )
 
-// ChessBoard groups all board squares for a files×ranks grid.
+// chessBoard groups all board squares for a files×ranks grid
 type ChessBoard struct {
 	Files   int
 	Ranks   int
 	squares []ChessBoardSquare
 }
 
-// NewChessBoard creates an 8×8 chess board (SSR default).
+// NewChessBoard - creates an 8×8 chess board (SSR default)
 func NewChessBoard() *ChessBoard {
 	return NewBoard(8, 8)
 }
 
-// NewBoard creates a files×ranks div-square board (Xiangqi 9×10, Shogi 9×9, …).
+// NewBoard - creates a files×ranks div-square board (Xiangqi 9×10, Shogi 9×9, …)
 func NewBoard(files, ranks int) *ChessBoard {
 	if files <= 0 {
 		files = 8
@@ -42,19 +42,19 @@ func NewBoard(files, ranks int) *ChessBoard {
 	return board
 }
 
-// SequenceByFileRank maps 1-based file/rank to data-sequence (rank max at top).
+// SequenceByFileRank - maps 1-based file/rank to data-sequence (rank max at top)
 func SequenceByFileRank(file, rank, files, maxRank int) int {
 	return (maxRank-rank)*files + (file - 1)
 }
 
-// FileRankFromSequence is the inverse of SequenceByFileRank.
+// FileRankFromSequence - the inverse of SequenceByFileRank
 func FileRankFromSequence(sequence, files, maxRank int) (file, rank int) {
 	file = (sequence % files) + 1
 	rank = maxRank - (sequence / files)
 	return file, rank
 }
 
-// Draw renders the board wrapper, labels, and squares
+// Draw - renders the board wrapper, labels, and squares
 func (c *ChessBoard) Draw() template.HTML {
 	var htmlBuilder strings.Builder
 
@@ -82,7 +82,7 @@ func (c *ChessBoard) Draw() template.HTML {
 	return template.HTML(htmlBuilder.String())
 }
 
-// DrawChessBoardSquares renders only square tiles
+// DrawChessBoardSquares - renders only square tiles
 func (c *ChessBoard) DrawChessBoardSquares() template.HTML {
 	var htmlBuilder strings.Builder
 
@@ -94,7 +94,7 @@ func (c *ChessBoard) DrawChessBoardSquares() template.HTML {
 		kind  string
 	}
 	pieceAt := make(map[string]pieceRender)
-	// SSR initial pieces only for classic chess start layout
+	// sSR initial pieces only for classic chess start layout
 	if c.Files == 8 && c.Ranks == 8 {
 		pieceAt = make(map[string]pieceRender, len(pieces.ChessPieces))
 		for _, p := range pieces.ChessPieces {
@@ -147,7 +147,7 @@ func (c *ChessBoard) DrawChessBoardSquares() template.HTML {
 	return template.HTML(htmlBuilder.String())
 }
 
-// squareCueClasses adds Xiangqi edge/river/palace cues (9×10 only). No board PNG.
+// squareCueClasses - adds Xiangqi edge/river/palace cues (9×10 only). no board PNG
 func squareCueClasses(files, ranks, file, rank int) string {
 	if files != 9 || ranks != 10 {
 		return ""
@@ -178,6 +178,7 @@ func squareCueClasses(files, ranks, file, rank int) string {
 	return strings.Join(parts, " ")
 }
 
+// generateFileLabels - returns generate file labels
 func generateFileLabels(files int) string {
 	var htmlBuilder strings.Builder
 	for i := 0; i < files; i++ {
@@ -188,6 +189,7 @@ func generateFileLabels(files int) string {
 	return htmlBuilder.String()
 }
 
+// generateRankLabels - returns generate rank labels
 func generateRankLabels(ranks int) string {
 	var htmlBuilder strings.Builder
 	for r := ranks; r >= 1; r-- {

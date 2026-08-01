@@ -18,6 +18,7 @@ var currentTurnPinned bool
 var halfmoveClock int
 var positionCounts map[string]int
 
+// last move for the game
 type LastMove struct {
 	FromFile       int
 	FromRank       int
@@ -28,6 +29,7 @@ type LastMove struct {
 	PawnDoubleStep bool
 }
 
+// move history entry for the game
 type MoveHistoryEntry struct {
 	Side              string `json:"side"`
 	PieceKind         string `json:"pieceKind"`
@@ -37,11 +39,13 @@ type MoveHistoryEntry struct {
 	CapturedPieceKind string `json:"capturedPieceKind,omitempty"`
 }
 
+// last applied move for the game
 var lastAppliedMove *LastMove
 
 // boardFEN is set for Xiangqi (and later Shogi); when non-empty, CurrentFEN returns it.
 var boardFEN string
 
+// global variables for the game
 var whiteKingMoved bool
 var blackKingMoved bool
 var whiteRookAMoved bool
@@ -49,7 +53,7 @@ var whiteRookHMoved bool
 var blackRookAMoved bool
 var blackRookHMoved bool
 
-// append the movement command to the history string
+// AppendMoveHistory - append the movement command to the history string
 func AppendMoveHistory(command string, color pieces.PieceColor, pieceKind pieces.PieceKind, toFile, toRank int, isCapture bool, capturedKind pieces.PieceKind) {
 	sideLabel := "White"
 	if color == pieces.Black {
@@ -70,7 +74,7 @@ func AppendMoveHistory(command string, color pieces.PieceColor, pieceKind pieces
 	})
 }
 
-// get the movement history
+// GetMoveHistory - get the movement history
 func GetMoveHistory() []string {
 	out := make([]string, len(moveHistory))
 	copy(out, moveHistory)
@@ -78,6 +82,7 @@ func GetMoveHistory() []string {
 	return out
 }
 
+// GetMoveHistoryDetailed - returns move history detailed
 func GetMoveHistoryDetailed() []MoveHistoryEntry {
 	if len(moveHistory) == 0 {
 		return nil
@@ -87,12 +92,11 @@ func GetMoveHistoryDetailed() []MoveHistoryEntry {
 	return out
 }
 
-// CurrentTurnColor returns whose move should be next.
-// White starts at move 1, then alternates each successful move.
+// CurrentTurnColor - returns whose move should be next. white starts at move 1, then alternates each successful move
 func CurrentTurnColor() pieces.PieceColor {
 	if currentTurnOverride != nil {
 		if !currentTurnPinned && len(moveHistory) == 0 && lastAppliedMove == nil {
-			// If tests or manual setup clear runtime history, fall back to standard start turn.
+			// if tests or manual setup clear runtime history, fall back to standard start turn.
 			currentTurnOverride = nil
 		}
 	}
@@ -105,7 +109,7 @@ func CurrentTurnColor() pieces.PieceColor {
 	return pieces.Black
 }
 
-// CurrentTurnLabel returns a frontend-friendly turn label.
+// CurrentTurnLabel - returns a frontend-friendly turn label
 func CurrentTurnLabel() string {
 	if CurrentTurnColor() == pieces.Black {
 		return "Black"
@@ -113,6 +117,7 @@ func CurrentTurnLabel() string {
 	return "White"
 }
 
+// RecordLastMove - records last move
 func RecordLastMove(fromFile, fromRank, toFile, toRank int, kind pieces.PieceKind, color pieces.PieceColor) {
 	lastAppliedMove = &LastMove{
 		FromFile:       fromFile,
@@ -125,6 +130,7 @@ func RecordLastMove(fromFile, fromRank, toFile, toRank int, kind pieces.PieceKin
 	}
 }
 
+// GetLastMove - returns last move
 func GetLastMove() *LastMove {
 	if lastAppliedMove == nil {
 		return nil
@@ -133,6 +139,7 @@ func GetLastMove() *LastMove {
 	return &copied
 }
 
+// RecordPieceMoveForCastling - records piece move for castling
 func RecordPieceMoveForCastling(kind pieces.PieceKind, color pieces.PieceColor, fromFile, fromRank int) {
 	switch kind {
 	case pieces.King:
@@ -161,6 +168,7 @@ func RecordPieceMoveForCastling(kind pieces.PieceKind, color pieces.PieceColor, 
 	}
 }
 
+// CanCastleByState - reports whether castle by state is allowed
 func CanCastleByState(color pieces.PieceColor, kingSide bool) bool {
 	if color == pieces.White {
 		if kingSide {
@@ -174,6 +182,7 @@ func CanCastleByState(color pieces.PieceColor, kingSide bool) bool {
 	return !blackKingMoved && !blackRookAMoved
 }
 
+// resetCastlingState - resets castling state
 func resetCastlingState() {
 	whiteKingMoved = false
 	blackKingMoved = false
@@ -183,27 +192,32 @@ func resetCastlingState() {
 	blackRookHMoved = false
 }
 
+// SetCurrentTurnColor - sets current turn color
 func SetCurrentTurnColor(color pieces.PieceColor) {
 	c := color
 	currentTurnOverride = &c
 	currentTurnPinned = false
 }
 
+// SetCurrentTurnColorPinned - sets current turn color pinned
 func SetCurrentTurnColorPinned(color pieces.PieceColor) {
 	c := color
 	currentTurnOverride = &c
 	currentTurnPinned = true
 }
 
+// AdvanceTurnColor - performs advance turn color
 func AdvanceTurnColor() {
 	SetCurrentTurnColor(OpponentColor(CurrentTurnColor()))
 }
 
+// resetTurnOverride - resets turn override
 func resetTurnOverride() {
 	currentTurnOverride = nil
 	currentTurnPinned = false
 }
 
+// SetCastlingStateFromFEN - sets castling state from fen
 func SetCastlingStateFromFEN(rights string) {
 	resetCastlingState()
 	whiteKingMoved = true
@@ -231,6 +245,7 @@ func SetCastlingStateFromFEN(rights string) {
 	}
 }
 
+// OpponentColor - performs opponent color
 func OpponentColor(color pieces.PieceColor) pieces.PieceColor {
 	if color == pieces.White {
 		return pieces.Black
@@ -238,12 +253,14 @@ func OpponentColor(color pieces.PieceColor) pieces.PieceColor {
 	return pieces.White
 }
 
+// resetDrawTracking - resets draw tracking
 func resetDrawTracking() {
 	halfmoveClock = 0
 	positionCounts = make(map[string]int)
 	recordCurrentPosition()
 }
 
+// recordDrawStateAfterMove - records draw state after move
 func recordDrawStateAfterMove(movedKind pieces.PieceKind, capture bool) {
 	if movedKind == pieces.Pawn || capture {
 		halfmoveClock = 0
@@ -253,15 +270,18 @@ func recordDrawStateAfterMove(movedKind pieces.PieceKind, capture bool) {
 	recordCurrentPosition()
 }
 
+// GetHalfmoveClock - returns halfmove clock
 func GetHalfmoveClock() int {
 	return halfmoveClock
 }
 
+// GetCurrentPositionRepetitionCount - returns current position repetition count
 func GetCurrentPositionRepetitionCount() int {
 	key := currentPositionKey()
 	return positionCounts[key]
 }
 
+// currentPositionKey - returns current position key
 func currentPositionKey() string {
 	return fmt.Sprintf("%s %s %s %s",
 		boardToKey(),
@@ -271,6 +291,7 @@ func currentPositionKey() string {
 	)
 }
 
+// recordCurrentPosition - records current position
 func recordCurrentPosition() {
 	if positionCounts == nil {
 		positionCounts = make(map[string]int)
@@ -279,6 +300,7 @@ func recordCurrentPosition() {
 	positionCounts[key]++
 }
 
+// boardToKey - returns board to key
 func boardToKey() string {
 	var out strings.Builder
 	for rank := 8; rank >= 1; rank-- {
@@ -305,6 +327,7 @@ func boardToKey() string {
 	return out.String()
 }
 
+// pieceToFENRune - performs piece to fen rune
 func pieceToFENRune(p pieces.ChessPiece) rune {
 	var ch rune
 	switch p.Kind {
@@ -329,6 +352,7 @@ func pieceToFENRune(p pieces.ChessPiece) rune {
 	return ch
 }
 
+// castlingRightsKey - returns castling rights key
 func castlingRightsKey() string {
 	rights := ""
 	if CanCastleByState(pieces.White, true) {
@@ -349,6 +373,7 @@ func castlingRightsKey() string {
 	return rights
 }
 
+// enPassantTargetKey - returns en passant target key
 func enPassantTargetKey() string {
 	mv := GetLastMove()
 	if mv == nil || !mv.PawnDoubleStep {
@@ -372,7 +397,7 @@ type CapturedSummary struct {
 	Black map[string]int `json:"black"`
 }
 
-// get the current state of the board
+// GetBoardState - get the current state of the board
 func GetBoardState() []PieceState {
 	state := make([]PieceState, 0, len(pieces.ChessPieces))
 	for _, p := range pieces.ChessPieces {
@@ -387,21 +412,21 @@ func GetBoardState() []PieceState {
 	return state
 }
 
-// GetCapturedSummary computes captured-piece counts for each side
-// from current board state against standard Chess initial piece counts.
+// GetCapturedSummary - computes captured-piece counts for each side from current board state against standard Chess initial piece counts
 func GetCapturedSummary() CapturedSummary {
 	return capturedSummaryAgainstInitial(map[string]int{
 		"pawn": 8, "rook": 2, "knight": 2, "bishop": 2, "queen": 1, "king": 1,
 	})
 }
 
-// GetXiangqiCapturedSummary uses Xiangqi starting counts (not Chess queens/bishops).
+// GetXiangqiCapturedSummary - uses Xiangqi starting counts (not Chess queens/bishops)
 func GetXiangqiCapturedSummary() CapturedSummary {
 	return capturedSummaryAgainstInitial(map[string]int{
 		"pawn": 5, "rook": 2, "knight": 2, "elephant": 2, "advisor": 2, "cannon": 2, "king": 1,
 	})
 }
 
+// capturedSummaryAgainstInitial - performs captured summary against initial
 func capturedSummaryAgainstInitial(initial map[string]int) CapturedSummary {
 	liveWhite := map[string]int{}
 	liveBlack := map[string]int{}
@@ -442,6 +467,7 @@ func capturedSummaryAgainstInitial(initial map[string]int) CapturedSummary {
 	}
 }
 
+// absInt - returns abs int
 func absInt(v int) int {
 	if v < 0 {
 		return -v

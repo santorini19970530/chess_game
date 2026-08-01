@@ -15,6 +15,7 @@ import (
 	"go_backend/simulation"
 )
 
+// main - cli entrypoint for running formal ai-vs-ai match batches
 func main() {
 	games := flag.Int("games", 0, "number of games to simulate (required, >=1)")
 	profile := flag.String("profile", "", "AI strength for both sides: beginner|intermediate|advanced|master")
@@ -77,7 +78,7 @@ func main() {
 		start := time.Now()
 		res, err := simulation.RunSingleAIGame(game.ID, handlers.SelectAIMove)
 		if err != nil {
-			// Xiangqi/Shogi can loop past the ply cap; count as draw and keep the batch alive
+			// xiangqi/Shogi can loop past the ply cap; count as draw and keep the batch alive
 			// so -format json still writes a summary (empty file = this Fatal used to fire).
 			if errors.Is(err, simulation.ErrMaxPliesReached) {
 				moves := 0
@@ -189,6 +190,7 @@ func main() {
 	}
 }
 
+// resolveMatchProfiles - resolves match profiles
 func resolveMatchProfiles(profile, whiteRaw, blackRaw string) (white, black string, err error) {
 	profile = strings.TrimSpace(profile)
 	whiteRaw = strings.TrimSpace(whiteRaw)
@@ -222,6 +224,7 @@ func resolveMatchProfiles(profile, whiteRaw, blackRaw string) (white, black stri
 	return white, black, nil
 }
 
+// parseMatchGameType - parses match game type
 func parseMatchGameType(raw string) (session.GameType, error) {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
 	case "", "chess":

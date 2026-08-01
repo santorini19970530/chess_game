@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// UCIResult represents a parsed info line from the engine.
+// uCIResult represents a parsed info line from the engine
 type UCIResult struct {
 	Move   string
 	Score  int // centipawn score, positive good for side to move
@@ -21,7 +21,7 @@ type UCIResult struct {
 	MultiPV int // multipv index (1-based)
 }
 
-// FairyStockfish wraps a Fairy-Stockfish UCI process.
+// fairyStockfish wraps a Fairy-Stockfish UCI process
 type FairyStockfish struct {
 	cmd        *exec.Cmd
 	stdin      io.WriteCloser
@@ -33,7 +33,7 @@ type FairyStockfish struct {
 	variant    string // last UCI_Variant successfully applied (FS name, e.g. "xiangqi")
 }
 
-// UCIVariantName maps session game type ("xianqi") to Fairy-Stockfish UCI_Variant ("xiangqi").
+// UCIVariantName - maps session game type ("xianqi") to Fairy-Stockfish UCI_Variant ("xiangqi")
 func UCIVariantName(gameType string) string {
 	switch strings.ToLower(strings.TrimSpace(gameType)) {
 	case "xianqi", "xiangqi":
@@ -45,7 +45,7 @@ func UCIVariantName(gameType string) string {
 	}
 }
 
-// NewFairyStockfish creates a new wrapper but does not start the process.
+// NewFairyStockfish - creates a new wrapper but does not start the process
 func NewFairyStockfish(binaryPath string) (*FairyStockfish, error) {
 	if binaryPath == "" {
 		return nil, errors.New("binaryPath must be provided")
@@ -55,7 +55,7 @@ func NewFairyStockfish(binaryPath string) (*FairyStockfish, error) {
 	}, nil
 }
 
-// Start launches the engine, sends "uci", and waits for "uciok".
+// Start - launches the engine, sends "uci", and waits for "uciok"
 func (fs *FairyStockfish) Start() error {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
@@ -81,7 +81,7 @@ func (fs *FairyStockfish) Start() error {
 	}
 	fs.running = true
 
-	// Initialize UCI
+	// initialize UCI
 	if err := fs.send("uci"); err != nil {
 		fs.closeLocked()
 		return err
@@ -94,7 +94,7 @@ func (fs *FairyStockfish) Start() error {
 	return nil
 }
 
-// IsReady sends isready and waits for readyok.
+// IsReady - sends isready and waits for readyok
 func (fs *FairyStockfish) IsReady() error {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
@@ -107,13 +107,13 @@ func (fs *FairyStockfish) IsReady() error {
 	return fs.waitFor("readyok", 2*time.Second)
 }
 
-// Restart stops and restarts the engine (useful after crashes or timeouts).
+// Restart - stops and restarts the engine (useful after crashes or timeouts)
 func (fs *FairyStockfish) Restart() error {
 	_ = fs.Close()
 	return fs.Start()
 }
 
-// SetOption sends setoption name ... value ...
+// SetOption - sends setoption name ... value
 func (fs *FairyStockfish) SetOption(name, value string) error {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
@@ -124,8 +124,7 @@ func (fs *FairyStockfish) SetOption(name, value string) error {
 	return fs.send(cmd)
 }
 
-// SetVariant sets UCI_Variant (Fairy-Stockfish name: chess, xiangqi, shogi, ...).
-// No-op when already on that variant. Call before BestMove/TopK for non-chess games.
+// SetVariant - sets fairy-stockfish UCI_Variant; no-op when already on that variant
 func (fs *FairyStockfish) SetVariant(gameTypeOrVariant string) error {
 	variant := UCIVariantName(gameTypeOrVariant)
 	fs.mu.Lock()
@@ -149,14 +148,14 @@ func (fs *FairyStockfish) SetVariant(gameTypeOrVariant string) error {
 	return nil
 }
 
-// Variant returns the last applied UCI_Variant name.
+// Variant - returns the last applied UCI_Variant name
 func (fs *FairyStockfish) Variant() string {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 	return fs.variant
 }
 
-// SetStrengthProfile maps profile to UCI options (Skill Level + MultiPV).
+// SetStrengthProfile - maps profile to UCI options (Skill Level + MultiPV)
 func (fs *FairyStockfish) SetStrengthProfile(profile string) error {
 	p := strings.ToLower(strings.TrimSpace(profile))
 	var skill, multipv int
@@ -169,8 +168,8 @@ func (fs *FairyStockfish) SetStrengthProfile(profile string) error {
 	case "advanced":
 		skill, multipv = 15, 3
 	case "master":
-		// MultiPV>1 is for suggestion UI; BestMove only needs one line and
-		// MultiPV 5 made long eval runs crash more often (EOF / broken pipe).
+		// multiPV>1 is for suggestion UI; BestMove only needs one line and
+		// multiPV 5 made long eval runs crash more often (EOF / broken pipe).
 		skill, multipv = 20, 1
 	default:
 		skill, multipv = 5, 3
@@ -185,7 +184,7 @@ func (fs *FairyStockfish) SetStrengthProfile(profile string) error {
 	return nil
 }
 
-// BestMove sends position + go and returns the bestmove.
+// BestMove - sends position + go and returns the bestmove
 func (fs *FairyStockfish) BestMove(fen string, limit Limit) (string, error) {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
@@ -207,15 +206,14 @@ func (fs *FairyStockfish) BestMove(fen string, limit Limit) (string, error) {
 	}
 	move, err := fs.waitForBestMove(wait)
 	if err != nil {
-		// Kill the process so a later Start/replace is clean (don't only flip the flag).
+		// kill the process so a later Start/replace is clean (don't only flip the flag).
 		_ = fs.closeLocked()
 		return "", err
 	}
 	return move, nil
 }
 
-// TopK returns up to k best moves (with centipawn scores and PV) using MultiPV.
-// It respects the current engine configuration (e.g. Skill Level set via SetStrengthProfile).
+// TopK - returns up to k best moves with scores/pv via multipv under current engine config
 func (fs *FairyStockfish) TopK(fen string, k int, limit Limit) ([]UCIResult, error) {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
@@ -229,7 +227,7 @@ func (fs *FairyStockfish) TopK(fen string, k int, limit Limit) ([]UCIResult, err
 		k = 10 // safety cap
 	}
 
-	// Remember current MultiPV so we can restore it
+	// remember current MultiPV so we can restore it
 	_ = fs.send(fmt.Sprintf("setoption name MultiPV value %d", k))
 
 	if err := fs.send(fmt.Sprintf("position fen %s", fen)); err != nil {
@@ -243,7 +241,7 @@ func (fs *FairyStockfish) TopK(fen string, k int, limit Limit) ([]UCIResult, err
 
 	results, err := fs.collectTopKResults(k, 12*time.Second)
 
-	// Restore a reasonable default
+	// restore a reasonable default
 	_ = fs.send("setoption name MultiPV value 3")
 
 	if err != nil {
@@ -252,7 +250,7 @@ func (fs *FairyStockfish) TopK(fen string, k int, limit Limit) ([]UCIResult, err
 	return results, nil
 }
 
-// TopKWithProfile applies the strength profile first, then calls TopK.
+// TopKWithProfile - applies the strength profile first, then calls TopK
 func (fs *FairyStockfish) TopKWithProfile(fen string, k int, profile string, limit Limit) ([]UCIResult, error) {
 	if err := fs.SetStrengthProfile(profile); err != nil {
 		return nil, err
@@ -260,16 +258,14 @@ func (fs *FairyStockfish) TopKWithProfile(fen string, k int, profile string, lim
 	return fs.TopK(fen, k, limit)
 }
 
-// Close sends quit and kills the process.
+// Close - sends quit and kills the process
 func (fs *FairyStockfish) Close() error {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 	return fs.closeLocked()
 }
 
-// closeLocked assumes fs.mu is already held.
-// Always tears down pipes/process if present, even when running was already false
-// (e.g. after an EOF where BestMove cleared the flag).
+// closeLocked - tears down pipes/process while fs.mu is already held
 func (fs *FairyStockfish) closeLocked() error {
 	fs.running = false
 	fs.variant = ""
@@ -286,14 +282,14 @@ func (fs *FairyStockfish) closeLocked() error {
 	return nil
 }
 
-// IsRunning reports whether the wrapper thinks the process is alive.
+// IsRunning - reports whether the wrapper thinks the process is alive
 func (fs *FairyStockfish) IsRunning() bool {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 	return fs.running
 }
 
-// --- internal helpers ---
+// send - internal helpers
 
 func (fs *FairyStockfish) send(cmd string) error {
 	if fs.stdin == nil {
@@ -303,6 +299,7 @@ func (fs *FairyStockfish) send(cmd string) error {
 	return err
 }
 
+// waitFor - waits for for
 func (fs *FairyStockfish) waitFor(token string, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -323,6 +320,7 @@ func (fs *FairyStockfish) waitFor(token string, timeout time.Duration) error {
 	}
 }
 
+// waitForBestMove - waits for for best move
 func (fs *FairyStockfish) waitForBestMove(timeout time.Duration) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -347,7 +345,7 @@ func (fs *FairyStockfish) waitForBestMove(timeout time.Duration) (string, error)
 	}
 }
 
-// collectTopKResults reads info lines until bestmove, parsing multipv results.
+// collectTopKResults - reads info lines until bestmove, parsing multipv results
 func (fs *FairyStockfish) collectTopKResults(k int, timeout time.Duration) ([]UCIResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -387,7 +385,7 @@ func (fs *FairyStockfish) collectTopKResults(k int, timeout time.Duration) ([]UC
 					if res.Depth == 0 {
 						res.Depth = 1
 					}
-					// Prefer the real multipv index if present
+					// prefer the real multipv index if present
 					idx := res.MultiPV
 					if idx < 1 || idx > k {
 						idx = len(seen) + 1
@@ -401,7 +399,7 @@ func (fs *FairyStockfish) collectTopKResults(k int, timeout time.Duration) ([]UC
 	}
 }
 
-// parseInfoLine extracts score cp, pv, depth, and multipv index from an info line.
+// parseInfoLine - extracts score cp, pv, depth, and multipv index from an info line
 func parseInfoLine(line string) *UCIResult {
 	res := &UCIResult{}
 	fields := strings.Fields(line)
@@ -434,13 +432,14 @@ func parseInfoLine(line string) *UCIResult {
 	return res
 }
 
-// GoCommand formats the UCI `go` line for limit (tests / diagnostics).
+// GoCommand - formats the UCI `go` line for limit (tests / diagnostics)
 func GoCommand(limit Limit) string {
 	return (&FairyStockfish{}).buildGoCmd(limit)
 }
 
+// buildGoCmd - builds go cmd
 func (fs *FairyStockfish) buildGoCmd(limit Limit) string {
-	// Clock-on: wtime/btime (+ optional winc/binc). Optional movetime caps wall wait.
+	// clock-on: wtime/btime (+ optional winc/binc). optional movetime caps wall wait.
 	if limit.WhiteTime > 0 || limit.BlackTime > 0 {
 		cmd := fmt.Sprintf(
 			"go wtime %d btime %d",
@@ -459,7 +458,7 @@ func (fs *FairyStockfish) buildGoCmd(limit Limit) string {
 		}
 		return cmd
 	}
-	// Prefer movetime when set so searches finish before waitForBestMove's deadline.
+	// prefer movetime when set so searches finish before waitForBestMove's deadline.
 	// (Depth-only go depth 20 routinely exceeds the 10s bestmove wait on master.)
 	if limit.MoveTime > 0 {
 		return fmt.Sprintf("go movetime %d", limit.MoveTime.Milliseconds())
@@ -470,7 +469,7 @@ func (fs *FairyStockfish) buildGoCmd(limit Limit) string {
 	return "go depth 8"
 }
 
-// Limit mirrors chess/engine.Limit style for compatibility.
+// limit mirrors chess/engine.Limit style for compatibility.
 type Limit struct {
 	Depth     int
 	MoveTime  time.Duration

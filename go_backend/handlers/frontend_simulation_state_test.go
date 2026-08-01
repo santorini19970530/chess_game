@@ -7,6 +7,7 @@ import (
 	"testing"
 )
 
+// loadChessCommandSource - returns chess command source
 func loadChessCommandSource(t *testing.T) string {
 	t.Helper()
 
@@ -19,6 +20,7 @@ func loadChessCommandSource(t *testing.T) string {
 	return loadFrontendSource(t, candidates, "chess_command.js")
 }
 
+// loadInputCSSSource - returns input css source
 func loadInputCSSSource(t *testing.T) string {
 	t.Helper()
 
@@ -31,6 +33,7 @@ func loadInputCSSSource(t *testing.T) string {
 	return loadFrontendSource(t, candidates, "input.css")
 }
 
+// loadIndexHandlerSource - returns index handler source
 func loadIndexHandlerSource(t *testing.T) string {
 	t.Helper()
 
@@ -42,6 +45,7 @@ func loadIndexHandlerSource(t *testing.T) string {
 	return loadFrontendSource(t, candidates, "index.go")
 }
 
+// loadFrontendSource - returns frontend source
 func loadFrontendSource(t *testing.T, candidates []string, label string) string {
 	t.Helper()
 
@@ -58,6 +62,7 @@ func loadFrontendSource(t *testing.T, candidates []string, label string) string 
 	return ""
 }
 
+// requireSnippet - returns require snippet
 func requireSnippet(t *testing.T, source string, snippet string) {
 	t.Helper()
 	if strings.Contains(source, snippet) {
@@ -66,6 +71,7 @@ func requireSnippet(t *testing.T, source string, snippet string) {
 	t.Fatalf("expected frontend simulation logic snippet missing: %q", snippet)
 }
 
+// TestFrontendSimulationState_RunPlaybackDoneMarkers - checks frontend simulation state run playback done markers
 func TestFrontendSimulationState_RunPlaybackDoneMarkers(t *testing.T) {
 	source := loadChessCommandSource(t)
 
@@ -82,6 +88,7 @@ func TestFrontendSimulationState_RunPlaybackDoneMarkers(t *testing.T) {
 	requireSnippet(t, source, `simRunBtn.style.display = "none";`)
 }
 
+// TestFrontendSimulationState_ErrorAndConflictRecoveryMarkers - checks frontend simulation state error and conflict recovery markers
 func TestFrontendSimulationState_ErrorAndConflictRecoveryMarkers(t *testing.T) {
 	source := loadChessCommandSource(t)
 
@@ -97,6 +104,7 @@ func TestFrontendSimulationState_ErrorAndConflictRecoveryMarkers(t *testing.T) {
 	}
 }
 
+// TestFrontendSimulationState_BusyGuardMarkers - checks frontend simulation state busy guard markers
 func TestFrontendSimulationState_BusyGuardMarkers(t *testing.T) {
 	source := loadChessCommandSource(t)
 
@@ -112,6 +120,7 @@ func TestFrontendSimulationState_BusyGuardMarkers(t *testing.T) {
 	}
 }
 
+// TestFrontendSimulationDownload_Step1ButtonMarkers - checks frontend simulation download step1 button markers
 func TestFrontendSimulationDownload_Step1ButtonMarkers(t *testing.T) {
 	source := loadIndexHandlerSource(t)
 
@@ -122,12 +131,14 @@ func TestFrontendSimulationDownload_Step1ButtonMarkers(t *testing.T) {
 	requireSnippet(t, source, "Download CSV")
 }
 
+// TestFrontendShogiBoard_NumericFileLabels - checks frontend shogi board numeric file labels
 func TestFrontendShogiBoard_NumericFileLabels(t *testing.T) {
 	jsSrc := loadChessCommandSource(t)
 	requireSnippet(t, jsSrc, `const numericFiles = boardGameType === "shogi"`)
 	requireSnippet(t, jsSrc, "? String(i + 1)")
 }
 
+// TestFrontendConfigPanel_DetailsCollapse - checks frontend config panel details collapse
 func TestFrontendConfigPanel_DetailsCollapse(t *testing.T) {
 	indexSrc := loadIndexHandlerSource(t)
 	requireSnippet(t, indexSrc, `id="game_config_details"`)
@@ -139,6 +150,7 @@ func TestFrontendConfigPanel_DetailsCollapse(t *testing.T) {
 	requireSnippet(t, jsSrc, "game_config_details")
 }
 
+// TestFrontendLoadMoves_ReviewMarkers - checks frontend load moves review markers
 func TestFrontendLoadMoves_ReviewMarkers(t *testing.T) {
 	indexSrc := loadIndexHandlerSource(t)
 	requireSnippet(t, indexSrc, `id="review_moves_input"`)
@@ -155,6 +167,7 @@ func TestFrontendLoadMoves_ReviewMarkers(t *testing.T) {
 	requireSnippet(t, jsSrc, "reviewPlaybackMoves")
 }
 
+// TestFrontendSimulationDownload_Step2StyleMarkers - checks frontend simulation download step2 style markers
 func TestFrontendSimulationDownload_Step2StyleMarkers(t *testing.T) {
 	source := loadInputCSSSource(t)
 
@@ -164,6 +177,7 @@ func TestFrontendSimulationDownload_Step2StyleMarkers(t *testing.T) {
 	requireSnippet(t, source, "#simulation_download_csv_btn[disabled]")
 }
 
+// TestFrontendSimulationDownload_ExportMarkers - checks frontend simulation download export markers
 func TestFrontendSimulationDownload_ExportMarkers(t *testing.T) {
 	source := loadChessCommandSource(t)
 

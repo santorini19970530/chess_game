@@ -5,8 +5,7 @@ import (
 	pieces "go_backend/game/piece"
 )
 
-// EvaluateShogiGameOutcome uses Go legal-move generation (board + drops).
-// No legal moves → loss for the side to move (tsume / no-move loss).
+// EvaluateShogiGameOutcome - uses Go legal-move generation (board + drops). no legal moves → loss for the side to move (tsume / no-move loss)
 func EvaluateShogiGameOutcome() GameOutcome {
 	whiteOK, blackOK := false, false
 	for _, p := range pieces.ChessPieces {

@@ -5,17 +5,17 @@ package engine
 
 import pieces "go_backend/game/piece"
 
-// IsInCheck reports whether the specified side's king is under attack.
+// IsInCheck - reports whether the specified side's king is under attack
 func IsInCheck(color pieces.PieceColor) bool {
 	return isInCheckOnBoard(pieces.ChessPieces, color)
 }
 
-// IsSquareAttackedBy reports whether an attacker color attacks the square.
+// IsSquareAttackedBy - reports whether an attacker color attacks the square
 func IsSquareAttackedBy(file, rank int, attackerColor pieces.PieceColor) bool {
 	return isSquareAttacked(pieces.ChessPieces, file, rank, attackerColor)
 }
 
-// CheckedColor returns the side currently in check, if any.
+// CheckedColor - returns the side currently in check, if any
 func CheckedColor() pieces.PieceColor {
 	if IsInCheck(pieces.White) {
 		return pieces.White
@@ -26,7 +26,7 @@ func CheckedColor() pieces.PieceColor {
 	return ""
 }
 
-// WouldLeaveKingInCheck reports whether applying a move would leave the mover in check.
+// WouldLeaveKingInCheck - reports whether applying a move would leave the mover in check
 func WouldLeaveKingInCheck(
 	source pieces.ChessPiece,
 	fromFile, fromRank, toFile, toRank int,
@@ -49,6 +49,7 @@ func WouldLeaveKingInCheck(
 	return isInCheckOnBoard(boardAfter, source.Color)
 }
 
+// simulateBoardAfterMove - simulates board after move
 func simulateBoardAfterMove(
 	board []pieces.ChessPiece,
 	source pieces.ChessPiece,
@@ -98,6 +99,7 @@ func simulateBoardAfterMove(
 	return cloned
 }
 
+// isInCheckOnBoard - reports whether in check on board
 func isInCheckOnBoard(board []pieces.ChessPiece, color pieces.PieceColor) bool {
 	kingFile, kingRank, found := findKing(board, color)
 	if !found {
@@ -110,6 +112,7 @@ func isInCheckOnBoard(board []pieces.ChessPiece, color pieces.PieceColor) bool {
 	return isSquareAttacked(board, kingFile, kingRank, attackerColor)
 }
 
+// findKing - finds king
 func findKing(board []pieces.ChessPiece, color pieces.PieceColor) (int, int, bool) {
 	for _, p := range board {
 		if p.Color == color && p.Kind == pieces.King {
@@ -119,6 +122,7 @@ func findKing(board []pieces.ChessPiece, color pieces.PieceColor) (int, int, boo
 	return 0, 0, false
 }
 
+// isSquareAttacked - reports whether square attacked
 func isSquareAttacked(board []pieces.ChessPiece, targetFile, targetRank int, attackerColor pieces.PieceColor) bool {
 	for _, p := range board {
 		if p.Color != attackerColor {
@@ -131,6 +135,7 @@ func isSquareAttacked(board []pieces.ChessPiece, targetFile, targetRank int, att
 	return false
 }
 
+// pieceAttacksSquare - reports piece attacks square
 func pieceAttacksSquare(board []pieces.ChessPiece, piece pieces.ChessPiece, targetFile, targetRank int) bool {
 	df := targetFile - piece.File
 	dr := targetRank - piece.Rank
@@ -162,6 +167,7 @@ func pieceAttacksSquare(board []pieces.ChessPiece, piece pieces.ChessPiece, targ
 	}
 }
 
+// isPathClear - reports whether path clear
 func isPathClear(board []pieces.ChessPiece, fromFile, fromRank, toFile, toRank int) bool {
 	stepFile := signInt(toFile - fromFile)
 	stepRank := signInt(toRank - fromRank)
@@ -177,6 +183,7 @@ func isPathClear(board []pieces.ChessPiece, fromFile, fromRank, toFile, toRank i
 	return true
 }
 
+// indexOfPiece - returns index of piece
 func indexOfPiece(board []pieces.ChessPiece, file, rank int) int {
 	for i, p := range board {
 		if p.File == file && p.Rank == rank {
@@ -186,6 +193,7 @@ func indexOfPiece(board []pieces.ChessPiece, file, rank int) int {
 	return -1
 }
 
+// pieceAt - performs piece at
 func pieceAt(board []pieces.ChessPiece, file, rank int) (pieces.ChessPiece, bool) {
 	for _, p := range board {
 		if p.File == file && p.Rank == rank {
@@ -195,6 +203,7 @@ func pieceAt(board []pieces.ChessPiece, file, rank int) (pieces.ChessPiece, bool
 	return pieces.ChessPiece{}, false
 }
 
+// signInt - returns sign int
 func signInt(v int) int {
 	if v < 0 {
 		return -1
@@ -205,6 +214,7 @@ func signInt(v int) int {
 	return 0
 }
 
+// absCheck - returns abs check
 func absCheck(v int) int {
 	if v < 0 {
 		return -v

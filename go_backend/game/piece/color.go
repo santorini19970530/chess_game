@@ -3,6 +3,7 @@
 
 package pieces
 
+// piece color for the game
 type PieceColor string
 
 const (

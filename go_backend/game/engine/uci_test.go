@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// TestFairyStockfish_StartsAndResponds - checks fairy stockfish starts and responds
 func TestFairyStockfish_StartsAndResponds(t *testing.T) {
 	bin := os.Getenv("FAIRY_STOCKFISH_PATH")
 	if bin == "" {
@@ -27,6 +28,7 @@ func TestFairyStockfish_StartsAndResponds(t *testing.T) {
 	}
 }
 
+// TestFairyStockfish_BestMoveReturnsLegalMove - checks fairy stockfish best move returns legal move
 func TestFairyStockfish_BestMoveReturnsLegalMove(t *testing.T) {
 	bin := os.Getenv("FAIRY_STOCKFISH_PATH")
 	if bin == "" {
@@ -51,6 +53,7 @@ func TestFairyStockfish_BestMoveReturnsLegalMove(t *testing.T) {
 	}
 }
 
+// TestFairyStockfish_SetStrengthProfile - checks fairy stockfish set strength profile
 func TestFairyStockfish_SetStrengthProfile(t *testing.T) {
 	bin := os.Getenv("FAIRY_STOCKFISH_PATH")
 	if bin == "" {
@@ -73,6 +76,7 @@ func TestFairyStockfish_SetStrengthProfile(t *testing.T) {
 	}
 }
 
+// TestFairyStockfish_Restart - checks fairy stockfish restart
 func TestFairyStockfish_Restart(t *testing.T) {
 	bin := os.Getenv("FAIRY_STOCKFISH_PATH")
 	if bin == "" {
@@ -97,6 +101,7 @@ func TestFairyStockfish_Restart(t *testing.T) {
 	}
 }
 
+// TestFairyStockfish_TopKReturnsLegalMoves - checks fairy stockfish top k returns legal moves
 func TestFairyStockfish_TopKReturnsLegalMoves(t *testing.T) {
 	bin := os.Getenv("FAIRY_STOCKFISH_PATH")
 	if bin == "" {
@@ -126,6 +131,7 @@ func TestFairyStockfish_TopKReturnsLegalMoves(t *testing.T) {
 	}
 }
 
+// TestFairyStockfish_TopKRespectsProfile - checks fairy stockfish top k respects profile
 func TestFairyStockfish_TopKRespectsProfile(t *testing.T) {
 	bin := os.Getenv("FAIRY_STOCKFISH_PATH")
 	if bin == "" {
@@ -155,6 +161,7 @@ func TestFairyStockfish_TopKRespectsProfile(t *testing.T) {
 	}
 }
 
+// TestUCIVariantName - checks uci variant name
 func TestUCIVariantName(t *testing.T) {
 	cases := map[string]string{
 		"chess":   "chess",
@@ -171,6 +178,7 @@ func TestUCIVariantName(t *testing.T) {
 	}
 }
 
+// TestFairyStockfish_SetVariantXiangqiBestMove - checks fairy stockfish set variant xiangqi best move
 func TestFairyStockfish_SetVariantXiangqiBestMove(t *testing.T) {
 	bin := os.Getenv("FAIRY_STOCKFISH_PATH")
 	if bin == "" {

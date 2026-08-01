@@ -7,6 +7,7 @@ import (
 	"testing"
 )
 
+// TestIndexHTML_IncludesClockSetupControls - checks index html includes clock setup controls
 func TestIndexHTML_IncludesClockSetupControls(t *testing.T) {
 	source, err := os.ReadFile(filepath.Join("index.go"))
 	if err != nil {

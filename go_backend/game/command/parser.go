@@ -8,9 +8,12 @@ import (
 	"strings"
 )
 
+// command format pattern for the command
 var commandFormatPattern = regexp.MustCompile(`^(?:[a-h][1-8][a-h][1-8][qrbn]?|[prnbqk][a-h][1-8][a-h][1-8])$`)
+// san pattern for the command
 var sanPattern = regexp.MustCompile(`^([pkqrbn])?([a-h1-8]{0,2})(x)?([a-h][1-8])(?:=?([qrbn]))?$`)
 
+// castle move for the command
 type castleMove struct {
 	fromFile int
 	fromRank int
@@ -18,10 +21,12 @@ type castleMove struct {
 	toRank   int
 }
 
+// ParseCommand - parses a move command string into an internal command
 func ParseCommand(command string) (ParsedCommand, error) {
 	return ParseCommandForColor(command, "")
 }
 
+// ParseCommandForColor - parses a move command for a specific side to move
 func ParseCommandForColor(command string, expectedColor pieces.PieceColor) (ParsedCommand, error) {
 	command = strings.ToLower(strings.TrimSpace(command))
 	if !commandFormatPattern.MatchString(command) {
@@ -66,6 +71,7 @@ func ParseCommandForColor(command string, expectedColor pieces.PieceColor) (Pars
 	return parsed, nil
 }
 
+// parseSANCommand - parses san command
 func parseSANCommand(command string, expectedColor pieces.PieceColor) (ParsedCommand, error) {
 	san := strings.TrimRight(command, "+#!?")
 
@@ -143,6 +149,7 @@ func parseSANCommand(command string, expectedColor pieces.PieceColor) (ParsedCom
 	return parsed, nil
 }
 
+// parseCastleSAN - parses castle san
 func parseCastleSAN(raw string, queenSide bool, expectedColor pieces.PieceColor) (ParsedCommand, error) {
 	moves := []castleMove{
 		{fromFile: 5, fromRank: 1, toFile: 7, toRank: 1}, // white king side
@@ -177,6 +184,7 @@ func parseCastleSAN(raw string, queenSide bool, expectedColor pieces.PieceColor)
 	return parsed, nil
 }
 
+// kindFromSANPiece - performs kind from san piece
 func kindFromSANPiece(ch byte) pieces.PieceKind {
 	switch ch {
 	case 'p':
@@ -196,6 +204,7 @@ func kindFromSANPiece(ch byte) pieces.PieceKind {
 	}
 }
 
+// pieceCodeFromKind - returns piece code from kind
 func pieceCodeFromKind(kind pieces.PieceKind) string {
 	switch kind {
 	case pieces.King:
@@ -213,6 +222,7 @@ func pieceCodeFromKind(kind pieces.PieceKind) string {
 	}
 }
 
+// getPieceAt - returns piece at
 func getPieceAt(file, rank int) (pieces.ChessPiece, bool) {
 	for _, p := range pieces.ChessPieces {
 		if p.File == file && p.Rank == rank {
@@ -222,6 +232,7 @@ func getPieceAt(file, rank int) (pieces.ChessPiece, bool) {
 	return pieces.ChessPiece{}, false
 }
 
+// canPieceReach - reports whether piece reach is allowed
 func canPieceReach(p pieces.ChessPiece, toFile, toRank int, isCapture bool) bool {
 	df := toFile - p.File
 	dr := toRank - p.Rank
@@ -289,6 +300,7 @@ func canPieceReach(p pieces.ChessPiece, toFile, toRank int, isCapture bool) bool
 	}
 }
 
+// pathClear - reports path clear
 func pathClear(fromFile, fromRank, toFile, toRank int) bool {
 	stepFile := sign(toFile - fromFile)
 	stepRank := sign(toRank - fromRank)
@@ -305,6 +317,7 @@ func pathClear(fromFile, fromRank, toFile, toRank int) bool {
 	return true
 }
 
+// sign - returns sign
 func sign(v int) int {
 	if v > 0 {
 		return 1
@@ -315,6 +328,7 @@ func sign(v int) int {
 	return 0
 }
 
+// abs - returns abs
 func abs(v int) int {
 	if v < 0 {
 		return -v
@@ -322,6 +336,7 @@ func abs(v int) int {
 	return v
 }
 
+// findSANCandidate - finds san candidate
 func findSANCandidate(
 	targetKind pieces.PieceKind,
 	targetFile, targetRank int,
@@ -356,6 +371,7 @@ func findSANCandidate(
 	return fromFile, fromRank, candidateCount
 }
 
+// findCastleCandidate - finds castle candidate
 func findCastleCandidate(moves []castleMove, expectedColor pieces.PieceColor) (castleMove, int) {
 	candidateCount := 0
 	var selected castleMove
@@ -378,10 +394,12 @@ func findCastleCandidate(moves []castleMove, expectedColor pieces.PieceColor) (c
 	return selected, candidateCount
 }
 
+// ParseAndLogCommand - parses and log command
 func ParseAndLogCommand(command string) error {
 	return ParseAndLogCommandForColor(command, "")
 }
 
+// ParseAndLogCommandForColor - parses and log command for color
 func ParseAndLogCommandForColor(command string, expectedColor pieces.PieceColor) error {
 	parsed, err := ParseCommandForColor(command, expectedColor)
 	if err != nil {

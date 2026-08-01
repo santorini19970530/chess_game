@@ -6,6 +6,7 @@ import (
 	pieces "go_backend/game/piece"
 )
 
+// TestShogiPawnForwardOnly - checks shogi pawn forward only
 func TestShogiPawnForwardOnly(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.Pawn, File: 5, Rank: 3},
@@ -16,6 +17,7 @@ func TestShogiPawnForwardOnly(t *testing.T) {
 	}
 }
 
+// TestShogiKnightJumps - checks shogi knight jumps
 func TestShogiKnightJumps(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.Knight, File: 2, Rank: 1},
@@ -33,6 +35,7 @@ func TestShogiKnightJumps(t *testing.T) {
 	}
 }
 
+// TestShogiLanceBlocked - checks shogi lance blocked
 func TestShogiLanceBlocked(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.Lance, File: 1, Rank: 1},
@@ -49,6 +52,7 @@ func TestShogiLanceBlocked(t *testing.T) {
 	}
 }
 
+// TestShogiSilverVsGold - checks shogi silver vs gold
 func TestShogiSilverVsGold(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.Silver, File: 5, Rank: 5},
@@ -93,6 +97,7 @@ func TestShogiSilverVsGold(t *testing.T) {
 	}
 }
 
+// TestShogiPromotedMovesAsGold - checks shogi promoted moves as gold
 func TestShogiPromotedMovesAsGold(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.PromotedPawn, File: 5, Rank: 8},
@@ -104,6 +109,7 @@ func TestShogiPromotedMovesAsGold(t *testing.T) {
 	}
 }
 
+// TestShogiDragonHasDiagonalStep - checks shogi dragon has diagonal step
 func TestShogiDragonHasDiagonalStep(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.Dragon, File: 5, Rank: 5},
@@ -120,6 +126,7 @@ func TestShogiDragonHasDiagonalStep(t *testing.T) {
 	}
 }
 
+// TestShogiPromotionHelpers - checks shogi promotion helpers
 func TestShogiPromotionHelpers(t *testing.T) {
 	if !ShogiInPromotionZone(7, pieces.White) || ShogiInPromotionZone(6, pieces.White) {
 		t.Fatal("white promotion zone ranks 7-9")
@@ -138,9 +145,9 @@ func TestShogiPromotionHelpers(t *testing.T) {
 	}
 }
 
+// TestShogiCheckFilter - checks shogi check filter
 func TestShogiCheckFilter(t *testing.T) {
-	// White king e1; black rook on e9 open file — white pawn e2 cannot move off-file? 
-	// Simpler: white king e5, black gold attacks e6; white gold on e4 moving away leaves king in check from black rook on e9.
+	// white gold on e6 blocks black rook on e9; moving it sideways should leave king in check
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.King, File: 5, Rank: 5},
 		{Color: pieces.White, Kind: pieces.Gold, File: 5, Rank: 6}, // blocks rook
@@ -155,6 +162,7 @@ func TestShogiCheckFilter(t *testing.T) {
 	}
 }
 
+// TestShogiValidateRook - checks shogi validate rook
 func TestShogiValidateRook(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.Rook, File: 2, Rank: 2},

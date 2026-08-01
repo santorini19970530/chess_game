@@ -13,6 +13,7 @@ import (
 	"runtime"
 )
 
+// frontendPath - resolves a path under the frontend directory
 func frontendPath(parts ...string) string {
 	_, thisFile, _, ok := runtime.Caller(0)
 	baseDir := "."
@@ -24,7 +25,7 @@ func frontendPath(parts ...string) string {
 	return filepath.Clean(filepath.Join(pathParts...))
 }
 
-// registerRoutes registers all routes for the web app
+// registerRoutes - registers all routes for the web app
 func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 	styleCSSPath := frontendPath("styles", "style.css")
 	inputCSSPath := frontendPath("styles", "input.css")
@@ -83,7 +84,7 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 	// page routes
 	mux.HandleFunc("/", h.Index) // index
 	mux.HandleFunc("/ws/game", h.GameSocket)
-	// Legacy compatibility endpoints (deprecated): kept temporarily while clients migrate.
+	// legacy form endpoints still used by older clients; prefer /api/games*
 	mux.HandleFunc("/command", h.SubmitChessCommand)
 	mux.HandleFunc("/game/new", h.NewGame)
 	mux.HandleFunc("/game/flag", h.FlagGame)
@@ -91,10 +92,10 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 	mux.HandleFunc("/game/legal-moves", h.GetLegalMoves)
 	mux.HandleFunc("/game/analysis/latest", h.GetLatestAnalysis)
 
-	// Primary REST API endpoints for game lifecycle and moves.
+	// primary REST API endpoints for game lifecycle and moves.
 	mux.HandleFunc("/api/games", h.APIGames)
 	mux.HandleFunc("/api/games/", h.APIGameRoutes)
 
-	// Simulation endpoint
+	// simulation endpoint
 	mux.HandleFunc("/api/simulate", h.APISimulate)
 }

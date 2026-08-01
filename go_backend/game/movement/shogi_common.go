@@ -2,11 +2,12 @@ package movement
 
 import pieces "go_backend/game/piece"
 
+// isInsideShogiBoard - reports whether inside shogi board
 func isInsideShogiBoard(file, rank int) bool {
 	return file >= 1 && file <= 9 && rank >= 1 && rank <= 9
 }
 
-// ShogiInPromotionZone: White (Sente) ranks 7–9; Black (Gote) ranks 1–3.
+// ShogiInPromotionZone - white (Sente) ranks 7–9; Black (Gote) ranks 1–3
 func ShogiInPromotionZone(rank int, color pieces.PieceColor) bool {
 	if color == pieces.White {
 		return rank >= 7 && rank <= 9
@@ -14,7 +15,7 @@ func ShogiInPromotionZone(rank int, color pieces.PieceColor) bool {
 	return rank >= 1 && rank <= 3
 }
 
-// ShogiCanPromote: piece may promote if the move enters, leaves, or stays in the zone.
+// ShogiCanPromote - piece may promote if the move enters, leaves, or stays in the zone
 func ShogiCanPromote(kind pieces.PieceKind, fromRank, toRank int, color pieces.PieceColor) bool {
 	if !shogiIsPromotable(kind) {
 		return false
@@ -22,7 +23,7 @@ func ShogiCanPromote(kind pieces.PieceKind, fromRank, toRank int, color pieces.P
 	return ShogiInPromotionZone(fromRank, color) || ShogiInPromotionZone(toRank, color)
 }
 
-// ShogiMustPromote: pawn/lance on last rank; knight on last two ranks.
+// ShogiMustPromote - pawn/lance on last rank; knight on last two ranks
 func ShogiMustPromote(kind pieces.PieceKind, toRank int, color pieces.PieceColor) bool {
 	switch kind {
 	case pieces.Pawn, pieces.Lance:
@@ -40,6 +41,7 @@ func ShogiMustPromote(kind pieces.PieceKind, toRank int, color pieces.PieceColor
 	}
 }
 
+// shogiIsPromotable - reports shogi is promotable
 func shogiIsPromotable(kind pieces.PieceKind) bool {
 	switch kind {
 	case pieces.Pawn, pieces.Lance, pieces.Knight, pieces.Silver, pieces.Bishop, pieces.Rook:
@@ -49,7 +51,7 @@ func shogiIsPromotable(kind pieces.PieceKind) bool {
 	}
 }
 
-// ShogiPromotedKind maps an unpromoted piece to its promoted form.
+// ShogiPromotedKind - maps an unpromoted piece to its promoted form
 func ShogiPromotedKind(kind pieces.PieceKind) (pieces.PieceKind, bool) {
 	switch kind {
 	case pieces.Pawn:
@@ -69,6 +71,7 @@ func ShogiPromotedKind(kind pieces.PieceKind) (pieces.PieceKind, bool) {
 	}
 }
 
+// shogiForward - returns shogi forward
 func shogiForward(color pieces.PieceColor) int {
 	if color == pieces.Black {
 		return -1
@@ -76,6 +79,7 @@ func shogiForward(color pieces.PieceColor) int {
 	return 1
 }
 
+// collectShogiSlidingMoves - collects shogi sliding moves
 func collectShogiSlidingMoves(ctx MovementBoard, src Square, directions [][2]int, capacity int) []any {
 	legal := make([]any, 0, capacity)
 	for _, dir := range directions {
@@ -98,6 +102,7 @@ func collectShogiSlidingMoves(ctx MovementBoard, src Square, directions [][2]int
 	return legal
 }
 
+// appendShogiIfEnemyOrEmpty - appends shogi if enemy or empty
 func appendShogiIfEnemyOrEmpty(legal []any, ctx MovementBoard, file, rank int) []any {
 	if !isInsideShogiBoard(file, rank) {
 		return legal
@@ -109,6 +114,7 @@ func appendShogiIfEnemyOrEmpty(legal []any, ctx MovementBoard, file, rank int) [
 	return legal
 }
 
+// appendShogiSteps - appends shogi steps
 func appendShogiSteps(legal []any, ctx MovementBoard, src Square, deltas [][2]int) []any {
 	for _, d := range deltas {
 		legal = appendShogiIfEnemyOrEmpty(legal, ctx, src.File+d[0], src.Rank+d[1])
@@ -116,7 +122,7 @@ func appendShogiSteps(legal []any, ctx MovementBoard, src Square, deltas [][2]in
 	return legal
 }
 
-// Gold-general deltas for White (Sente); Black uses flipped ranks.
+// shogiGoldDeltas - gold-general deltas for White (Sente); Black uses flipped ranks
 func shogiGoldDeltas(color pieces.PieceColor) [][2]int {
 	fwd := shogiForward(color)
 	return [][2]int{
@@ -126,6 +132,7 @@ func shogiGoldDeltas(color pieces.PieceColor) [][2]int {
 	}
 }
 
+// shogiSilverDeltas - returns shogi silver deltas
 func shogiSilverDeltas(color pieces.PieceColor) [][2]int {
 	fwd := shogiForward(color)
 	return [][2]int{

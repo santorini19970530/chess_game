@@ -16,6 +16,7 @@ import (
 	"go_backend/simulation"
 )
 
+// request body for the simulate endpoint
 type simulateRequest struct {
 	Games         int    `json:"games"`
 	Profile       string `json:"profile"`
@@ -25,6 +26,7 @@ type simulateRequest struct {
 	GameTypeAlt   string `json:"game_type"`
 }
 
+// result of a single game simulation
 type gameResult struct {
 	Result          string                     `json:"result"`
 	Winner          string                     `json:"winner,omitempty"`
@@ -34,6 +36,7 @@ type gameResult struct {
 	HistoryDetailed []session.MoveHistoryEntry `json:"history_detailed,omitempty"`
 }
 
+// response body for the simulate endpoint
 type simulateResponse struct {
 	Games           int          `json:"games"`
 	GameType        string       `json:"game_type"`
@@ -49,13 +52,16 @@ type simulateResponse struct {
 	Results         []gameResult `json:"results,omitempty"`
 }
 
+// maximum number of plies to simulate in a single game
 const maxSimulationPlies = 600
 
+// global variables for the simulation
 var (
 	simulationRunMu       sync.Mutex
 	simulationRunInFlight bool
 )
 
+// tryStartSimulationRun - claims the single-flight simulation slot if free
 func tryStartSimulationRun() bool {
 	simulationRunMu.Lock()
 	defer simulationRunMu.Unlock()
@@ -66,12 +72,14 @@ func tryStartSimulationRun() bool {
 	return true
 }
 
+// finishSimulationRun - releases the simulation single-flight slot
 func finishSimulationRun() {
 	simulationRunMu.Lock()
 	simulationRunInFlight = false
 	simulationRunMu.Unlock()
 }
 
+// parseDetailsFlag - parses details flag
 func parseDetailsFlag(r *http.Request) (bool, error) {
 	raw := strings.TrimSpace(r.URL.Query().Get("details"))
 	if raw == "" {
@@ -84,6 +92,7 @@ func parseDetailsFlag(r *http.Request) (bool, error) {
 	return value, nil
 }
 
+// APISimulate - runs an ai-vs-ai simulation batch and returns the summary
 func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
@@ -113,7 +122,7 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 
 	var req simulateRequest
 
-	// Support both JSON and application/x-www-form-urlencoded
+	// support both JSON and application/x-www-form-urlencoded
 	ct := strings.ToLower(strings.TrimSpace(r.Header.Get("Content-Type")))
 	if ct == "" || strings.HasPrefix(ct, "application/x-www-form-urlencoded") {
 		if err := r.ParseForm(); err != nil {
@@ -192,7 +201,7 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Broadcast game start (global so any connected client sees it)
+		// broadcast game start (global so any connected client sees it)
 		gameSocketHub.BroadcastGlobal(socketEventSimulationGameEnd, map[string]interface{}{
 			"game_num": gameNum,
 			"status":   "started",
@@ -200,7 +209,7 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 
 		start := time.Now()
 
-		// Run game move-by-move for live streaming
+		// run game move-by-move for live streaming
 		moveCount := 0
 		var runErr error
 		for ply := 0; ply < maxSimulationPlies; ply++ {
@@ -230,7 +239,7 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 			}
 			moveCount++
 
-			// Emit live move event (global)
+			// emit live move event (global)
 			gameSocketHub.BroadcastGlobal(socketEventSimulationMove, map[string]interface{}{
 				"game_num": gameNum,
 				"move":     move,
@@ -310,7 +319,7 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Persist each game into its own JSON file under a run folder
+	// persist each game into its own JSON file under a run folder
 	if err := simulation.ArchiveSimulationRun(archiveItems); err != nil {
 		log.Printf("warning: failed to archive simulation run: %v", err)
 	}
@@ -356,8 +365,7 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// resolveSimulateProfiles applies profile shorthand + per-side overrides.
-// Unknown names are rejected (eval boundary).
+// resolveSimulateProfiles - applies profile shorthand + per-side overrides. unknown names are rejected (eval boundary)
 func resolveSimulateProfiles(profile, whiteRaw, blackRaw string) (white, black string, err error) {
 	profile = strings.TrimSpace(profile)
 	whiteRaw = strings.TrimSpace(whiteRaw)
@@ -391,6 +399,7 @@ func resolveSimulateProfiles(profile, whiteRaw, blackRaw string) (white, black s
 	return white, black, nil
 }
 
+// parseSupportedGameType - parses supported game type
 func parseSupportedGameType(raw string) (session.GameType, error) {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
 	case "", "chess":

@@ -2,6 +2,7 @@ package session
 
 import "testing"
 
+// TestXiangqiCapturedSummary_StartPositionEmpty - checks xiangqi captured summary start position empty
 func TestXiangqiCapturedSummary_StartPositionEmpty(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()

@@ -8,7 +8,7 @@ import (
 	pieces "go_backend/game/piece"
 )
 
-// PawnStrategy is a placeholder for pawn move rules.
+// pawnStrategy is a placeholder for pawn move rules
 type PawnStrategy struct{}
 
 // Name - returns the name of the pawn strategy

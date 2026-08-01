@@ -5,6 +5,7 @@ import (
 	pieces "go_backend/game/piece"
 )
 
+// legal destination for a piece
 type LegalDestination struct {
 	File              int  `json:"file"`
 	Rank              int  `json:"rank"`
@@ -13,7 +14,7 @@ type LegalDestination struct {
 	IsCapture         bool `json:"isCapture"`
 }
 
-// LegalMovesForSquare returns legal destinations for a source square on current turn.
+// LegalMovesForSquare - returns legal destinations for a source square on current turn
 func LegalMovesForSquare(file, rank int) []LegalDestination {
 	sourcePiece, found := getPieceAt(file, rank)
 	if !found {
@@ -25,6 +26,7 @@ func LegalMovesForSquare(file, rank int) []LegalDestination {
 	return pieceLegalDestinations(sourcePiece)
 }
 
+// pieceLegalDestinations - returns piece legal destinations
 func pieceLegalDestinations(sourcePiece pieces.ChessPiece) []LegalDestination {
 	out := make([]LegalDestination, 0, 32)
 	for toFile := 1; toFile <= 8; toFile++ {

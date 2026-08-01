@@ -10,6 +10,7 @@ import (
 	sessionpkg "go_backend/game/session"
 )
 
+// TestAPIGamesCreate_AcceptsClockTimeControl - checks api games create accepts clock time control
 func TestAPIGamesCreate_AcceptsClockTimeControl(t *testing.T) {
 	h := NewHandler()
 	body := strings.NewReader(
@@ -47,6 +48,7 @@ func TestAPIGamesCreate_AcceptsClockTimeControl(t *testing.T) {
 	}
 }
 
+// TestAPIGamesCreate_OmittingClockKeepsDisabled - checks api games create omitting clock keeps disabled
 func TestAPIGamesCreate_OmittingClockKeepsDisabled(t *testing.T) {
 	h := NewHandler()
 	req := httptest.NewRequest(
@@ -69,6 +71,7 @@ func TestAPIGamesCreate_OmittingClockKeepsDisabled(t *testing.T) {
 	}
 }
 
+// TestAPIGameConfig_AppliesHvAIHumanAIBases - checks api game config applies hv ai human ai bases
 func TestAPIGameConfig_AppliesHvAIHumanAIBases(t *testing.T) {
 	h := NewHandler()
 	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsAI, sessionpkg.GameTypeChess, "black", 1, "", "beginner")
@@ -101,6 +104,7 @@ func TestAPIGameConfig_AppliesHvAIHumanAIBases(t *testing.T) {
 	}
 }
 
+// TestAPIGameNew_AppliesClockFromForm - checks api game new applies clock from form
 func TestAPIGameNew_AppliesClockFromForm(t *testing.T) {
 	h := NewHandler()
 	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")

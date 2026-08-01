@@ -2,6 +2,7 @@ package main
 
 import "testing"
 
+// TestResolveMatchProfiles_SideOverrides - checks resolve match profiles side overrides
 func TestResolveMatchProfiles_SideOverrides(t *testing.T) {
 	white, black, err := resolveMatchProfiles("intermediate", "beginner", "master")
 	if err != nil {
@@ -12,6 +13,7 @@ func TestResolveMatchProfiles_SideOverrides(t *testing.T) {
 	}
 }
 
+// TestResolveMatchProfiles_ShorthandBothSides - checks resolve match profiles shorthand both sides
 func TestResolveMatchProfiles_ShorthandBothSides(t *testing.T) {
 	white, black, err := resolveMatchProfiles("advanced", "", "")
 	if err != nil {
@@ -22,6 +24,7 @@ func TestResolveMatchProfiles_ShorthandBothSides(t *testing.T) {
 	}
 }
 
+// TestResolveMatchProfiles_RejectsUnknown - checks resolve match profiles rejects unknown
 func TestResolveMatchProfiles_RejectsUnknown(t *testing.T) {
 	if _, _, err := resolveMatchProfiles("nope", "", ""); err == nil {
 		t.Fatal("expected error")

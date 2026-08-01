@@ -13,13 +13,13 @@ import (
 	"time"
 )
 
-// AIClient calls the Python service /history, /policy, and /value endpoints.
+// aIClient calls the Python service /history, /policy, and /value endpoints.
 type AIClient struct {
 	baseURL    string
 	httpClient *http.Client
 }
 
-// NewAIClient builds a client using existing analyzer config defaults.
+// NewAIClient - builds a client using existing analyzer config defaults
 func NewAIClient() *AIClient {
 	return &AIClient{
 		baseURL:    analyzerBaseURL(),
@@ -27,7 +27,7 @@ func NewAIClient() *AIClient {
 	}
 }
 
-// AICommonRequest is the shared request envelope for three-agent endpoints.
+// aICommonRequest is the shared request envelope for three-agent endpoints.
 type AICommonRequest struct {
 	RequestID   string   `json:"request_id"`
 	GameID      string   `json:"game_id,omitempty"`
@@ -40,12 +40,13 @@ type AICommonRequest struct {
 	Profile     string   `json:"profile,omitempty"` // AI strength level: beginner|intermediate|advanced|master
 }
 
-// AIPolicyRequest extends AICommonRequest for policy-specific options.
+// aIPolicyRequest extends AICommonRequest for policy-specific options.
 type AIPolicyRequest struct {
 	AICommonRequest
 	TopK int `json:"top_k,omitempty"`
 }
 
+// aiErrorResponse is the error response from the AI endpoints.
 type aiErrorResponse struct {
 	RequestID string `json:"request_id"`
 	Status    string `json:"status"`
@@ -53,6 +54,7 @@ type aiErrorResponse struct {
 	Message   string `json:"message"`
 }
 
+// list out the error kinds for the ai client
 const (
 	aiClientErrorKindTimeout     = "timeout"
 	aiClientErrorKindUnavailable = "unavailable"
@@ -64,13 +66,14 @@ const (
 	aiClientErrorKindOther       = "other"
 )
 
-// AIClientError standardizes failure kinds from AI endpoint calls.
+// aIClientError standardizes failure kinds from AI endpoint calls.
 type AIClientError struct {
 	Kind       string
 	HTTPStatus int
 	Err        error
 }
 
+// Error - returns the error message
 func (e *AIClientError) Error() string {
 	if e == nil || e.Err == nil {
 		return "ai client error"
@@ -78,6 +81,7 @@ func (e *AIClientError) Error() string {
 	return e.Err.Error()
 }
 
+// Unwrap - returns the wrapped error
 func (e *AIClientError) Unwrap() error {
 	if e == nil {
 		return nil
@@ -85,6 +89,7 @@ func (e *AIClientError) Unwrap() error {
 	return e.Err
 }
 
+// response from the history endpoint
 type AIHistoryResponse struct {
 	RequestID string                 `json:"request_id"`
 	Status    string                 `json:"status"`
@@ -95,6 +100,7 @@ type AIHistoryResponse struct {
 	LatencyMS int                    `json:"latency_ms"`
 }
 
+// candidate from the policy endpoint
 type AIPolicyCandidate struct {
 	Rank    int     `json:"rank"`
 	UCI     string  `json:"uci"`
@@ -103,6 +109,7 @@ type AIPolicyCandidate struct {
 	Prob    float64 `json:"prob"`
 }
 
+// response from the policy endpoint
 type AIPolicyResponse struct {
 	RequestID   string              `json:"request_id"`
 	Status      string              `json:"status"`
@@ -112,6 +119,7 @@ type AIPolicyResponse struct {
 	LatencyMS   int                 `json:"latency_ms"`
 }
 
+// response from the value endpoint
 type AIValueResponse struct {
 	RequestID      string  `json:"request_id"`
 	Status         string  `json:"status"`
@@ -124,6 +132,7 @@ type AIValueResponse struct {
 	LatencyMS      int     `json:"latency_ms"`
 }
 
+// History - calls the python /history agent endpoint
 func (c *AIClient) History(req AICommonRequest) (*AIHistoryResponse, error) {
 	var out AIHistoryResponse
 	if err := c.doJSONPost("/history", req, &out); err != nil {
@@ -135,6 +144,7 @@ func (c *AIClient) History(req AICommonRequest) (*AIHistoryResponse, error) {
 	return &out, nil
 }
 
+// Policy - calls the python /policy agent endpoint
 func (c *AIClient) Policy(req AIPolicyRequest) (*AIPolicyResponse, error) {
 	var out AIPolicyResponse
 	if err := c.doJSONPost("/policy", req, &out); err != nil {
@@ -146,6 +156,7 @@ func (c *AIClient) Policy(req AIPolicyRequest) (*AIPolicyResponse, error) {
 	return &out, nil
 }
 
+// Value - calls the python /value agent endpoint
 func (c *AIClient) Value(req AICommonRequest) (*AIValueResponse, error) {
 	var out AIValueResponse
 	if err := c.doJSONPost("/value", req, &out); err != nil {
@@ -157,7 +168,7 @@ func (c *AIClient) Value(req AICommonRequest) (*AIValueResponse, error) {
 	return &out, nil
 }
 
-// doJSONPost is a shared helper for JSON POST calls to AI endpoints.
+// doJSONPost - a shared helper for JSON POST calls to AI endpoints
 func (c *AIClient) doJSONPost(path string, payload any, out any) error {
 	baseURL := strings.TrimRight(c.baseURL, "/")
 	client := c.httpClient
@@ -167,7 +178,7 @@ func (c *AIClient) doJSONPost(path string, payload any, out any) error {
 	return doJSONPost(client, baseURL+path, analyzerRequestTimeout(), payload, out)
 }
 
-// doJSONPost executes a JSON HTTP POST and decodes JSON response into out.
+// doJSONPost - executes a JSON HTTP POST and decodes JSON response into out
 func doJSONPost(httpClient *http.Client, endpoint string, timeout time.Duration, payload any, out any) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -235,6 +246,7 @@ func doJSONPost(httpClient *http.Client, endpoint string, timeout time.Duration,
 	return nil
 }
 
+// mapAIClientTransportErrorKind - maps ai client transport error kind
 func mapAIClientTransportErrorKind(err error) string {
 	if err == nil {
 		return aiClientErrorKindOther
@@ -252,6 +264,7 @@ func mapAIClientTransportErrorKind(err error) string {
 	return aiClientErrorKindOther
 }
 
+// invalidPayloadError - wraps an invalid ai response payload as an ai client error
 func invalidPayloadError(msg string) error {
 	return &AIClientError{
 		Kind: aiClientErrorKindBadPayload,
@@ -259,6 +272,7 @@ func invalidPayloadError(msg string) error {
 	}
 }
 
+// validateHistoryResponse - validates history response
 func validateHistoryResponse(resp AIHistoryResponse) error {
 	if strings.TrimSpace(resp.RequestID) == "" {
 		return invalidPayloadError("missing request_id")
@@ -278,6 +292,7 @@ func validateHistoryResponse(resp AIHistoryResponse) error {
 	return nil
 }
 
+// validatePolicyResponse - validates policy response
 func validatePolicyResponse(resp AIPolicyResponse) error {
 	if strings.TrimSpace(resp.RequestID) == "" {
 		return invalidPayloadError("missing request_id")
@@ -302,6 +317,7 @@ func validatePolicyResponse(resp AIPolicyResponse) error {
 	return nil
 }
 
+// validateValueResponse - validates value response
 func validateValueResponse(resp AIValueResponse) error {
 	if strings.TrimSpace(resp.RequestID) == "" {
 		return invalidPayloadError("missing request_id")

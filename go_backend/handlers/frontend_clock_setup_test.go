@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// TestFrontendClockSetup_FormAndDisplayMarkers - checks frontend clock setup form and display markers
 func TestFrontendClockSetup_FormAndDisplayMarkers(t *testing.T) {
 	source := loadChessCommandSource(t)
 	for _, snippet := range []string{

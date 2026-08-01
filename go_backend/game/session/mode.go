@@ -1,2 +1,0 @@
-// mode.go
-package session

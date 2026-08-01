@@ -2,13 +2,13 @@ package movement
 
 import pieces "go_backend/game/piece"
 
-// XiangqiWouldLeaveGeneralInCheck reports whether applying from→to leaves mover's general
-// attacked or creates a flying-general face-off.
+// XiangqiWouldLeaveGeneralInCheck - reports whether applying from→to leaves mover's general attacked or creates a flying-general face-off
 func XiangqiWouldLeaveGeneralInCheck(source pieces.ChessPiece, fromFile, fromRank, toFile, toRank int) bool {
 	after := simulateXiangqiMove(pieces.ChessPieces, fromFile, fromRank, toFile, toRank)
 	return xiangqiGeneralInCheckOnBoard(after, source.Color) || xiangqiFlyingGeneral(after)
 }
 
+// simulateXiangqiMove - simulates xiangqi move
 func simulateXiangqiMove(board []pieces.ChessPiece, fromFile, fromRank, toFile, toRank int) []pieces.ChessPiece {
 	cloned := append([]pieces.ChessPiece(nil), board...)
 	srcIdx := -1
@@ -35,6 +35,7 @@ func simulateXiangqiMove(board []pieces.ChessPiece, fromFile, fromRank, toFile, 
 	return cloned
 }
 
+// xiangqiGeneralInCheckOnBoard - reports xiangqi general in check on board
 func xiangqiGeneralInCheckOnBoard(board []pieces.ChessPiece, color pieces.PieceColor) bool {
 	gf, gr, ok := findGeneral(board, color)
 	if !ok {
@@ -47,6 +48,7 @@ func xiangqiGeneralInCheckOnBoard(board []pieces.ChessPiece, color pieces.PieceC
 	return xiangqiSquareAttackedOnBoard(board, gf, gr, attacker)
 }
 
+// findGeneral - finds general
 func findGeneral(board []pieces.ChessPiece, color pieces.PieceColor) (int, int, bool) {
 	for _, p := range board {
 		if p.Kind == pieces.King && p.Color == color {
@@ -56,7 +58,7 @@ func findGeneral(board []pieces.ChessPiece, color pieces.PieceColor) (int, int, 
 	return 0, 0, false
 }
 
-// XiangqiCheckedColor returns the side in check under Xiangqi rules, if any.
+// XiangqiCheckedColor - returns the side in check under Xiangqi rules, if any
 func XiangqiCheckedColor() pieces.PieceColor {
 	if xiangqiGeneralInCheckOnBoard(pieces.ChessPieces, pieces.White) {
 		return pieces.White
@@ -67,7 +69,7 @@ func XiangqiCheckedColor() pieces.PieceColor {
 	return ""
 }
 
-// Flying general: same file, no pieces between the two kings.
+// xiangqiFlyingGeneral - flying general: same file, no pieces between the two kings
 func xiangqiFlyingGeneral(board []pieces.ChessPiece) bool {
 	wf, wr, wok := findGeneral(board, pieces.White)
 	bf, br, bok := findGeneral(board, pieces.Black)
@@ -86,6 +88,7 @@ func xiangqiFlyingGeneral(board []pieces.ChessPiece) bool {
 	return true
 }
 
+// xiangqiSquareAttackedOnBoard - reports xiangqi square attacked on board
 func xiangqiSquareAttackedOnBoard(board []pieces.ChessPiece, file, rank int, attacker pieces.PieceColor) bool {
 	saved := pieces.ChessPieces
 	pieces.ChessPieces = board

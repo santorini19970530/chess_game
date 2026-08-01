@@ -9,7 +9,7 @@ import (
 	sessionpkg "go_backend/game/session"
 )
 
-// GetLegalMoves returns legal destination squares for a selected source square.
+// GetLegalMoves - returns legal destination squares for a selected source square
 func (h *Handler) GetLegalMoves(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)

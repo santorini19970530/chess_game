@@ -2,8 +2,7 @@ package simulation
 
 import "sort"
 
-// PercentileMs returns the nearest-rank percentile of duration values (ms).
-// p is 0..100. Empty input returns 0.
+// PercentileMs - returns the nearest-rank percentile of duration values (ms). p is 0..100. empty input returns 0
 func PercentileMs(values []int64, p int) int64 {
 	if len(values) == 0 {
 		return 0
@@ -29,7 +28,7 @@ func PercentileMs(values []int64, p int) int64 {
 	return cp[idx-1]
 }
 
-// MeanMs returns the arithmetic mean of duration values (ms).
+// MeanMs - returns the arithmetic mean of duration values (ms)
 func MeanMs(values []int64) float64 {
 	if len(values) == 0 {
 		return 0

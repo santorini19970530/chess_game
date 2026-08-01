@@ -1,6 +1,6 @@
 package command
 
-// ParsedCommand is a lightweight parsed command model.
+// parsedCommand is a lightweight parsed command model
 type ParsedCommand struct {
 	Raw       string
 	Normalized string

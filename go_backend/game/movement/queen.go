@@ -3,7 +3,7 @@
 
 package movement
 
-// QueenStrategy handles queen movement rules
+// queenStrategy handles queen movement rules
 type QueenStrategy struct{}
 
 // Name - returns the name of the queen strategy

@@ -11,6 +11,7 @@ import (
 	sessionpkg "go_backend/game/session"
 )
 
+// TestAPIGameMove_DoesNotMutateOtherGame - checks api game move does not mutate other game
 func TestAPIGameMove_DoesNotMutateOtherGame(t *testing.T) {
 	h := NewHandler()
 	gameA, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")
@@ -51,6 +52,7 @@ func TestAPIGameMove_DoesNotMutateOtherGame(t *testing.T) {
 	}
 }
 
+// TestAPIGameConfigRoute_UpdatesOnlyTargetGame - checks api game config route updates only target game
 func TestAPIGameConfigRoute_UpdatesOnlyTargetGame(t *testing.T) {
 	h := NewHandler()
 	gameA, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")
@@ -90,6 +92,7 @@ func TestAPIGameConfigRoute_UpdatesOnlyTargetGame(t *testing.T) {
 	}
 }
 
+// TestAPIGameNewRoute_CreatesFreshGameSnapshot - checks api game new route creates fresh game snapshot
 func TestAPIGameNewRoute_CreatesFreshGameSnapshot(t *testing.T) {
 	h := NewHandler()
 	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")
@@ -124,6 +127,7 @@ func TestAPIGameNewRoute_CreatesFreshGameSnapshot(t *testing.T) {
 	}
 }
 
+// TestAPIGameNewRoute_RespectsTypeDropdown - checks api game new route respects type dropdown
 func TestAPIGameNewRoute_RespectsTypeDropdown(t *testing.T) {
 	h := NewHandler()
 	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")
@@ -153,6 +157,7 @@ func TestAPIGameNewRoute_RespectsTypeDropdown(t *testing.T) {
 	}
 }
 
+// TestAPIGameFlagRoute_SetsTerminalResult - checks api game flag route sets terminal result
 func TestAPIGameFlagRoute_SetsTerminalResult(t *testing.T) {
 	h := NewHandler()
 	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")
@@ -191,6 +196,7 @@ func TestAPIGameFlagRoute_SetsTerminalResult(t *testing.T) {
 	}
 }
 
+// TestAPIGameMove_XiangqiAcceptsFileI - checks api game move xiangqi accepts file i
 func TestAPIGameMove_XiangqiAcceptsFileI(t *testing.T) {
 	// Chess UCI parser is a-h/1-8 only; i4i5 must still reach Xiangqi apply.
 	h := NewHandler()
@@ -231,6 +237,7 @@ func TestAPIGameMove_XiangqiAcceptsFileI(t *testing.T) {
 	}
 }
 
+// TestAPIGameMove_XiangqiAcceptsRank10 - checks api game move xiangqi accepts rank10
 func TestAPIGameMove_XiangqiAcceptsRank10(t *testing.T) {
 	h := NewHandler()
 	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeXiangqi, "white", 1, "", "intermediate")
@@ -250,6 +257,7 @@ func TestAPIGameMove_XiangqiAcceptsRank10(t *testing.T) {
 	}
 }
 
+// TestAPIGameMove_ShogiAcceptsDrop - checks api game move shogi accepts drop
 func TestAPIGameMove_ShogiAcceptsDrop(t *testing.T) {
 	h := NewHandler()
 	fen := "4k4/9/9/9/9/9/9/9/4K4[P] w - - 0 1"
@@ -282,6 +290,7 @@ func TestAPIGameMove_ShogiAcceptsDrop(t *testing.T) {
 	}
 }
 
+// TestAPIGameLegalMoves_ShogiDropKind - checks api game legal moves shogi drop kind
 func TestAPIGameLegalMoves_ShogiDropKind(t *testing.T) {
 	h := NewHandler()
 	fen := "4k4/9/9/9/9/9/9/9/4K4[P] w - - 0 1"
@@ -310,6 +319,7 @@ func TestAPIGameLegalMoves_ShogiDropKind(t *testing.T) {
 	}
 }
 
+// TestAPIGameLegalMovesRoute_ReturnsMovesForCurrentTurnPiece - checks api game legal moves route returns moves for current turn piece
 func TestAPIGameLegalMovesRoute_ReturnsMovesForCurrentTurnPiece(t *testing.T) {
 	h := NewHandler()
 	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")
@@ -345,6 +355,7 @@ func TestAPIGameLegalMovesRoute_ReturnsMovesForCurrentTurnPiece(t *testing.T) {
 	}
 }
 
+// TestAPIGameLatestAnalysisRoute_ReturnsStatusShape - checks api game latest analysis route returns status shape
 func TestAPIGameLatestAnalysisRoute_ReturnsStatusShape(t *testing.T) {
 	h := NewHandler()
 	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")

@@ -9,6 +9,7 @@ import (
 	"net/http"
 )
 
+// main - starts the go http server for the chess game backend
 func main() {
 	// initialize handler and router
 	h := handlers.NewHandler()

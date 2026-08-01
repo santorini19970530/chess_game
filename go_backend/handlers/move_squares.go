@@ -12,12 +12,13 @@ import (
 	sessionpkg "go_backend/game/session"
 )
 
-// Fairy / Xiangqi / Shogi UCI: files a-i, ranks 1-10 (optional trailing '+' for shogi promote).
+// fairy / Xiangqi / Shogi UCI: files a-i, ranks 1-10 (optional trailing '+' for shogi promote).
 var variantUCIPattern = regexp.MustCompile(`^([a-i])([0-9]{1,2})([a-i])([0-9]{1,2})\+?$`)
 
-// Shogi drop: P*e5 / p@e5 (piece letter + *|@ + square). from is empty.
+// shogi drop: P*e5 / p@e5 (piece letter + *|@ + square). from is empty.
 var variantDropPattern = regexp.MustCompile(`^[plnsgbr][*@]([a-i])([1-9])$`)
 
+// parseVariantUCISquares - parses variant uci squares
 func parseVariantUCISquares(move string) (fromFile string, fromRank int, toFile string, toRank int, err error) {
 	move = strings.ToLower(strings.TrimSpace(move))
 	m := variantUCIPattern.FindStringSubmatch(move)
@@ -35,6 +36,7 @@ func parseVariantUCISquares(move string) (fromFile string, fromRank int, toFile 
 	return m[1], fromRank, m[3], toRank, nil
 }
 
+// parseVariantDropSquares - parses variant drop squares
 func parseVariantDropSquares(move string) (toFile string, toRank int, ok bool) {
 	move = strings.ToLower(strings.TrimSpace(move))
 	m := variantDropPattern.FindStringSubmatch(move)
@@ -48,8 +50,7 @@ func parseVariantDropSquares(move string) (toFile string, toRank int, ok bool) {
 	return m[1], rank, true
 }
 
-// resolveMoveSquares validates command shape before ApplyMove.
-// Chess keeps the a-h/1-8 (+ SAN) parser; Xiangqi/Shogi skip it (file i / rank 10).
+// resolveMoveSquares - validates command shape before ApplyMove. chess keeps the a-h/1-8 (+ SAN) parser; Xiangqi/Shogi skip it (file i / rank 10)
 func resolveMoveSquares(
 	gameType sessionpkg.GameType, commandText string, expectedColor pieces.PieceColor,
 ) (fromFile string, fromRank int, toFile string, toRank int, err error) {

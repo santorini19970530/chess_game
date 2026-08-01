@@ -1,10 +1,12 @@
 package movement
 
-// XiangqiAdvisorStrategy — one diagonal step inside the palace.
+// xiangqiAdvisorStrategy - one diagonal step inside the palace
 type XiangqiAdvisorStrategy struct{}
 
+// Name - returns the piece strategy name
 func (XiangqiAdvisorStrategy) Name() string { return "XiangqiAdvisor" }
 
+// LegalMoves - returns legal destinations for this piece from the square
 func (XiangqiAdvisorStrategy) LegalMoves(board any, from any) []any {
 	ctx, ok := board.(MovementBoard)
 	if !ok {

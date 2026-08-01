@@ -9,6 +9,7 @@ import (
 	pieces "go_backend/game/piece"
 )
 
+// TestArchiveActiveGameIfNeeded_WritesJSONSnapshot - checks archive active game if needed writes json snapshot
 func TestArchiveActiveGameIfNeeded_WritesJSONSnapshot(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -78,6 +79,7 @@ func TestArchiveActiveGameIfNeeded_WritesJSONSnapshot(t *testing.T) {
 	}
 }
 
+// TestArchiveActiveGameIfNeeded_IncludesFlaggedByInHistory - checks archive active game if needed includes flagged by in history
 func TestArchiveActiveGameIfNeeded_IncludesFlaggedByInHistory(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -111,8 +113,7 @@ func TestArchiveActiveGameIfNeeded_IncludesFlaggedByInHistory(t *testing.T) {
 	}
 }
 
-// TestNewUniqueGameID_RapidCreationYieldsDistinctIDs verifies that many games created
-// in quick succession all receive distinct IDs (covers the strengthened ID generator).
+// TestNewUniqueGameID_RapidCreationYieldsDistinctIDs - verifies that many games created in quick succession all receive distinct IDs (covers the strengthened ID generator)
 func TestNewUniqueGameID_RapidCreationYieldsDistinctIDs(t *testing.T) {
 	resetGameSessionForTest()
 	ids := make(map[string]bool)
@@ -132,8 +133,7 @@ func TestNewUniqueGameID_RapidCreationYieldsDistinctIDs(t *testing.T) {
 	}
 }
 
-// TestArchiveActiveGameIfNeeded_DoesNotDuplicateOnSecondCall ensures the archive
-// logic (guarded by the Archived flag) never writes the same game ID twice.
+// TestArchiveActiveGameIfNeeded_DoesNotDuplicateOnSecondCall - ensures the archive logic (guarded by the Archived flag) never writes the same game ID twice
 func TestArchiveActiveGameIfNeeded_DoesNotDuplicateOnSecondCall(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()

@@ -8,7 +8,7 @@ import (
 	pieces "go_backend/game/piece"
 )
 
-// applyXiangqiFENToCurrentGlobals sets BoardFEN, piece list, and side-to-move from a Xiangqi FEN.
+// applyXiangqiFENToCurrentGlobals - sets BoardFEN, piece list, and side-to-move from a Xiangqi FEN
 func applyXiangqiFENToCurrentGlobals(fen string) error {
 	parts := strings.Fields(strings.TrimSpace(fen))
 	if len(parts) < 2 {
@@ -33,6 +33,7 @@ func applyXiangqiFENToCurrentGlobals(fen string) error {
 	return nil
 }
 
+// parseXiangqiFENBoard - parses xiangqi fen board
 func parseXiangqiFENBoard(boardPart string) ([]pieces.ChessPiece, error) {
 	ranks := strings.Split(boardPart, "/")
 	if len(ranks) != 10 {
@@ -69,6 +70,7 @@ func parseXiangqiFENBoard(boardPart string) ([]pieces.ChessPiece, error) {
 	return out, nil
 }
 
+// xiangqiPieceFromChar - performs xiangqi piece from char
 func xiangqiPieceFromChar(ch rune) (pieces.PieceKind, pieces.PieceColor, bool) {
 	color := pieces.White
 	if unicode.IsLower(ch) {
@@ -94,6 +96,7 @@ func xiangqiPieceFromChar(ch rune) (pieces.PieceKind, pieces.PieceColor, bool) {
 	}
 }
 
+// xiangqiCharFromPiece - performs xiangqi char from piece
 func xiangqiCharFromPiece(kind pieces.PieceKind, color pieces.PieceColor) (byte, bool) {
 	var ch byte
 	switch kind {
@@ -120,7 +123,7 @@ func xiangqiCharFromPiece(kind pieces.PieceKind, color pieces.PieceColor) (byte,
 	return ch, true
 }
 
-// exportXiangqiFEN builds FEN from current pieces + side to move.
+// exportXiangqiFEN - builds FEN from current pieces + side to move
 func exportXiangqiFEN() string {
 	type cell struct {
 		kind  pieces.PieceKind
@@ -167,6 +170,7 @@ func exportXiangqiFEN() string {
 	return fmt.Sprintf("%s %s - - 0 %d", placement.String(), active, fullmove)
 }
 
+// syncXiangqiBoardFEN - syncs xiangqi board fen
 func syncXiangqiBoardFEN() {
 	boardFEN = exportXiangqiFEN()
 }

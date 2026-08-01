@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// TestApplyMove_RejectsWhenGameAlreadyFlagged - checks apply move rejects when game already flagged
 func TestApplyMove_RejectsWhenGameAlreadyFlagged(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -21,6 +22,7 @@ func TestApplyMove_RejectsWhenGameAlreadyFlagged(t *testing.T) {
 	}
 }
 
+// TestApplyMove_ClockTimeoutFlagsBeforeMove - checks apply move clock timeout flags before move
 func TestApplyMove_ClockTimeoutFlagsBeforeMove(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -62,6 +64,7 @@ func TestApplyMove_ClockTimeoutFlagsBeforeMove(t *testing.T) {
 	}
 }
 
+// TestApplyMove_AwardsIncrementAfterLegalMove - checks apply move awards increment after legal move
 func TestApplyMove_AwardsIncrementAfterLegalMove(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()

@@ -20,10 +20,12 @@ import (
 	sessionpkg "go_backend/game/session"
 )
 
+// http client for the analyzer
 var pyAnalyzerHTTPClient = &http.Client{
 	Timeout: 0,
 }
 
+// request to the analyzer
 type analyzerRequest struct {
 	RequestID string `json:"request_id"`
 	FEN       string `json:"fen"`
@@ -32,7 +34,7 @@ type analyzerRequest struct {
 	GameType  string `json:"game_type,omitempty"`
 }
 
-// explainRequest mirrors the payload expected by Python /explain.
+// explainRequest mirrors the payload expected by Python /explain
 type explainRequest struct {
 	RequestID    string   `json:"request_id"`
 	FEN          string   `json:"fen"`
@@ -47,13 +49,12 @@ type explainRequest struct {
 	Quick        bool     `json:"quick,omitempty"` // instant ground-truth line (no Ollama)
 }
 
-// explainSkillLevelFromProfile maps AI strength (4 levels) → explain skill_level (3).
+// explainSkillLevelFromProfile - maps AI strength (4 levels) → explain skill_level (3)
 func explainSkillLevelFromProfile(profile string) string {
 	return sessionpkg.SkillLevelFromAIProfile(profile)
 }
 
-// conceptHintsFromAnalysis builds at most 3 short cues for the explain prompt (issue0047).
-// Missing fields are skipped; never blocks explain.
+// conceptHintsFromAnalysis - builds at most 3 short cues for the explain prompt (issue0047). missing fields are skipped; never blocks explain
 func conceptHintsFromAnalysis(a analyzerResponse) []string {
 	hints := make([]string, 0, 3)
 	if t := strings.TrimSpace(a.ThreatSummary); t != "" {
@@ -116,8 +117,7 @@ func conceptHintsFromAnalysis(a analyzerResponse) []string {
 	return hints
 }
 
-// conceptHintsForExplain only uses analysis for this exact FEN.
-// Stale MultiPV from the previous ply must not cue the coach (mismatch with Suggested moves).
+// conceptHintsForExplain - only uses analysis for this exact FEN. stale MultiPV from the previous ply must not cue the coach (mismatch with Suggested moves)
 func conceptHintsForExplain(latest latestAnalysisState, fen string) []string {
 	analysisFEN := strings.TrimSpace(latest.Analysis.FEN)
 	if analysisFEN == "" || analysisFEN != strings.TrimSpace(fen) {
@@ -126,9 +126,7 @@ func conceptHintsForExplain(latest latestAnalysisState, fen string) []string {
 	return conceptHintsFromAnalysis(latest.Analysis)
 }
 
-// explainHintWait returns how long explain may wait for same-FEN analysis cues.
-// Default 0: do not delay coach for MultiPV (moves stay snappy; ground truth still in Python).
-// Set EXPLAIN_HINT_WAIT_MS (e.g. 3000) if you prefer cues over speed.
+// explainHintWait - returns how long explain may wait for same-fen analysis cues (default 0)
 func explainHintWait() time.Duration {
 	raw := strings.TrimSpace(os.Getenv("EXPLAIN_HINT_WAIT_MS"))
 	if raw == "" {
@@ -144,8 +142,7 @@ func explainHintWait() time.Duration {
 	return time.Duration(ms) * time.Millisecond
 }
 
-// waitConceptHintsForFEN peeks (and optionally polls) for same-FEN analysis cues.
-// Never blocks the game HTTP thread — only the explain goroutine.
+// waitConceptHintsForFEN - peeks (and optionally polls) for same-FEN analysis cues. never blocks the game HTTP thread — only the explain goroutine
 func waitConceptHintsForFEN(gameID, fen string, timeout time.Duration) []string {
 	fen = strings.TrimSpace(fen)
 	peek := func() []string {
@@ -182,6 +179,7 @@ type explainResponse struct {
 	ConceptHints []string `json:"concept_hints,omitempty"`
 }
 
+// job to analyze the current position
 type analysisJob struct {
 	GameID          string
 	MoveNumber      int
@@ -190,6 +188,7 @@ type analysisJob struct {
 	EnqueueQueueLen int
 }
 
+// suggested move from the analyzer
 type analyzerSuggestedMove struct {
 	Rank  int    `json:"rank"`
 	UCI   string `json:"uci"`
@@ -197,6 +196,7 @@ type analyzerSuggestedMove struct {
 	Score int    `json:"score"`
 }
 
+// response from the analyzer
 type analyzerResponse struct {
 	RequestID      string                  `json:"request_id"`
 	Status         string                  `json:"status"`
@@ -216,13 +216,14 @@ type analyzerResponse struct {
 	LatencyMS      int                     `json:"latency_ms"`
 }
 
+// record of the move analysis
 type moveAnalysisRecord struct {
 	MoveNumber int              `json:"move_number"`
 	Command    string           `json:"command"`
 	Analysis   analyzerResponse `json:"analysis"`
 }
 
-// moveExplanationRecord is coach evidence for report / QA (issue0047–0048).
+// moveExplanationRecord is coach evidence for report / QA
 type moveExplanationRecord struct {
 	MoveNumber   int      `json:"move_number"`
 	MoveUCI      string   `json:"move_uci"`
@@ -236,6 +237,7 @@ type moveExplanationRecord struct {
 	RecordedAt   string   `json:"recorded_at"`
 }
 
+// latest analysis state
 type latestAnalysisState struct {
 	GameID     string           `json:"game_id"`
 	MoveNumber int              `json:"move_number"`
@@ -244,6 +246,7 @@ type latestAnalysisState struct {
 	UpdatedAt  string           `json:"updated_at"`
 }
 
+// latest analysis status
 type analysisLatestStatus struct {
 	GameID              string               `json:"game_id"`
 	RequestedMoveNumber int                  `json:"requested_move_number"`
@@ -253,12 +256,14 @@ type analysisLatestStatus struct {
 	Latest              *latestAnalysisState `json:"latest,omitempty"`
 }
 
+// error from the analyzer call
 type analyzerCallError struct {
 	Kind       string
 	HTTPStatus int
 	Err        error
 }
 
+// Error - returns the error message
 func (e *analyzerCallError) Error() string {
 	if e == nil || e.Err == nil {
 		return "analyzer call error"
@@ -266,6 +271,7 @@ func (e *analyzerCallError) Error() string {
 	return e.Err.Error()
 }
 
+// Unwrap - returns the wrapped error
 func (e *analyzerCallError) Unwrap() error {
 	if e == nil {
 		return nil
@@ -273,6 +279,7 @@ func (e *analyzerCallError) Unwrap() error {
 	return e.Err
 }
 
+// log event for the analyzer
 type analysisLogEvent struct {
 	Event               string `json:"event"`
 	GameID              string `json:"game_id"`
@@ -293,6 +300,7 @@ type analysisLogEvent struct {
 	BestMoveUCI         string `json:"best_move_uci,omitempty"`
 }
 
+// global variables for the analyzer
 var (
 	moveAnalysisByGame      = map[string][]moveAnalysisRecord{}
 	moveExplanationByGame   = map[string][]moveExplanationRecord{}
@@ -305,10 +313,11 @@ var (
 	analysisStoreMu         sync.Mutex
 	analysisQueue           = make(chan analysisJob, 128)
 	analysisWorkerOnce      sync.Once
-	// One Ollama /explain at a time — unbounded goroutines melt the machine late-game.
+	// one Ollama /explain at a time — unbounded goroutines melt the machine late-game.
 	explainOllamaSem = make(chan struct{}, 1)
 )
 
+// error kinds for the analyzer
 const (
 	analysisErrorKindNone        = "none"
 	analysisErrorKindTimeout     = "timeout"
@@ -318,6 +327,7 @@ const (
 	analysisErrorKindOther       = "other"
 )
 
+// analyzerBaseURL - returns the base URL for the analyzer
 func analyzerBaseURL() string {
 	v := os.Getenv("PY_ANALYSER_URL")
 	if v == "" {
@@ -326,6 +336,7 @@ func analyzerBaseURL() string {
 	return v
 }
 
+// analyzerRequestTimeout - returns the http timeout for analyzer calls
 func analyzerRequestTimeout() time.Duration {
 	raw := strings.TrimSpace(os.Getenv("PY_ANALYSER_TIMEOUT_MS"))
 	if raw == "" {
@@ -338,11 +349,13 @@ func analyzerRequestTimeout() time.Duration {
 	return time.Duration(timeoutMS) * time.Millisecond
 }
 
+// analyzerUserSafeError - maps an analyzer error to a user-safe message
 func analyzerUserSafeError(err error) string {
 	kind, _ := analyzerErrorDetails(err)
 	return analyzerUserSafeErrorByKind(kind)
 }
 
+// analyzerUserSafeErrorByKind - maps an analyzer error kind to a user-safe message
 func analyzerUserSafeErrorByKind(kind string) string {
 	switch kind {
 	case analysisErrorKindTimeout:
@@ -360,6 +373,7 @@ func analyzerUserSafeErrorByKind(kind string) string {
 	}
 }
 
+// analyzerErrorDetails - builds structured analyzer error details for logs
 func analyzerErrorDetails(err error) (string, int) {
 	if err == nil {
 		return analysisErrorKindNone, 0
@@ -385,6 +399,7 @@ func analyzerErrorDetails(err error) (string, int) {
 	return analysisErrorKindOther, 0
 }
 
+// emitAnalysisLog - emits analysis log
 func emitAnalysisLog(entry analysisLogEvent) {
 	if strings.TrimSpace(entry.ErrorKind) == "" {
 		entry.ErrorKind = analysisErrorKindNone
@@ -400,6 +415,7 @@ func emitAnalysisLog(entry analysisLogEvent) {
 	log.Print(string(raw))
 }
 
+// analyzeByRequest - posts one /analyze request to the python service
 func analyzeByRequest(reqPayload analyzerRequest) (*analyzerResponse, error) {
 	body, err := json.Marshal(reqPayload)
 	if err != nil {
@@ -446,19 +462,19 @@ func analyzeByRequest(reqPayload analyzerRequest) (*analyzerResponse, error) {
 		}
 	}
 
-	// Printed for testing as requested.
+	// printed for testing as requested.
 	log.Printf("analyzer response: %s", string(respBody))
 	return &parsed, nil
 }
 
-// explainByRequest performs a POST to the Python /explain endpoint.
+// explainByRequest - performs a POST to the Python /explain endpoint
 func explainByRequest(reqPayload explainRequest) (*explainResponse, error) {
 	body, err := json.Marshal(reqPayload)
 	if err != nil {
 		return nil, fmt.Errorf("explain request marshal failed: %w", err)
 	}
 
-	// Use a slightly longer timeout than analysis because LLM generation can be slower.
+	// use a slightly longer timeout than analysis because LLM generation can be slower.
 	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
 	defer cancel()
 
@@ -507,6 +523,7 @@ func explainByRequest(reqPayload explainRequest) (*explainResponse, error) {
 	return &parsed, nil
 }
 
+// noteExplainRequest - records that an explain should follow analysis for this fen
 func noteExplainRequest(gameID string, moveNumber int) {
 	analysisStoreMu.Lock()
 	defer analysisStoreMu.Unlock()
@@ -515,12 +532,14 @@ func noteExplainRequest(gameID string, moveNumber int) {
 	}
 }
 
+// isExplainStale - reports whether explain stale
 func isExplainStale(gameID string, moveNumber int) bool {
 	analysisStoreMu.Lock()
 	defer analysisStoreMu.Unlock()
 	return moveNumber < explainLatestByGame[gameID]
 }
 
+// StartAnalyzerWorker - starts analyzer worker
 func StartAnalyzerWorker() {
 	analysisWorkerOnce.Do(func() {
 		go analysisWorkerLoop()
@@ -528,6 +547,7 @@ func StartAnalyzerWorker() {
 	})
 }
 
+// analysisWorkerLoop - drains the analysis queue and runs analyze/explain jobs
 func analysisWorkerLoop() {
 	for job := range analysisQueue {
 		startedAt := time.Now()
@@ -570,7 +590,7 @@ func analysisWorkerLoop() {
 				HTTPStatus:          httpStatus,
 			})
 			log.Printf("warning: analyzer job failed game_id=%s move=%d: %v", job.GameID, job.MoveNumber, err)
-			// Still coach the move (without MultiPV cues) so notes are not silent on analyzer failure.
+			// still coach the move (without MultiPV cues) so notes are not silent on analyzer failure.
 			if shouldExplainCommand(job.Command) {
 				enqueueExplanation(job.GameID, job.Command, job.Command)
 			}
@@ -604,7 +624,7 @@ func analysisWorkerLoop() {
 			continue
 		}
 		recordMoveAnalysisForGame(job.GameID, job.MoveNumber, job.Command, *result)
-		// Explain after MultiPV is cached for this FEN → non-empty concept_hints aligned with Suggested moves.
+		// explain after MultiPV is cached for this FEN → non-empty concept_hints aligned with Suggested moves.
 		if shouldExplainCommand(job.Command) {
 			enqueueExplanation(job.GameID, job.Command, job.Command)
 		}
@@ -636,6 +656,7 @@ func analysisWorkerLoop() {
 	}
 }
 
+// enqueueCurrentPositionAnalysis - enqueues current position analysis
 func enqueueCurrentPositionAnalysis(gameID, command string) {
 	gameType := "chess"
 	if game, err := sessionpkg.GetGameSessionByID(gameID); err == nil && string(game.Type) != "" {
@@ -730,6 +751,7 @@ func enqueueCurrentPositionAnalysis(gameID, command string) {
 	}
 }
 
+// recordMoveAnalysis - records move analysis
 func recordMoveAnalysis(command string, result analyzerResponse) {
 	game := sessionpkg.GetGameSession()
 	history := sessionpkg.GetMoveHistory()
@@ -737,16 +759,13 @@ func recordMoveAnalysis(command string, result analyzerResponse) {
 	recordMoveAnalysisForGame(game.ID, moveNumber, command, result)
 }
 
+// shouldExplainCommand - reports whether this move should trigger coach explain
 func shouldExplainCommand(command string) bool {
 	c := strings.TrimSpace(strings.ToLower(command))
 	return c != "" && c != "flag"
 }
 
-// enqueueExplanation calls the Python /explain endpoint asynchronously (non-blocking).
-// Prefer calling this after analysis is recorded so concept_hints match Suggested moves.
-// On success it broadcasts a dedicated "explanation_ready" socket event.
-// Any failure (Ollama down, timeout, etc.) is silently ignored so the game is never affected.
-// Ollama is single-flight + stale-skipped so late-game ply storms cannot wedge the machine/UI.
+// enqueueExplanation - calls python /explain asynchronously after analysis cues are ready for the same fen
 func enqueueExplanation(gameID, moveUCI, moveSAN string) {
 	go func() {
 		gameType := "chess"
@@ -855,12 +874,14 @@ func enqueueExplanation(gameID, moveUCI, moveSAN string) {
 	}()
 }
 
+// recordMoveExplanationForGame - records move explanation for game
 func recordMoveExplanationForGame(gameID string, entry moveExplanationRecord) {
 	analysisStoreMu.Lock()
 	defer analysisStoreMu.Unlock()
 	moveExplanationByGame[gameID] = append(moveExplanationByGame[gameID], entry)
 }
 
+// recordMoveAnalysisForGame - records move analysis for game
 func recordMoveAnalysisForGame(gameID string, moveNumber int, command string, result analyzerResponse) {
 	analysisStoreMu.Lock()
 	defer analysisStoreMu.Unlock()
@@ -879,6 +900,7 @@ func recordMoveAnalysisForGame(gameID string, moveNumber int, command string, re
 	}
 }
 
+// getLatestAnalysisByGameID - returns the latest analysis payload for a game
 func getLatestAnalysisByGameID(gameID string) (latestAnalysisState, bool) {
 	analysisStoreMu.Lock()
 	defer analysisStoreMu.Unlock()
@@ -886,6 +908,7 @@ func getLatestAnalysisByGameID(gameID string) (latestAnalysisState, bool) {
 	return entry, ok
 }
 
+// getLatestAnalysisStatusByGameID - returns latest analysis status metadata for a game
 func getLatestAnalysisStatusByGameID(gameID string) analysisLatestStatus {
 	analysisStoreMu.Lock()
 	defer analysisStoreMu.Unlock()
@@ -903,6 +926,7 @@ func getLatestAnalysisStatusByGameID(gameID string) analysisLatestStatus {
 	return status
 }
 
+// exportGameAnalysisIfNeeded - exports game analysis if needed
 func exportGameAnalysisIfNeeded(game sessionpkg.GameSession) {
 	if game.Result == sessionpkg.GameResultInProgress {
 		return
@@ -955,6 +979,7 @@ func exportGameAnalysisIfNeeded(game sessionpkg.GameSession) {
 	log.Printf("analysis export saved: %s", outputPath)
 }
 
+// historyByGameID - history by game id
 func historyByGameID(gameID string) []string {
 	history, err := sessionpkg.MoveHistoryByID(gameID)
 	if err != nil {

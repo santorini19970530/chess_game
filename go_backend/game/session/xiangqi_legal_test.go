@@ -4,6 +4,7 @@ import (
 	"testing"
 )
 
+// TestXiangqiLegalMoves_AllAndPerSquare - checks xiangqi legal moves all and per square
 func TestXiangqiLegalMoves_AllAndPerSquare(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()

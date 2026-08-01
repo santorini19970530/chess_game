@@ -12,7 +12,7 @@ import (
 	sessionpkg "go_backend/game/session"
 )
 
-// Clock acceptance: TC create, increment, flag-on-timeout, clock-off unchanged, time-aware go.
+// TestClock_Acceptance - clock acceptance: TC create, increment, flag-on-timeout, clock-off unchanged, time-aware go
 func TestClock_Acceptance(t *testing.T) {
 	t.Run("clock_off_create_unchanged", func(t *testing.T) {
 		h := NewHandler()

@@ -4,7 +4,7 @@
 
 package pieces
 
-// ChessPiece stores piece type, image file, and board position, for each chess piece
+// chessPiece stores piece type, image file, and board position, for each chess piece
 type ChessPiece struct {
 	Color   PieceColor
 	Kind    PieceKind
@@ -13,7 +13,7 @@ type ChessPiece struct {
 	Rank    int
 }
 
-// moving chess pieces
+// Move - moving chess pieces
 func (p *ChessPiece) Move(file int, rank int) {
 	p.File = file
 	p.Rank = rank

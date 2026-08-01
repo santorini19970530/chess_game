@@ -10,6 +10,7 @@ import (
 	"go_backend/game/engine"
 )
 
+// TestShogiHumanVsAI_OneMoveCycle - checks shogi human vs ai one move cycle
 func TestShogiHumanVsAI_OneMoveCycle(t *testing.T) {
 	bin := os.Getenv("FAIRY_STOCKFISH_PATH")
 	if bin == "" {
@@ -105,6 +106,7 @@ func TestShogiHumanVsAI_OneMoveCycle(t *testing.T) {
 	}
 }
 
+// normalizeShogiUCI - normalizes shogi uci
 func normalizeShogiUCI(raw string) string {
 	s := strings.TrimSpace(raw)
 	if s == "" {

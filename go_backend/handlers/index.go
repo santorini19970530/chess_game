@@ -1,6 +1,5 @@
 // CM3070 FP code
 // index.go - game playing page
-// index page is having chess board (handle in issue 1), chess pieces (handle in issue 2), and other elements (to be handled later)
 
 package handlers
 
@@ -17,6 +16,7 @@ import (
 	"strings"
 )
 
+// gameStateResponse - status of the game that share with the frontend
 type gameStateResponse struct {
 	CurrentTurn     string                        `json:"currentTurn"`
 	CheckedSide     string                        `json:"checkedSide"`
@@ -28,15 +28,14 @@ type gameStateResponse struct {
 	State           []sessionpkg.PieceState       `json:"state"`
 }
 
-// generateChessBoard builds the chessboard html for the index page
-// game state integration (gameSession) will be added later.
+// generateChessBoard - builds the chessboard html for the index page
 func generateChessBoard() template.HTML {
 	gameBoard := chessboard.NewChessBoard()
 
 	return gameBoard.Draw()
 }
 
-// Index renders the main game page template
+// Index - renders the main game page template
 func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	// reject non-root paths
 	if r.URL.Path != "/" {
@@ -88,7 +87,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	mainHTMLCode.WriteString(`<select id="coach_level" title="Explanation skill level (independent of AI strength)"><option value="beginner">Beginner</option><option value="intermediate" selected>Intermediate</option><option value="advanced">Advanced</option></select>`)
 	mainHTMLCode.WriteString(`<label for="fen_input">Starting FEN (optional)</label>`)
 	mainHTMLCode.WriteString(`<textarea id="fen_input" rows="3" placeholder="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>`)
-	// Clock setup: seconds in the form; JS converts to ms for the API.
+	// clock setup: seconds in the form; JS converts to ms for the API.
 	mainHTMLCode.WriteString(`<div class="config_clock_enable">`)
 	mainHTMLCode.WriteString(`<label for="clock_enabled">Clock</label>`)
 	mainHTMLCode.WriteString(`<input id="clock_enabled" type="checkbox" title="Off = unlimited time" />`)
@@ -241,6 +240,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// NewGame - archives the current game and starts a new session from form setup
 func (h *Handler) NewGame(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
@@ -266,7 +266,7 @@ func (h *Handler) NewGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse form to allow "New Game" to respect current dropdown selections
+	// parse form to allow "New Game" to respect current dropdown selections
 	// without requiring the user to click "Apply Setup" first.
 	if err := r.ParseForm(); err == nil {
 		if m := r.FormValue("mode"); m != "" {
@@ -290,7 +290,7 @@ func (h *Handler) NewGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Auto-play first AI move if human is Black (use the new game's config)
+	// auto-play first AI move if human is Black (use the new game's config)
 	if game.Mode == sessionpkg.GameModeHumanVsAI && strings.ToLower(game.Config.HumanColor) == "black" && game.Result == sessionpkg.GameResultInProgress {
 		if aiMove, aiErr := SelectAIMove(game.ID); aiErr == nil && aiMove != "" {
 			if _, applyErr := sessionpkg.ApplyMoveByCommandByID(game.ID, aiMove); applyErr != nil {
@@ -327,6 +327,7 @@ func (h *Handler) NewGame(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// UpdateGameConfig - applies mode/type/clock/skill setup from the form to the session
 func (h *Handler) UpdateGameConfig(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
@@ -385,6 +386,7 @@ func (h *Handler) UpdateGameConfig(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// FlagGame - ends the game by flag for the side that ran out of time
 func (h *Handler) FlagGame(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
@@ -454,6 +456,7 @@ func (h *Handler) FlagGame(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetLatestAnalysis - returns the latest coach analysis status for a game id
 func (h *Handler) GetLatestAnalysis(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
@@ -471,7 +474,7 @@ func (h *Handler) GetLatestAnalysis(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// SubmitChessCommand receives input from command textbox and send to server for processing
+// SubmitChessCommand - receives input from command textbox and send to server for processing
 func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
@@ -544,7 +547,7 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 
 	aiMoveApplied := ""
 
-	// Human vs AI: start AI thinking in background (legacy command path)
+	// human vs AI: start AI thinking in background (legacy command path)
 	if finalGame.Mode == sessionpkg.GameModeHumanVsAI && finalGame.Result == sessionpkg.GameResultInProgress {
 		go func() {
 			if aiMove, aiErr := SelectAIMove(gameID); aiErr == nil && aiMove != "" {
@@ -554,10 +557,10 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 				}
 				log.Printf("human_vs_ai: background AI move applied %s command=%s", gameIDLabel(gameID), aiMove)
 
-				// Broadcast via WebSocket so frontend updates
+				// broadcast via WebSocket so frontend updates
 				gameSocketHub.Broadcast(gameID, socketEventMoveApplied, moveAppliedPayload(gameID, aiMove))
 
-				// Enqueue analysis
+				// enqueue analysis
 				enqueueCurrentPositionAnalysis(gameID, aiMove)
 
 				if _, refreshErr := sessionpkg.RefreshGameSessionOutcomeByID(gameID); refreshErr != nil {
@@ -620,8 +623,7 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 	response.To.File = toFile
 	response.To.Rank = toRank
 
-	// Testing phase: call Python analyzer after each successful move
-	// and print full response in Go server terminal.
+	// enqueue coach analysis for the position after a successful move.
 	enqueueCurrentPositionAnalysis(gameID, normalizedMove)
 	if finalGame.Result != sessionpkg.GameResultInProgress {
 		exportGameAnalysisIfNeeded(finalGame)
@@ -633,6 +635,7 @@ func (h *Handler) SubmitChessCommand(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// readGameConfigFromRequest - reads game configuration settings from the request
 func readGameConfigFromRequest(r *http.Request) (sessionpkg.GameMode, sessionpkg.GameType, string, int, string, string, error) {
 	mode := sessionpkg.GameMode(strings.TrimSpace(r.FormValue("mode")))
 	if mode == "" {
@@ -662,6 +665,7 @@ func readGameConfigFromRequest(r *http.Request) (sessionpkg.GameMode, sessionpkg
 	return mode, gameType, humanColor, aiGameCount, fen, profile, nil
 }
 
+// readSkillLevelFromRequest - reads skill level settings from the request
 func readSkillLevelFromRequest(r *http.Request) string {
 	skillLevel := strings.TrimSpace(r.FormValue("skillLevel"))
 	if skillLevel == "" {
@@ -670,6 +674,7 @@ func readSkillLevelFromRequest(r *http.Request) string {
 	return skillLevel
 }
 
+// applySkillLevelFromRequest - applies skill level settings from the request to the game session
 func applySkillLevelFromRequest(gameID string, r *http.Request, game sessionpkg.GameSession) sessionpkg.GameSession {
 	skillLevel := readSkillLevelFromRequest(r)
 	if skillLevel == "" {
@@ -682,6 +687,7 @@ func applySkillLevelFromRequest(gameID string, r *http.Request, game sessionpkg.
 	return updated
 }
 
+// formHasClockFields - reports whether the request form includes any clock fields
 func formHasClockFields(r *http.Request) bool {
 	for _, key := range []string{
 		"clockEnabled",
@@ -696,6 +702,7 @@ func formHasClockFields(r *http.Request) bool {
 	return false
 }
 
+// parseOptionalNonNegInt64 - parses an optional non-negative integer from a string
 func parseOptionalNonNegInt64(raw string) (int64, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -708,8 +715,7 @@ func parseOptionalNonNegInt64(raw string) (int64, error) {
 	return v, nil
 }
 
-// readClockFromRequest parses optional TC fields. present=false when omitted (leave session clock alone).
-// Explicit clockEnabled=false/0/off → disabled (0/0 bases). human/ai bases map via humanColor.
+// readClockFromRequest - parses optional clock fields from the request; omitted means leave the session clock alone
 func readClockFromRequest(r *http.Request, humanColor string) (whiteMs, blackMs, incrementMs int64, present bool, err error) {
 	if !formHasClockFields(r) {
 		return 0, 0, 0, false, nil
@@ -746,6 +752,7 @@ func readClockFromRequest(r *http.Request, humanColor string) (whiteMs, blackMs,
 	return whiteMs, blackMs, incrementMs, true, nil
 }
 
+// applyClockFromRequest - applies clock settings from the request to the game session
 func applyClockFromRequest(gameID string, r *http.Request, humanColor string, game sessionpkg.GameSession) (sessionpkg.GameSession, error) {
 	whiteMs, blackMs, incrementMs, present, err := readClockFromRequest(r, humanColor)
 	if err != nil {

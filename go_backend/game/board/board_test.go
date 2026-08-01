@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// TestSequenceByFileRank_ChessAndXiangqi - checks sequence by file rank chess and xiangqi
 func TestSequenceByFileRank_ChessAndXiangqi(t *testing.T) {
 	// Chess a8 = 0, h1 = 63
 	if got := SequenceByFileRank(1, 8, 8, 8); got != 0 {
@@ -26,6 +27,7 @@ func TestSequenceByFileRank_ChessAndXiangqi(t *testing.T) {
 	}
 }
 
+// TestNewBoard_XiangqiDrawHas90SquaresAndLabels - checks new board xiangqi draw has90 squares and labels
 func TestNewBoard_XiangqiDrawHas90SquaresAndLabels(t *testing.T) {
 	html := string(NewBoard(9, 10).Draw())
 	if !strings.Contains(html, `--board-files: 9`) || !strings.Contains(html, `--board-ranks: 10`) {

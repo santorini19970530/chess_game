@@ -2,11 +2,13 @@ package movement
 
 import pieces "go_backend/game/piece"
 
-// XiangqiSoldierStrategy — forward one; after river also sideways. No retreat.
+// xiangqiSoldierStrategy - forward one; after river also sideways. no retreat
 type XiangqiSoldierStrategy struct{}
 
+// Name - returns the piece strategy name
 func (XiangqiSoldierStrategy) Name() string { return "XiangqiSoldier" }
 
+// LegalMoves - returns legal destinations for this piece from the square
 func (XiangqiSoldierStrategy) LegalMoves(board any, from any) []any {
 	ctx, ok := board.(MovementBoard)
 	if !ok {

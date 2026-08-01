@@ -3,6 +3,7 @@
 
 package pieces
 
+// piece kind for the game
 type PieceKind string
 
 const (
@@ -16,7 +17,7 @@ const (
 	Cannon   PieceKind = "cannon"
 	Elephant PieceKind = "elephant"
 
-	// Shogi (and promoted forms).
+	// shogi (and promoted forms).
 	Lance           PieceKind = "lance"
 	Silver          PieceKind = "silver"
 	Gold            PieceKind = "gold"

@@ -15,28 +15,28 @@ import (
 	"go_backend/simulation"
 )
 
+// mapping of side to fairy stockfish engine
 var (
 	fsEngines  = map[string]*engine.FairyStockfish{}
 	fsEngineMu sync.Mutex
 )
 
-// useFairyStockfish reports whether the Go UCI path should be used (env flag).
+// useFairyStockfish - reports whether the Go UCI path should be used (env flag)
 func useFairyStockfish() bool {
 	return strings.EqualFold(os.Getenv("USE_FAIRY_STOCKFISH"), "true") ||
 		strings.EqualFold(os.Getenv("USE_FAIRY_STOCKFISH"), "1")
 }
 
-// fairyStockfishBinary resolves the path to the stockfish binary.
-// Default: relative to this module's parent (py_analyser/...).
+// fairyStockfishBinary - resolves the path to the stockfish binary. default: relative to this module's parent (py_analyser/...)
 func fairyStockfishBinary() string {
 	if p := os.Getenv("FAIRY_STOCKFISH_PATH"); p != "" {
 		return p
 	}
-	// Fallback default used in the project layout
+	// fallback default used in the project layout
 	return filepath.Join("..", "py_analyser", "Fairy-Stockfish-fairy_sf_14", "src", "stockfish")
 }
 
-// getFairyStockfish returns a started engine instance for one side (white|black).
+// getFairyStockfish - returns a started engine instance for one side (white|black)
 func getFairyStockfish(side string) (*engine.FairyStockfish, error) {
 	key := strings.ToLower(strings.TrimSpace(side))
 	if key != "black" {
@@ -66,7 +66,7 @@ func getFairyStockfish(side string) (*engine.FairyStockfish, error) {
 	return fs, nil
 }
 
-// resetFairyStockfish drops a dead/broken engine for that side and starts a new one.
+// resetFairyStockfish - drops a dead/broken engine for that side and starts a new one
 func resetFairyStockfish(side string) (*engine.FairyStockfish, error) {
 	key := strings.ToLower(strings.TrimSpace(side))
 	if key != "black" {
@@ -81,9 +81,7 @@ func resetFairyStockfish(side string) (*engine.FairyStockfish, error) {
 	return getFairyStockfish(side)
 }
 
-// SelectAIMove picks a move string that is already legal under Go rules.
-// Authority: Go builds the legal set and the caller applies via Go session apply.
-// Fairy-Stockfish / Python only propose candidates; illegal proposals are discarded.
+// SelectAIMove - returns a go-legal ai move; fs/python only propose candidates
 func SelectAIMove(gameID string) (string, error) {
 	fen, err := sessionpkg.CurrentFENByID(gameID)
 	if err != nil {
@@ -102,7 +100,7 @@ func SelectAIMove(gameID string) (string, error) {
 		return "", err
 	}
 
-	// Go rules engine is the only legality source.
+	// go rules engine is the only legality source.
 	legalMoves, err := sessionpkg.AllLegalUCIMovesByID(gameID)
 	if err != nil {
 		return "", err
@@ -115,7 +113,7 @@ func SelectAIMove(gameID string) (string, error) {
 	if gameType == "" {
 		gameType = "chess"
 	}
-	// Map normalized key → Go-canonical move string (what we return / apply).
+	// map normalized key → Go-canonical move string (what we return / apply).
 	legalByNorm := make(map[string]string, len(legalMoves))
 	for _, mv := range legalMoves {
 		legalByNorm[normalizeAIMove(gameType, mv)] = mv
@@ -129,7 +127,7 @@ func SelectAIMove(gameID string) (string, error) {
 		return canon, ok
 	}
 
-	// FS proposes; Go accepts only if in legalByNorm.
+	// fs proposes; go accepts only if in legalByNorm
 	if useFairyStockfish() {
 		if move, err := selectMoveWithFairyStockfish(fen, profile, color, allowDegrade, gameType, snapshot.Game.Clock); err == nil && move != "" {
 			if canon, ok := pickGoLegal(move); ok {
@@ -149,7 +147,7 @@ func SelectAIMove(gameID string) (string, error) {
 		}
 	}
 
-	// Python agents are chess advice only — never used for xianqi/shogi.
+	// python agents are chess advice only — never used for xianqi/shogi.
 	if gameType == "chess" {
 		ai := NewAIClient()
 		commonReq := AICommonRequest{
@@ -194,10 +192,11 @@ func SelectAIMove(gameID string) (string, error) {
 		log.Printf("warning: %s AI without USE_FAIRY_STOCKFISH — Go first-legal fallback (weak)", gameType)
 	}
 
-	// Always a Go-legal move.
+	// always a Go-legal move.
 	return legalMoves[0], nil
 }
 
+// legalUCIMovesByID - collects legal uci moves for one side from piece destinations
 func legalUCIMovesByID(gameID string, pieces []sessionpkg.PieceState, side string) ([]string, error) {
 	normalizedSide := strings.ToLower(strings.TrimSpace(side))
 	seen := make(map[string]struct{}, 128)
@@ -224,6 +223,7 @@ func legalUCIMovesByID(gameID string, pieces []sessionpkg.PieceState, side strin
 	return out, nil
 }
 
+// chooseBestLegalCandidate - returns the first policy candidate that is in the legal set
 func chooseBestLegalCandidate(candidates []AIPolicyCandidate, legalSet map[string]struct{}) string {
 	for _, c := range candidates {
 		uci := normalizeAIMove("chess", c.UCI)
@@ -237,6 +237,7 @@ func chooseBestLegalCandidate(candidates []AIPolicyCandidate, legalSet map[strin
 	return ""
 }
 
+// toUCIMove - formats a chess square pair as uci, appending q when promotion is required
 func toUCIMove(fromFile, fromRank, toFile, toRank int, requiresPromotion bool) string {
 	if fromFile < 1 || fromFile > 8 || toFile < 1 || toFile > 8 || fromRank < 1 || fromRank > 8 || toRank < 1 || toRank > 8 {
 		return ""
@@ -248,11 +249,12 @@ func toUCIMove(fromFile, fromRank, toFile, toRank int, requiresPromotion bool) s
 	return move
 }
 
+// normalizeUCI - trims and lowercases a raw uci string
 func normalizeUCI(raw string) string {
 	return strings.ToLower(strings.TrimSpace(raw))
 }
 
-// normalizeAIMove lowercases UCI and maps shogi drop '@' → '*'.
+// normalizeAIMove - lowercases UCI and maps shogi drop '@' → '*'
 func normalizeAIMove(gameType, raw string) string {
 	s := normalizeUCI(raw)
 	if (gameType == "shogi") && len(s) >= 4 && s[1] == '@' {
@@ -261,11 +263,7 @@ func normalizeAIMove(gameType, raw string) string {
 	return s
 }
 
-// selectMoveWithFairyStockfish uses the local UCI engine for one legal best move.
-// allowDegrade=true (AI vs AI): retry, then step down profiles before failing.
-// allowDegrade=false (Human vs AI): retry same profile only; caller treats failure as AI timeout/loss.
-// gameType is the session type (chess / xianqi / shogi); mapped to UCI_Variant before search.
-// clk (when enabled) supplies wtime/btime/winc/binc; profile still sets strength + movetime cap.
+// selectMoveWithFairyStockfish - asks the local uci engine for one best move with profile/clock limits and optional degrade
 func selectMoveWithFairyStockfish(fen, profile, side string, allowDegrade bool, gameType string, clk *sessionpkg.Clock) (string, error) {
 	var lastErr error
 	chain := []string{strings.ToLower(strings.TrimSpace(profile))}
@@ -315,6 +313,7 @@ func selectMoveWithFairyStockfish(fen, profile, side string, allowDegrade bool, 
 	return "", lastErr
 }
 
+// fsProfileFallbackChain - returns strength profiles from the requested level down to beginner
 func fsProfileFallbackChain(profile string) []string {
 	order := []string{"master", "advanced", "intermediate", "beginner"}
 	start := strings.ToLower(strings.TrimSpace(profile))
@@ -328,6 +327,7 @@ func fsProfileFallbackChain(profile string) []string {
 	return order[idx:]
 }
 
+// fsLimitForProfile - maps a strength profile to depth and movetime limits
 func fsLimitForProfile(profile string) engine.Limit {
 	limit := engine.Limit{Depth: 8, MoveTime: 600 * time.Millisecond}
 	switch strings.ToLower(strings.TrimSpace(profile)) {
@@ -347,7 +347,7 @@ func fsLimitForProfile(profile string) engine.Limit {
 	return limit
 }
 
-// fsLimitForGame: clock off → profile movetime only; clock on → wtime/btime/inc + capped movetime.
+// fsLimitForGame - clock off → profile movetime only; clock on → wtime/btime/inc + capped movetime
 func fsLimitForGame(profile string, clk *sessionpkg.Clock, side string) engine.Limit {
 	limit := fsLimitForProfile(profile)
 	if clk == nil || !clk.Enabled {
@@ -378,8 +378,7 @@ func fsLimitForGame(profile string, clk *sessionpkg.Clock, side string) engine.L
 	return limit
 }
 
-// RunAIGame is the step-1 entry point for a single AI vs AI game.
-// It delegates to simulation.RunSingleAIGame using the existing SelectAIMove.
+// RunAIGame - runs one ai-vs-ai game via simulation.RunSingleAIGame and SelectAIMove
 func RunAIGame(gameID string) (simulation.Result, error) {
 	return simulation.RunSingleAIGame(gameID, SelectAIMove)
 }

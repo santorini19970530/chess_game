@@ -2,6 +2,7 @@ package handlers
 
 import "testing"
 
+// TestFsProfileFallbackChain - checks fs profile fallback chain
 func TestFsProfileFallbackChain(t *testing.T) {
 	got := fsProfileFallbackChain("master")
 	want := []string{"master", "advanced", "intermediate", "beginner"}

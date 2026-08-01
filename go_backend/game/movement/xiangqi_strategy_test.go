@@ -6,6 +6,7 @@ import (
 	pieces "go_backend/game/piece"
 )
 
+// TestXiangqiHorseBlockedByHump - checks xiangqi horse blocked by hump
 func TestXiangqiHorseBlockedByHump(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.Knight, File: 2, Rank: 1}, // b1
@@ -19,6 +20,7 @@ func TestXiangqiHorseBlockedByHump(t *testing.T) {
 	}
 }
 
+// TestXiangqiSoldierNoDoubleStep - checks xiangqi soldier no double step
 func TestXiangqiSoldierNoDoubleStep(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.Pawn, File: 1, Rank: 4},
@@ -29,6 +31,7 @@ func TestXiangqiSoldierNoDoubleStep(t *testing.T) {
 	}
 }
 
+// TestXiangqiValidateChariot - checks xiangqi validate chariot
 func TestXiangqiValidateChariot(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.Rook, File: 1, Rank: 1},

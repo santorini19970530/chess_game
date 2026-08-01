@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// newTestAIClient - builds an ai client pointed at the test server url
 func newTestAIClient(baseURL string) *AIClient {
 	return &AIClient{
 		baseURL: baseURL,
@@ -18,6 +19,7 @@ func newTestAIClient(baseURL string) *AIClient {
 	}
 }
 
+// baseAIRequest - returns a minimal valid ai common request for tests
 func baseAIRequest() AICommonRequest {
 	return AICommonRequest{
 		RequestID:  "test-req-1",
@@ -30,6 +32,7 @@ func baseAIRequest() AICommonRequest {
 	}
 }
 
+// TestAIClientSuccessForEachEndpoint - checks history/policy/value succeed against a fake server
 func TestAIClientSuccessForEachEndpoint(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -74,6 +77,7 @@ func TestAIClientSuccessForEachEndpoint(t *testing.T) {
 	}
 }
 
+// TestAIClientTimeout - checks ai client maps timeouts to a structured error
 func TestAIClientTimeout(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(250 * time.Millisecond)
@@ -97,6 +101,7 @@ func TestAIClientTimeout(t *testing.T) {
 	}
 }
 
+// TestAIClientNon200 - checks non-200 analyzer responses become ai client errors
 func TestAIClientNon200(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -122,6 +127,7 @@ func TestAIClientNon200(t *testing.T) {
 	}
 }
 
+// TestAIClientMalformedJSON - checks malformed json responses become ai client errors
 func TestAIClientMalformedJSON(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -143,6 +149,7 @@ func TestAIClientMalformedJSON(t *testing.T) {
 	}
 }
 
+// TestAIClientMissingRequiredFields - checks missing required fields become invalid payload errors
 func TestAIClientMissingRequiredFields(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -168,6 +175,7 @@ func TestAIClientMissingRequiredFields(t *testing.T) {
 	}
 }
 
+// TestAIClientNetworkUnavailableMapping - checks network dial failures map to unavailable
 func TestAIClientNetworkUnavailableMapping(t *testing.T) {
 	// Port 1 should be closed and return a connection-refused style network error.
 	client := newTestAIClient("http://127.0.0.1:1")

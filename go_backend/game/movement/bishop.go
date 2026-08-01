@@ -3,7 +3,7 @@
 
 package movement
 
-// BishopStrategy handles bishop movement rules
+// bishopStrategy handles bishop movement rules
 type BishopStrategy struct{}
 
 // Name - returns the name of the bishop strategy

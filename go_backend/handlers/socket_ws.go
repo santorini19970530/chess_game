@@ -12,23 +12,26 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// global variables for the socket websocket
 var (
 	socketClientCounter uint64
 	wsUpgrader          = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		CheckOrigin: func(_ *http.Request) bool {
-			// Socket-first local development: allow same-host tooling/origin.
+			// socket-first local development: allow same-host tooling/origin.
 			return true
 		},
 	}
 )
 
+// nextSocketClientID - allocates the next websocket client id
 func nextSocketClientID() string {
 	n := atomic.AddUint64(&socketClientCounter, 1)
 	return fmt.Sprintf("ws-client-%d", n)
 }
 
+// GameSocket - upgrades the request to a per-game websocket connection
 func (h *Handler) GameSocket(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)

@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// TestEvaluateGameOutcome_Checkmate - checks evaluate game outcome checkmate
 func TestEvaluateGameOutcome_Checkmate(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 6, Rank: 6},   // Kf6
@@ -31,6 +32,7 @@ func TestEvaluateGameOutcome_Checkmate(t *testing.T) {
 	}
 }
 
+// TestEvaluateGameOutcome_Stalemate - checks evaluate game outcome stalemate
 func TestEvaluateGameOutcome_Stalemate(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 6, Rank: 7},   // Kf7
@@ -51,6 +53,7 @@ func TestEvaluateGameOutcome_Stalemate(t *testing.T) {
 	}
 }
 
+// TestRefreshGameSessionOutcome_UpdatesMetadataAndResult - checks refresh game session outcome updates metadata and result
 func TestRefreshGameSessionOutcome_UpdatesMetadataAndResult(t *testing.T) {
 	resetGameSessionForTest()
 	pieces.ChessPieces = []pieces.ChessPiece{
@@ -80,6 +83,7 @@ func TestRefreshGameSessionOutcome_UpdatesMetadataAndResult(t *testing.T) {
 	}
 }
 
+// TestEvaluateGameOutcome_UserSequenceIsCheckNotMate - checks evaluate game outcome user sequence is check not mate
 func TestEvaluateGameOutcome_UserSequenceIsCheckNotMate(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -103,6 +107,7 @@ func TestEvaluateGameOutcome_UserSequenceIsCheckNotMate(t *testing.T) {
 	}
 }
 
+// TestFlagCurrentTurn_SetsWinLossOutcome - checks flag current turn sets win loss outcome
 func TestFlagCurrentTurn_SetsWinLossOutcome(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -119,6 +124,7 @@ func TestFlagCurrentTurn_SetsWinLossOutcome(t *testing.T) {
 	}
 }
 
+// TestUpdateGameConfig_WithFENForcesSingleGameAndLoadsPosition - checks update game config with fen forces single game and loads position
 func TestUpdateGameConfig_WithFENForcesSingleGameAndLoadsPosition(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -144,6 +150,7 @@ func TestUpdateGameConfig_WithFENForcesSingleGameAndLoadsPosition(t *testing.T) 
 	}
 }
 
+// TestEvaluateGameOutcome_DrawByInsufficientMaterial - checks evaluate game outcome draw by insufficient material
 func TestEvaluateGameOutcome_DrawByInsufficientMaterial(t *testing.T) {
 	resetGameSessionForTest()
 	resetTurnOverride()
@@ -162,6 +169,7 @@ func TestEvaluateGameOutcome_DrawByInsufficientMaterial(t *testing.T) {
 	}
 }
 
+// TestEvaluateGameOutcome_DrawByFiftyMoveRule - checks evaluate game outcome draw by fifty move rule
 func TestEvaluateGameOutcome_DrawByFiftyMoveRule(t *testing.T) {
 	resetGameSessionForTest()
 	resetTurnOverride()
@@ -182,6 +190,7 @@ func TestEvaluateGameOutcome_DrawByFiftyMoveRule(t *testing.T) {
 	}
 }
 
+// TestEvaluateGameOutcome_DrawByThreefoldRepetition - checks evaluate game outcome draw by threefold repetition
 func TestEvaluateGameOutcome_DrawByThreefoldRepetition(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -193,6 +202,7 @@ func TestEvaluateGameOutcome_DrawByThreefoldRepetition(t *testing.T) {
 	}
 }
 
+// TestResetGame_RestoresInitialState - checks reset game restores initial state
 func TestResetGame_RestoresInitialState(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 4, Rank: 4},
@@ -217,6 +227,7 @@ func TestResetGame_RestoresInitialState(t *testing.T) {
 	}
 }
 
+// TestLegalMovesForSquare_CurrentTurnPieceOnly - checks legal moves for square current turn piece only
 func TestLegalMovesForSquare_CurrentTurnPieceOnly(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -235,6 +246,7 @@ func TestLegalMovesForSquare_CurrentTurnPieceOnly(t *testing.T) {
 	}
 }
 
+// hasDestination - reports whether destination
 func hasDestination(moves []LegalDestination, file, rank int) bool {
 	for _, mv := range moves {
 		if mv.File == file && mv.Rank == rank {

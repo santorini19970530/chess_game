@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// TestNewestCSSSourceTime_SeesPartials - checks newest css source time sees partials
 func TestNewestCSSSourceTime_SeesPartials(t *testing.T) {
 	dir := t.TempDir()
 	input := filepath.Join(dir, "input.css")

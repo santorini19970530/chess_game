@@ -14,6 +14,7 @@ import (
 	pieces "go_backend/game/piece"
 )
 
+// ApplyMoveByCommand - applies move by command
 func ApplyMoveByCommand(commandText string) (string, error) {
 	game, err := lockActiveRuntimeState()
 	if err != nil {
@@ -58,6 +59,7 @@ func ApplyMoveByCommand(commandText string) (string, error) {
 	return normalized, nil
 }
 
+// applyMoveByCommandCurrentLoaded - applies move by command current loaded
 func applyMoveByCommandCurrentLoaded(commandText string) (string, error) {
 	expectedColor := CurrentTurnColor()
 	parsed, err := command.ParseCommandForColor(commandText, expectedColor)
@@ -169,6 +171,7 @@ func applyMoveByCommandCurrentLoaded(commandText string) (string, error) {
 	return parsed.Normalized, nil
 }
 
+// ApplyMove - applies move
 func ApplyMove(fromFile, fromRank, toFile, toRank int) error {
 	sourceIdx := -1
 	targetIdx := -1
@@ -201,6 +204,7 @@ func ApplyMove(fromFile, fromRank, toFile, toRank int) error {
 	return nil
 }
 
+// ApplyEnPassantMove - applies en passant move
 func ApplyEnPassantMove(fromFile, fromRank, toFile, toRank int) error {
 	sourceIdx := -1
 	capturedIdx := -1
@@ -234,6 +238,7 @@ func ApplyEnPassantMove(fromFile, fromRank, toFile, toRank int) error {
 	return nil
 }
 
+// ApplyCastlingMove - applies castling move
 func ApplyCastlingMove(fromFile, fromRank, toFile, toRank int) error {
 	kingIdx := -1
 	rookIdx := -1
@@ -266,6 +271,7 @@ func ApplyCastlingMove(fromFile, fromRank, toFile, toRank int) error {
 	return nil
 }
 
+// getPieceAt - returns piece at
 func getPieceAt(file, rank int) (pieces.ChessPiece, bool) {
 	for _, p := range pieces.ChessPieces {
 		if p.File == file && p.Rank == rank {
@@ -275,6 +281,7 @@ func getPieceAt(file, rank int) (pieces.ChessPiece, bool) {
 	return pieces.ChessPiece{}, false
 }
 
+// toEngineLastMove - converts to engine last move
 func toEngineLastMove(mv *LastMove) *engine.LastMoveInfo {
 	if mv == nil {
 		return nil
@@ -290,6 +297,7 @@ func toEngineLastMove(mv *LastMove) *engine.LastMoveInfo {
 	}
 }
 
+// resolvePromotion - resolves promotion
 func resolvePromotion(source pieces.ChessPiece, toRank int, promotion string) (bool, pieces.PieceKind, error) {
 	reachesLastRank := (source.Color == pieces.White && toRank == 8) || (source.Color == pieces.Black && toRank == 1)
 	if source.Kind != pieces.Pawn {
@@ -323,6 +331,7 @@ func resolvePromotion(source pieces.ChessPiece, toRank int, promotion string) (b
 	}
 }
 
+// ApplyPromotion - applies promotion
 func ApplyPromotion(file, rank int, color pieces.PieceColor, promotedKind pieces.PieceKind) error {
 	for i := range pieces.ChessPieces {
 		p := &pieces.ChessPieces[i]
@@ -335,6 +344,7 @@ func ApplyPromotion(file, rank int, color pieces.PieceColor, promotedKind pieces
 	return fmt.Errorf("promotion target piece not found")
 }
 
+// promotedPieceImage - returns promoted piece image
 func promotedPieceImage(kind pieces.PieceKind, color pieces.PieceColor) string {
 	tone := "light"
 	if color == pieces.Black {
@@ -343,6 +353,7 @@ func promotedPieceImage(kind pieces.PieceKind, color pieces.PieceColor) string {
 	return fmt.Sprintf("pic/chess_pic/%s_%s.png", string(kind), tone)
 }
 
+// castlingViolatesCheckRules - reports castling violates check rules
 func castlingViolatesCheckRules(color pieces.PieceColor, rank, toFile int) bool {
 	if engine.IsInCheck(color) {
 		return true
@@ -364,7 +375,7 @@ func castlingViolatesCheckRules(color pieces.PieceColor, rank, toFile int) bool 
 	return false
 }
 
-// toUCI converts internal file/rank to UCI square notation (chess a-h/1-8, xiangqi a-i/1-10).
+// toUCI - converts internal file/rank to UCI square notation (chess a-h/1-8, xiangqi a-i/1-10)
 func toUCI(fromFile, fromRank, toFile, toRank int) string {
 	maxFile, maxRank := 8, 8
 	if fromFile > 8 || toFile > 8 || fromRank > 8 || toRank > 8 {

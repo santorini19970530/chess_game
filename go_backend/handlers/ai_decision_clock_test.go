@@ -7,6 +7,7 @@ import (
 	sessionpkg "go_backend/game/session"
 )
 
+// TestFsLimitForGame_ClockOffKeepsProfileMovetime - checks fs limit for game clock off keeps profile movetime
 func TestFsLimitForGame_ClockOffKeepsProfileMovetime(t *testing.T) {
 	limit := fsLimitForGame("beginner", nil, "white")
 	if limit.MoveTime != 250*time.Millisecond {
@@ -23,6 +24,7 @@ func TestFsLimitForGame_ClockOffKeepsProfileMovetime(t *testing.T) {
 	}
 }
 
+// TestFsLimitForGame_ClockOnSetsWtimeAndCapsMovetime - checks fs limit for game clock on sets wtime and caps movetime
 func TestFsLimitForGame_ClockOnSetsWtimeAndCapsMovetime(t *testing.T) {
 	clk := sessionpkg.NewClock(300_000, 60_000, 30_000)
 	clk.Start("black", time.Unix(0, 0).UTC())

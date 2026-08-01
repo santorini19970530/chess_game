@@ -9,10 +9,10 @@ import (
 	"time"
 )
 
+// global mutex for the css build
 var buildMu sync.Mutex
 
-// EnsureStyleCSS rebuilds style.css from input.css when input or any imported
-// partial under the same styles directory is newer than the output.
+// EnsureStyleCSS - rebuilds style.css from input.css when input or any imported partial under the same styles directory is newer than the output
 func EnsureStyleCSS(inputPath, outputPath, tailwindPath string) error {
 	buildMu.Lock()
 	defer buildMu.Unlock()
@@ -38,6 +38,7 @@ func EnsureStyleCSS(inputPath, outputPath, tailwindPath string) error {
 	return nil
 }
 
+// newestCSSSourceTime - performs newest css source time
 func newestCSSSourceTime(inputPath string) (time.Time, error) {
 	info, err := os.Stat(inputPath)
 	if err != nil {

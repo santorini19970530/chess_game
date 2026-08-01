@@ -8,6 +8,7 @@ import (
 	"testing"
 )
 
+// TestAPISimulate_ValidRequest_ReturnsSummary - checks api simulate valid request returns summary
 func TestAPISimulate_ValidRequest_ReturnsSummary(t *testing.T) {
 	h := NewHandler()
 
@@ -48,6 +49,7 @@ func TestAPISimulate_ValidRequest_ReturnsSummary(t *testing.T) {
 	}
 }
 
+// TestAPISimulate_InvalidN_Returns400 - checks api simulate invalid n returns400
 func TestAPISimulate_InvalidN_Returns400(t *testing.T) {
 	h := NewHandler()
 
@@ -63,6 +65,7 @@ func TestAPISimulate_InvalidN_Returns400(t *testing.T) {
 	}
 }
 
+// TestAPISimulate_FormEncoded_Works - checks api simulate form encoded works
 func TestAPISimulate_FormEncoded_Works(t *testing.T) {
 	h := NewHandler()
 
@@ -78,6 +81,7 @@ func TestAPISimulate_FormEncoded_Works(t *testing.T) {
 	}
 }
 
+// TestAPISimulate_DetailsFalse_OmitsHistory - checks api simulate details false omits history
 func TestAPISimulate_DetailsFalse_OmitsHistory(t *testing.T) {
 	h := NewHandler()
 
@@ -104,6 +108,7 @@ func TestAPISimulate_DetailsFalse_OmitsHistory(t *testing.T) {
 	}
 }
 
+// TestAPISimulate_DetailsTrue_IncludesHistory - checks api simulate details true includes history
 func TestAPISimulate_DetailsTrue_IncludesHistory(t *testing.T) {
 	h := NewHandler()
 
@@ -138,6 +143,7 @@ func TestAPISimulate_DetailsTrue_IncludesHistory(t *testing.T) {
 	}
 }
 
+// TestAPISimulate_InvalidUpperBound_Returns400 - checks api simulate invalid upper bound returns400
 func TestAPISimulate_InvalidUpperBound_Returns400(t *testing.T) {
 	h := NewHandler()
 
@@ -153,6 +159,7 @@ func TestAPISimulate_InvalidUpperBound_Returns400(t *testing.T) {
 	}
 }
 
+// TestAPISimulate_InvalidDetailsFlag_Returns400 - checks api simulate invalid details flag returns400
 func TestAPISimulate_InvalidDetailsFlag_Returns400(t *testing.T) {
 	h := NewHandler()
 
@@ -168,6 +175,7 @@ func TestAPISimulate_InvalidDetailsFlag_Returns400(t *testing.T) {
 	}
 }
 
+// TestAPISimulate_InProgress_Returns409 - checks api simulate in progress returns409
 func TestAPISimulate_InProgress_Returns409(t *testing.T) {
 	h := NewHandler()
 
@@ -188,6 +196,7 @@ func TestAPISimulate_InProgress_Returns409(t *testing.T) {
 	}
 }
 
+// TestAPISimulate_SideProfiles_RecordedInResponse - checks api simulate side profiles recorded in response
 func TestAPISimulate_SideProfiles_RecordedInResponse(t *testing.T) {
 	h := NewHandler()
 
@@ -239,6 +248,7 @@ func TestAPISimulate_SideProfiles_RecordedInResponse(t *testing.T) {
 	}
 }
 
+// TestAPISimulate_InvalidSideProfile_Returns400 - checks api simulate invalid side profile returns400
 func TestAPISimulate_InvalidSideProfile_Returns400(t *testing.T) {
 	h := NewHandler()
 

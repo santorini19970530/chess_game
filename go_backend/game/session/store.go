@@ -7,6 +7,7 @@ import (
 	pieces "go_backend/game/piece"
 )
 
+// runtime state for the game
 type RuntimeState struct {
 	Pieces              []pieces.ChessPiece
 	MoveHistory         []string
@@ -22,26 +23,30 @@ type RuntimeState struct {
 	WhiteRookHMoved     bool
 	BlackRookAMoved     bool
 	BlackRookHMoved     bool
-	// BoardFEN is source of truth for non-chess variants (e.g. xiangqi). Empty for chess.
+	// boardFEN is source of truth for non-chess variants (e.g. xiangqi). empty for chess.
 	BoardFEN string
 }
 
+// runtime game for the game
 type RuntimeGame struct {
 	Session GameSession
 	State   RuntimeState
 }
 
+// session store for the game
 type SessionStore struct {
 	mu    sync.RWMutex
 	games map[string]*RuntimeGame
 }
 
+// NewSessionStore - creates session store
 func NewSessionStore() *SessionStore {
 	return &SessionStore{
 		games: make(map[string]*RuntimeGame),
 	}
 }
 
+// Create - creates the operation
 func (s *SessionStore) Create(session GameSession) *RuntimeGame {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -53,6 +58,7 @@ func (s *SessionStore) Create(session GameSession) *RuntimeGame {
 	return game
 }
 
+// Get - returns the value
 func (s *SessionStore) Get(gameID string) (*RuntimeGame, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -60,6 +66,7 @@ func (s *SessionStore) Get(gameID string) (*RuntimeGame, bool) {
 	return game, ok
 }
 
+// Update - updates the operation
 func (s *SessionStore) Update(gameID string, updater func(*RuntimeGame) error) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -70,6 +77,7 @@ func (s *SessionStore) Update(gameID string, updater func(*RuntimeGame) error) e
 	return updater(game)
 }
 
+// Delete - deletes the operation
 func (s *SessionStore) Delete(gameID string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -80,6 +88,7 @@ func (s *SessionStore) Delete(gameID string) bool {
 	return true
 }
 
+// newInitialRuntimeState - creates initial runtime state
 func newInitialRuntimeState() RuntimeState {
 	return RuntimeState{
 		Pieces:        append([]pieces.ChessPiece(nil), initialPiecesSnapshot...),
@@ -87,6 +96,7 @@ func newInitialRuntimeState() RuntimeState {
 	}
 }
 
+// bindToGlobals - binds to globals
 func (g *RuntimeGame) bindToGlobals() {
 	pieces.ChessPieces = append([]pieces.ChessPiece(nil), g.State.Pieces...)
 	moveHistory = append([]string(nil), g.State.MoveHistory...)
@@ -115,6 +125,7 @@ func (g *RuntimeGame) bindToGlobals() {
 	boardFEN = g.State.BoardFEN
 }
 
+// syncFromGlobals - syncs from globals
 func (g *RuntimeGame) syncFromGlobals() {
 	g.State.Pieces = append([]pieces.ChessPiece(nil), pieces.ChessPieces...)
 	g.State.MoveHistory = append([]string(nil), moveHistory...)
@@ -143,6 +154,7 @@ func (g *RuntimeGame) syncFromGlobals() {
 	g.State.BoardFEN = boardFEN
 }
 
+// copyStringIntMap - returns copy string int map
 func copyStringIntMap(in map[string]int) map[string]int {
 	if in == nil {
 		return make(map[string]int)

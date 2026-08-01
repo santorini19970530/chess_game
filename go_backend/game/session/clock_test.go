@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// TestClock_TickDownAndFlag - checks clock tick down and flag
 func TestClock_TickDownAndFlag(t *testing.T) {
 	c := NewClock(1000, 1000, 0)
 	start := time.Unix(0, 0).UTC()
@@ -28,6 +29,7 @@ func TestClock_TickDownAndFlag(t *testing.T) {
 	}
 }
 
+// TestClock_OnMoveAwardsIncrement - checks clock on move awards increment
 func TestClock_OnMoveAwardsIncrement(t *testing.T) {
 	// 1s base + 30s increment; fast move (~200ms) → mover ends near 800+30000.
 	c := NewClock(1000, 1000, 30_000)
@@ -48,6 +50,7 @@ func TestClock_OnMoveAwardsIncrement(t *testing.T) {
 	}
 }
 
+// TestClock_DisabledNoFlag - checks clock disabled no flag
 func TestClock_DisabledNoFlag(t *testing.T) {
 	c := NewClock(0, 0, 0) // disabled by default when both bases are 0 / not enabled
 	c.Enabled = false
@@ -59,6 +62,7 @@ func TestClock_DisabledNoFlag(t *testing.T) {
 	}
 }
 
+// TestClock_AsymmetricInitial - checks clock asymmetric initial
 func TestClock_AsymmetricInitial(t *testing.T) {
 	c := NewClock(5*60*1000, 60*1000, 0)
 	if c.Remaining("white") != 5*60*1000 || c.Remaining("black") != 60*1000 {

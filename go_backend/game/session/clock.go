@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// ClockSidesFromHumanAI maps HvAI human/AI bases onto white/black.
+// ClockSidesFromHumanAI - maps HvAI human/AI bases onto white/black
 func ClockSidesFromHumanAI(humanColor string, humanMs, aiMs int64) (whiteMs, blackMs int64) {
 	if strings.ToLower(strings.TrimSpace(humanColor)) == "black" {
 		return aiMs, humanMs
@@ -13,7 +13,7 @@ func ClockSidesFromHumanAI(humanColor string, humanMs, aiMs int64) (whiteMs, bla
 	return humanMs, aiMs
 }
 
-// Clock is a Fischer time-control clock (server-authoritative).
+// clock is a Fischer time-control clock (server-authoritative).
 // mode "fischer" now; byoyomi can reuse this type later.
 type Clock struct {
 	Enabled          bool   `json:"enabled"`
@@ -29,8 +29,7 @@ type Clock struct {
 	flaggedSide      string
 }
 
-// NewClock builds an enabled Fischer clock when either base is > 0.
-// Both bases 0 → disabled (unlimited).
+// NewClock - builds an enabled Fischer clock when either base is > 0. both bases 0 → disabled (unlimited)
 func NewClock(whiteInitialMs, blackInitialMs, incrementMs int64) *Clock {
 	enabled := whiteInitialMs > 0 || blackInitialMs > 0
 	return &Clock{
@@ -44,6 +43,7 @@ func NewClock(whiteInitialMs, blackInitialMs, incrementMs int64) *Clock {
 	}
 }
 
+// ActiveSide - returns active side
 func (c *Clock) ActiveSide() string {
 	if c == nil {
 		return ""
@@ -51,6 +51,7 @@ func (c *Clock) ActiveSide() string {
 	return c.Active
 }
 
+// Start - starts the operation
 func (c *Clock) Start(active string, now time.Time) {
 	if c == nil || !c.Enabled {
 		return
@@ -61,6 +62,7 @@ func (c *Clock) Start(active string, now time.Time) {
 	c.flaggedSide = ""
 }
 
+// Remaining - returns remaining
 func (c *Clock) Remaining(side string) int64 {
 	if c == nil {
 		return 0
@@ -75,6 +77,7 @@ func (c *Clock) Remaining(side string) int64 {
 	}
 }
 
+// Flagged - performs flagged
 func (c *Clock) Flagged() (side string, ok bool) {
 	if c == nil || !c.Enabled || c.flaggedSide == "" {
 		return "", false
@@ -82,7 +85,7 @@ func (c *Clock) Flagged() (side string, ok bool) {
 	return c.flaggedSide, true
 }
 
-// Settle deducts elapsed time from the active side since LastTick.
+// Settle - deducts elapsed time from the active side since LastTick
 func (c *Clock) Settle(now time.Time) {
 	if c == nil || !c.Enabled || !c.running || c.flaggedSide != "" {
 		return
@@ -95,7 +98,7 @@ func (c *Clock) Settle(now time.Time) {
 	c.LastTickUnixMs = now.UnixMilli()
 }
 
-// OnMove settles, awards Fischer increment to the mover, then starts the opponent.
+// OnMove - settles, awards Fischer increment to the mover, then starts the opponent
 func (c *Clock) OnMove(mover string, now time.Time) {
 	if c == nil || !c.Enabled || c.flaggedSide != "" {
 		return
@@ -111,6 +114,7 @@ func (c *Clock) OnMove(mover string, now time.Time) {
 	c.running = true
 }
 
+// debit - debits the operation
 func (c *Clock) debit(side string, ms int64) {
 	if ms <= 0 {
 		return
@@ -133,6 +137,7 @@ func (c *Clock) debit(side string, ms int64) {
 	}
 }
 
+// credit - credits the operation
 func (c *Clock) credit(side string, ms int64) {
 	if ms <= 0 {
 		return
@@ -145,6 +150,7 @@ func (c *Clock) credit(side string, ms int64) {
 	}
 }
 
+// normalizeClockSide - normalizes clock side
 func normalizeClockSide(side string) string {
 	switch side {
 	case "white", "black":
@@ -154,6 +160,7 @@ func normalizeClockSide(side string) string {
 	}
 }
 
+// opponentClockSide - returns opponent clock side
 func opponentClockSide(side string) string {
 	if side == "white" {
 		return "black"
