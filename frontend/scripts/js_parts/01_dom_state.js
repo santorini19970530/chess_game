@@ -126,6 +126,7 @@ class DomState {
     state.isSubmitting = false;
     state.pendingPromotionResolve = null;
     state.analysisPollTimer = null;
+    state.analysisPollGeneration = 0;
     state.isSimulationPlayback = false;
     state.simulationData = null;
     state.currentSimGameIdx = 0;

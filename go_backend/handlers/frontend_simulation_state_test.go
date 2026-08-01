@@ -134,7 +134,7 @@ func TestFrontendSimulationState_RunPlaybackDoneMarkers(t *testing.T) {
 	requireSnippet(t, source, `simRunBtn.style.display = "none";`)
 	requireSnippet(t, source, "ensureSimulationControls();")
 	requireSnippet(t, source, "startNextSimulationGame();")
-	requireSnippet(t, source, "if (currentSimMoveIdx >= moves.length) {")
+	requireSnippet(t, source, "loadCurrentSimGameIntoReview")
 	requireSnippet(t, source, "finishCurrentSimulationGame();")
 	requireSnippet(t, source, "if (isLastGame) {")
 	requireSnippet(t, source, "cleanupSimulationControls();")
@@ -142,6 +142,11 @@ func TestFrontendSimulationState_RunPlaybackDoneMarkers(t *testing.T) {
 	requireSnippet(t, source, `simRunBtn.disabled = false;`)
 	requireSnippet(t, source, "if (!this.app.util.isAIVsAIModeSelected()) {")
 	requireSnippet(t, source, `simRunBtn.style.display = "none";`)
+	// Sim playback reuses review Back/Forward (no separate Next Move stepper).
+	requireSnippet(t, source, "seekReviewPlayback")
+	if strings.Contains(source, "sim_next_move_btn") || strings.Contains(source, "playNextSimulationMove") {
+		t.Fatal("ai-vs-ai playback must use review Back/Forward, not a separate Next Move button")
+	}
 }
 
 // TestFrontendSimulationState_ErrorAndConflictRecoveryMarkers - checks frontend simulation state error and conflict recovery markers

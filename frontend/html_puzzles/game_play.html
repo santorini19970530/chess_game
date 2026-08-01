@@ -1,5 +1,5 @@
 <!-- CM3070 FP code -->
-<!-- game_play.html - command bar, review load, simulation summary, notes -->
+<!-- game_play.html - command bar, review ply, simulation summary, notes -->
 
 {{define "game_play"}}
 <div class="game_panel_right_bottom">
@@ -12,19 +12,6 @@
       <button id="chess_new_game" type="button">New Game</button>
     </div>
     <p id="chess_command_status" class="command_status" role="status" aria-live="polite"></p>
-    <div class="command_row review_playback_row">
-      <button id="review_moves_prev" type="button" disabled>◀ Back</button>
-      <button id="review_moves_next" type="button" disabled>Forward ▶</button>
-      <span id="review_moves_ply" class="review_moves_ply" aria-live="polite">Ply 0 / 0</span>
-    </div>
-  </div>
-  <div class="review_moves_block">
-    <label for="review_moves_input">Load moves / play JSON</label>
-    <textarea id="review_moves_input" rows="3" placeholder="e2e4 e7e5 … or paste game-*.json"></textarea>
-    <div class="command_row review_moves_row">
-      <input id="review_moves_file" type="file" accept="application/json,.json,text/plain" />
-      <button id="review_moves_load" type="button">Load moves</button>
-    </div>
   </div>
   <div id="simulation_summary_panel" class="simulation_summary_panel simulation_summary_hidden" aria-live="polite">
     <table class="simulation_summary_table" aria-label="Simulation summary">

@@ -14,12 +14,15 @@ class SocketClient {
     this.app.state.currentGameId = nextId;
     if (this.app.el.gameIdInput) this.app.el.gameIdInput.value = nextId;
     if (changed) {
+      // stop analysis polls for the old id — load-moves creates a new session each seek
+      this.stopAnalysisPolling();
       this.connectGameSocket(nextId);
     }
   }
 
   // stopAnalysisPolling - clears analysis poll timers and pending analysis targets
   stopAnalysisPolling() {
+    this.app.state.analysisPollGeneration = Number(this.app.state.analysisPollGeneration || 0) + 1;
     if (this.app.state.analysisPollTimer != null) {
       window.clearInterval(this.app.state.analysisPollTimer);
       this.app.state.analysisPollTimer = null;
@@ -274,17 +277,28 @@ class SocketClient {
       ws.addEventListener("close", () => {
         const sameSocket = ws === this.app.state.gameSocket;
         if (sameSocket) this.app.state.gameSocket = null;
-        if (!this.app.state.gameSocketAllowReconnect || this.app.state.gameSocketGameId !== targetGameId) return;
+        // do not resurrect an old session after load-moves / review seek advanced currentGameId
+        if (
+          !this.app.state.gameSocketAllowReconnect ||
+          this.app.state.gameSocketGameId !== targetGameId ||
+          this.app.state.currentGameId !== targetGameId
+        ) {
+          return;
+        }
 
         // rest polling remains the fallback while the socket is down
         if (this.app.state.pendingAnalysisTargetMove > 0) {
-          this.app.coach.startAnalysisPolling(this.app.state.pendingAnalysisTargetMove, this.app.state.pendingAnalysisCapturedSnapshot || this.app.state.cachedCapturedSummary);
+          this.app.coach.startAnalysisPolling(
+            this.app.state.pendingAnalysisTargetMove,
+            this.app.state.pendingAnalysisCapturedSnapshot || this.app.state.cachedCapturedSummary
+          );
         }
 
         this.clearSocketReconnectTimer();
         this.app.state.gameSocketReconnectAttempts += 1;
         const delay = Math.min(4000, 500 * Math.pow(2, this.app.state.gameSocketReconnectAttempts - 1));
         this.app.state.gameSocketReconnectTimer = window.setTimeout(() => {
+          if (this.app.state.currentGameId !== targetGameId) return;
           this.connectGameSocket(targetGameId);
         }, delay);
       });

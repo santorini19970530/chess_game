@@ -63,7 +63,7 @@ class ReviewPlayback {
 
     if (this.app.el.reviewMovesPrev) {
       this.app.el.reviewMovesPrev.addEventListener("click", () => {
-        if (this.app.state.simulationRequestInFlight || this.app.state.isSimulationPlayback) {
+        if (this.app.state.simulationRequestInFlight) {
           this.app.util.setStatus("Simulation is in progress. Please wait for it to finish.", "error");
           return;
         }
@@ -73,7 +73,7 @@ class ReviewPlayback {
 
     if (this.app.el.reviewMovesNext) {
       this.app.el.reviewMovesNext.addEventListener("click", () => {
-        if (this.app.state.simulationRequestInFlight || this.app.state.isSimulationPlayback) {
+        if (this.app.state.simulationRequestInFlight) {
           this.app.util.setStatus("Simulation is in progress. Please wait for it to finish.", "error");
           return;
         }
@@ -121,7 +121,8 @@ class ReviewPlayback {
   }
 
   // applyLoadedGameSnapshot - applies a load-moves snapshot onto board, clocks, and coach state
-  applyLoadedGameSnapshot(result) {
+  applyLoadedGameSnapshot(result, opts = {}) {
+    const keepSim = Boolean(opts.keepSimulation) || Boolean(this.app.state.isSimulationPlayback);
     this.app.applyGameSnapshot(result, {
       board: true,
       syncClockSetup: true,
@@ -130,7 +131,7 @@ class ReviewPlayback {
       clearCapturedCache: true,
       stopAnalysis: true,
       resolvePromotion: true,
-      cleanupSimulation: true,
+      cleanupSimulation: !keepSim,
     });
     this.app.el.input.value = "";
     this.updateReviewPlaybackControls();
@@ -141,6 +142,14 @@ class ReviewPlayback {
     }
 
     this.app.util.clearCoachNotesState();
+    // ai-vs-ai / review seek already stops analysis on game-id change; do not re-arm a poll storm
+    // while stepping simulation games (each forward creates a new session)
+    if (this.app.state.isSimulationPlayback) {
+      this.app.util.refreshNotesBox();
+      void this.app.coach.refreshSuggestedMoves();
+      return;
+    }
+
     const historyArray = Array.isArray(result.history) ? result.history : [];
     const detailedArray = Array.isArray(result.historyDetailed) ? result.historyDetailed : [];
     const targetMoveNumber = Math.max(historyArray.length, detailedArray.length);
@@ -190,8 +199,11 @@ class ReviewPlayback {
       this.app.util.setStatus(ply <= 0 ? "Review: start position…" : `Review: ply ${ply} / ${total}…`, "success");
       const result = await this.postLoadMovesRaw(raw);
       this.app.state.reviewPlaybackPly = ply;
-      this.applyLoadedGameSnapshot(result);
+      this.applyLoadedGameSnapshot(result, { keepSimulation: this.app.state.isSimulationPlayback });
       this.app.util.setStatus(ply <= 0 ? "Review at start position." : `Review at ply ${ply} / ${total}.`, "success");
+      if (this.app.state.isSimulationPlayback && ply >= total) {
+        this.app.simulation.finishCurrentSimulationGame();
+      }
     } catch (error) {
       this.app.util.setStatus(error?.message || "Review seek failed.", "error");
     } finally {

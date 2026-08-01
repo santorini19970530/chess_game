@@ -1326,6 +1326,30 @@ span.shogi_hand_piece {
   background: transparent;
   color: #d0d0d0;
 }
+.game_panel_config .review_moves_row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.game_panel_config .review_moves_row input[type="file"] {
+  width: 100%;
+  text-align: center;
+}
+.game_panel_config #review_moves_load {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.game_panel_config .review_playback_row {
+  width: 100%;
+  justify-content: center;
+}
+.game_panel_config .review_playback_row button {
+  flex: 1 1 0;
+  justify-content: center;
+}
 .review_playback_row {
   margin-top: 2px;
 }

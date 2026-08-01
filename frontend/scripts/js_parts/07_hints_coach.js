@@ -284,13 +284,18 @@ class HintsCoach {
   // startAnalysisPolling - starts analysis polling or socket fallback for a target move number
   startAnalysisPolling(targetMoveNumber, capturedSnapshot) {
     this.app.socket.stopAnalysisPolling();
-    // Keep composed notes (suggestions + coach Thinking…); analysis will refresh threat/suggestions.
+    // keep composed notes (suggestions + coach Thinking…); analysis will refresh threat/suggestions
     const target = Number(targetMoveNumber) || 0;
+    const expectedGameId = String(this.app.state.currentGameId || "").trim();
+    if (!expectedGameId || target <= 0) return;
+    const generation = Number(this.app.state.analysisPollGeneration || 0);
     this.app.state.pendingAnalysisTargetMove = target;
     this.app.state.pendingAnalysisCapturedSnapshot = capturedSnapshot || this.app.state.cachedCapturedSummary;
 
     if (this.app.socket.isSocketConnected()) {
       this.app.state.analysisPollFallbackTimer = window.setTimeout(() => {
+        if (generation !== this.app.state.analysisPollGeneration) return;
+        if (this.app.state.currentGameId !== expectedGameId) return;
         if (!this.app.socket.isSocketConnected() && this.app.state.pendingAnalysisTargetMove > 0) {
           this.startAnalysisPolling(
             this.app.state.pendingAnalysisTargetMove,
@@ -303,11 +308,17 @@ class HintsCoach {
 
     const pollOnce = async () => {
       try {
-        if (!this.app.state.currentGameId) return;
-        const response = await fetch(`/api/games/${encodeURIComponent(this.app.state.currentGameId)}/analysis/latest`, {
+        if (generation !== this.app.state.analysisPollGeneration) return;
+        if (!this.app.state.currentGameId || this.app.state.currentGameId !== expectedGameId) {
+          this.app.socket.stopAnalysisPolling();
+          return;
+        }
+        const response = await fetch(`/api/games/${encodeURIComponent(expectedGameId)}/analysis/latest`, {
           method: "GET",
         });
         if (!response.ok) return;
+        if (generation !== this.app.state.analysisPollGeneration) return;
+        if (this.app.state.currentGameId !== expectedGameId) return;
         const payload = await response.json();
         const latestMoveNumber = Number(payload?.latest_move_number || 0);
         const latestAnalysis = payload?.latest?.analysis;

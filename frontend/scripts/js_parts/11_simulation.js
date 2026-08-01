@@ -193,7 +193,6 @@ class SimulationPanel {
     this.app.state.simulationRequestInFlight = true;
     this.app.state.simulationData = null;
     this.app.state.currentSimGameIdx = -1;
-    this.app.state.currentSimMoveIdx = 0;
     this.clearSimulationSummary();
     this.app.setup.updateSetupControlState();
 
@@ -232,8 +231,8 @@ class SimulationPanel {
       this.renderSimulationSummary(this.app.state.simulationData);
       if (this.app.state.simRunBtn) this.app.state.simRunBtn.style.display = "none";
       this.ensureSimulationControls();
-      this.startNextSimulationGame();
-      this.app.util.setStatus(`Simulation loaded (${n} game${n > 1 ? "s" : ""}).`, "success");
+      await this.startNextSimulationGame();
+      this.app.util.setStatus(`Simulation loaded (${n} game${n > 1 ? "s" : ""}). Use Back / Forward to step.`, "success");
     } catch (error) {
       this.app.state.simulationRequestInFlight = false;
       this.app.setup.updateSetupControlState();
@@ -268,16 +267,6 @@ class SimulationPanel {
   // resetSimulationCapturedPanel - clears the side-panel captured icons for a new sim game
   resetSimulationCapturedPanel() {
     this.app.gameInfo.renderGameInfo(this.app.gameInfo.normalizeCapturedSummary(null), null);
-  }
-
-  // recordSimulationCapture - adds one captured piece to the side panel during next-move playback
-  recordSimulationCapture(side, capturedPieceKind) {
-    const kind = String(capturedPieceKind || "").toLowerCase();
-    if (!kind) return;
-    const capturer = String(side || "").toLowerCase() === "black" ? "black" : "white";
-    const summary = this.app.gameInfo.normalizeCapturedSummary(this.app.state.cachedCapturedSummary);
-    summary[capturer][kind] = (summary[capturer][kind] || 0) + 1;
-    this.app.gameInfo.renderGameInfo(summary, null);
   }
 
   // initialXiangqiState - builds the starting piece list for xiangqi
@@ -384,19 +373,9 @@ class SimulationPanel {
     }
   }
 
-  // ensureSimulationControls - creates next-move and next-game buttons when missing
+  // ensureSimulationControls - creates the next-game button when missing
   ensureSimulationControls() {
     if (!this.app.el.configApplyButton || !this.app.el.configApplyButton.parentNode) return;
-
-    if (!this.app.state.simNextMoveBtn) {
-      this.app.state.simNextMoveBtn = document.createElement("button");
-      this.app.state.simNextMoveBtn.id = "sim_next_move_btn";
-      this.app.state.simNextMoveBtn.type = "button";
-      this.app.state.simNextMoveBtn.textContent = "Next Move";
-      this.app.state.simNextMoveBtn.className = "run-simulation-btn";
-      this.app.state.simNextMoveBtn.addEventListener("click", this.playNextSimulationMove.bind(this));
-      this.app.el.configApplyButton.parentNode.appendChild(this.app.state.simNextMoveBtn);
-    }
 
     if (!this.app.state.simNextGameBtn) {
       this.app.state.simNextGameBtn = document.createElement("button");
@@ -405,7 +384,9 @@ class SimulationPanel {
       this.app.state.simNextGameBtn.textContent = "Next Game";
       this.app.state.simNextGameBtn.className = "run-simulation-btn";
       this.app.state.simNextGameBtn.style.display = "none";
-      this.app.state.simNextGameBtn.addEventListener("click", this.startNextSimulationGame.bind(this));
+      this.app.state.simNextGameBtn.addEventListener("click", () => {
+        void this.startNextSimulationGame();
+      });
       this.app.el.configApplyButton.parentNode.appendChild(this.app.state.simNextGameBtn);
     }
   }
@@ -415,7 +396,6 @@ class SimulationPanel {
     const gameResult = this.app.state.simulationData?.results?.[this.app.state.currentSimGameIdx] || null;
     if (!gameResult) return;
     this.applySimulationResultLabels(gameResult);
-    if (this.app.state.simNextMoveBtn) this.app.state.simNextMoveBtn.style.display = "none";
     if (this.app.state.simNextGameBtn) this.app.state.simNextGameBtn.style.display = "inline-block";
     const totalGames = Array.isArray(this.app.state.simulationData?.results)
       ? this.app.state.simulationData.results.length
@@ -432,12 +412,61 @@ class SimulationPanel {
     }
   }
 
-  // startNextSimulationGame - resets the board and history for the next simulation game
-  startNextSimulationGame() {
+  // uciListFromSimGame - extracts uci commands from one simulation game result
+  uciListFromSimGame(gameResult) {
+    const detailed = Array.isArray(gameResult?.history_detailed) ? gameResult.history_detailed : [];
+    return detailed
+      .map((entry) =>
+        String(entry?.command || "")
+          .trim()
+          .toLowerCase()
+      )
+      .filter(Boolean);
+  }
+
+  // loadCurrentSimGameIntoReview - loads the current sim game json into shared back/forward playback
+  async loadCurrentSimGameIntoReview() {
+    const gameResult = this.app.state.simulationData?.results?.[this.app.state.currentSimGameIdx];
+    if (!gameResult) return false;
+    const moves = this.uciListFromSimGame(gameResult);
+    if (!moves.length) {
+      this.app.util.setStatus(`Game ${this.app.state.currentSimGameIdx + 1} has no move history in response.`, "error");
+      this.finishCurrentSimulationGame();
+      return false;
+    }
+    if (!this.app.state.currentGameId) {
+      this.app.util.setStatus("Missing game session. Start a new game first.", "error");
+      return false;
+    }
+
+    const gameType = String(
+      gameResult.game_type || this.app.el.gameTypeSelect?.value || this.app.state.boardGameType || "chess"
+    ).toLowerCase();
+    const raw = JSON.stringify({
+      game_type: gameType,
+      history_detailed: gameResult.history_detailed,
+    });
+
+    try {
+      // establish session/type from the sim json, then seek to start for forward stepping
+      this.app.socket.stopAnalysisPolling();
+      const primed = await this.app.review.postLoadMovesRaw(raw);
+      this.app.socket.syncGameIdFromResult(primed);
+      this.app.state.reviewPlaybackMoves = moves;
+      this.app.state.reviewPlaybackPly = moves.length;
+      await this.app.review.seekReviewPlayback(0);
+      return true;
+    } catch (error) {
+      this.app.util.setStatus(error?.message || "Failed to load simulation game for review.", "error");
+      return false;
+    }
+  }
+
+  // startNextSimulationGame - loads the next simulation game into shared review playback
+  async startNextSimulationGame() {
     if (!this.app.state.simulationData || !Array.isArray(this.app.state.simulationData.results)) return;
 
     this.app.state.currentSimGameIdx++;
-    this.app.state.currentSimMoveIdx = 0;
 
     if (this.app.state.currentSimGameIdx >= this.app.state.simulationData.results.length) {
       this.app.util.setStatus("All simulation games completed.", "success");
@@ -450,9 +479,7 @@ class SimulationPanel {
       this.app.state.simNextGameBtn.disabled = false;
       this.app.state.simNextGameBtn.style.display = "none";
     }
-    if (this.app.state.simNextMoveBtn) this.app.state.simNextMoveBtn.style.display = "inline-block";
 
-    this.resetBoardToInitialState();
     this.resetSimulationHistoryPanels();
     this.resetSimulationCapturedPanel();
     this.setPlayingResultLabels();
@@ -460,62 +487,17 @@ class SimulationPanel {
 
     const totalGames = this.app.state.simulationData.results.length;
     this.app.util.setNotesText(`Simulation playback: Game ${this.app.state.currentSimGameIdx + 1}/${totalGames}`);
-    this.app.util.setStatus(`Game ${this.app.state.currentSimGameIdx + 1} ready. Click Next Move.`, "success");
-  }
-
-  // playNextSimulationMove - applies the next uci move from the current simulation game
-  playNextSimulationMove() {
-    const gameResult = this.app.state.simulationData?.results?.[this.app.state.currentSimGameIdx];
-    if (!gameResult) return;
-    const moves = Array.isArray(gameResult.history_detailed) ? gameResult.history_detailed : [];
-
-    if (moves.length === 0) {
-      this.app.util.setStatus(`Game ${this.app.state.currentSimGameIdx + 1} has no move history in response.`, "error");
-      this.finishCurrentSimulationGame();
-      return;
+    const loaded = await this.loadCurrentSimGameIntoReview();
+    if (loaded) {
+      this.app.util.setStatus(
+        `Game ${this.app.state.currentSimGameIdx + 1} ready. Use Forward to step (Back to rewind).`,
+        "success"
+      );
     }
-    if (this.app.state.currentSimMoveIdx >= moves.length) {
-      this.finishCurrentSimulationGame();
-      return;
-    }
-
-    const moveEntry = moves[this.app.state.currentSimMoveIdx] || {};
-    const uciMove = String(moveEntry.command || "").trim();
-    if (uciMove) {
-      this.app.board.applyUciMoveToBoard(uciMove);
-      const isCapture = Boolean(moveEntry.isCapture);
-      this.app.dom.playMoveSound(isCapture);
-      const side = String(
-        moveEntry.side || (this.app.state.currentSimMoveIdx % 2 === 0 ? "white" : "black")
-      ).toLowerCase();
-      const capturedPieceKind = String(moveEntry.capturedPieceKind || "");
-      if (isCapture) this.recordSimulationCapture(side, capturedPieceKind);
-      const listEl = side === "black" ? this.app.el.moveHistoryBlackList : this.app.el.moveHistoryWhiteList;
-      if (listEl) {
-        this.app.moveHistory.clearHistoryPlaceholder(listEl);
-        this.app.moveHistory.appendHistoryMove(
-          listEl,
-          side,
-          String(moveEntry.pieceKind || "pawn"),
-          String(moveEntry.to || ""),
-          this.app.moveHistory.destinationFromCommand(uciMove),
-          isCapture,
-          capturedPieceKind
-        );
-        listEl.scrollTop = listEl.scrollHeight;
-      }
-      const line = `#${this.app.state.currentSimMoveIdx + 1} ${uciMove}`;
-      this.app.util.appendNotesLine(line);
-    }
-    this.app.state.currentSimMoveIdx++;
   }
 
   // cleanupSimulationControls - removes playback buttons and restores the run-sim control
   cleanupSimulationControls() {
-    if (this.app.state.simNextMoveBtn) {
-      this.app.state.simNextMoveBtn.remove();
-      this.app.state.simNextMoveBtn = null;
-    }
     if (this.app.state.simNextGameBtn) {
       this.app.state.simNextGameBtn.remove();
       this.app.state.simNextGameBtn = null;
@@ -529,7 +511,6 @@ class SimulationPanel {
       }
     }
     this.app.state.currentSimGameIdx = 0;
-    this.app.state.currentSimMoveIdx = 0;
     this.app.state.simulationRequestInFlight = false;
     this.app.state.isSimulationPlayback = false;
     this.app.setup.updateSetupControlState();
