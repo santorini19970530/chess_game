@@ -197,6 +197,13 @@
   white-space: nowrap;
 }
 
+/* Tablet: board fills its column, not the full viewport width. */
+@media (min-width: 700px) and (max-width: 1099px) {
+  .chess_board_wrapper {
+    --board-size: min(100%, 48vw, 520px);
+  }
+}
+
 /* Must stay after base --board-size so desktop fills .game_panel_left (original behavior). */
 @media (min-width: 1100px) {
   .chess_board_wrapper {

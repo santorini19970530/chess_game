@@ -100,6 +100,10 @@ func (h *Handler) APIGameRoutes(w http.ResponseWriter, r *http.Request) {
 		h.postAPIGameNew(w, r, gameID)
 		return
 	}
+	if len(parts) == 2 && parts[1] == "load-moves" {
+		h.postAPIGameLoadMoves(w, r, gameID)
+		return
+	}
 	if len(parts) == 2 && parts[1] == "legal-moves" {
 		h.getAPIGameLegalMoves(w, r, gameID)
 		return

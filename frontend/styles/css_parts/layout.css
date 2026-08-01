@@ -64,6 +64,130 @@
   margin-bottom: 4px;
 }
 
+.game_config_details[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.game_config_details > summary.config_panel_title {
+  cursor: pointer;
+  list-style: none;
+  font-size: 1.05rem;
+  font-weight: 700;
+  user-select: none;
+}
+
+.game_config_details > summary.config_panel_title::-webkit-details-marker {
+  display: none;
+}
+
+.game_config_details > summary.config_panel_title::before {
+  content: "▸ ";
+  color: #9ca3af;
+}
+
+.game_config_details[open] > summary.config_panel_title::before {
+  content: "▾ ";
+}
+
+.game_config_details:not([open]) > summary.config_panel_title {
+  margin-bottom: 0;
+}
+
+/* Tablet: board + side first; setup full width at the bottom. */
+@media (min-width: 700px) and (max-width: 1099px) {
+  .game_panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+    grid-template-areas:
+      "left rightTop"
+      "left rightBottom"
+      "config config";
+    gap: 10px;
+    align-items: start;
+  }
+
+  .game_panel_config {
+    grid-area: config;
+    padding: 12px;
+  }
+
+  .game_panel_left {
+    grid-area: left;
+    position: sticky;
+    top: 8px;
+    z-index: 10;
+    padding: 8px;
+    align-self: start;
+  }
+
+  .game_panel_right_top {
+    grid-area: rightTop;
+    padding: 12px;
+    min-height: 0;
+  }
+
+  .game_panel_right_bottom {
+    grid-area: rightBottom;
+    padding: 12px;
+  }
+}
+
+/* Phone: play UI first (board → clocks/history → command → setup last). */
+@media (max-width: 699px) {
+  .game_panel {
+    gap: 10px;
+  }
+
+  .game_panel_left {
+    order: 1;
+  }
+
+  .game_panel_right_top {
+    order: 2;
+  }
+
+  .game_panel_right_bottom {
+    order: 3;
+  }
+
+  .game_panel_config {
+    order: 4;
+  }
+
+  .game_panel_left,
+  .game_panel_config,
+  .game_panel_right_top,
+  .game_panel_right_bottom {
+    padding: 10px;
+  }
+
+  .game_panel_left {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: #171717;
+    border-bottom: 1px solid #2d2d2d;
+  }
+
+  .play_chrome {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    margin: 0 -10px;
+    padding: 8px 10px;
+    background: #171717;
+    border-top: 1px solid #2d2d2d;
+    box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.35);
+  }
+
+  .game_panel_config textarea,
+  #fen_input {
+    min-height: 2.6em;
+  }
+}
+
 @media (min-width: 1100px) {
   .game_panel {
     flex: 1 1 0;

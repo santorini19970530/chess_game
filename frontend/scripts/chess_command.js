@@ -22,6 +22,12 @@
   const moveHistoryWhiteList = document.getElementById("chess_move_history_white");
   const moveHistoryBlackList = document.getElementById("chess_move_history_black");
   const newGameButton = document.getElementById("chess_new_game");
+  const reviewMovesInput = document.getElementById("review_moves_input");
+  const reviewMovesFile = document.getElementById("review_moves_file");
+  const reviewMovesLoad = document.getElementById("review_moves_load");
+  const reviewMovesPrev = document.getElementById("review_moves_prev");
+  const reviewMovesNext = document.getElementById("review_moves_next");
+  const reviewMovesPlyLabel = document.getElementById("review_moves_ply");
   const gameTypeSelect = document.getElementById("game_type");
   const gameModeSelect = document.getElementById("game_mode");
   const humanSideSelect = document.getElementById("human_side");
@@ -30,6 +36,7 @@
   const aiStrengthSelect = document.getElementById("ai_strength");
   const coachLevelSelect = document.getElementById("coach_level");
   const configApplyButton = document.getElementById("game_config_apply");
+  const configDetails = document.getElementById("game_config_details");
   const clockEnabledInput = document.getElementById("clock_enabled");
   const clockPresetSelect = document.getElementById("clock_preset");
   const clockBaseSecInput = document.getElementById("clock_base_sec");
@@ -354,6 +361,11 @@
     if (changed) {
       connectGameSocket(nextId);
     }
+  };
+
+  // Collapse setup once a session exists; leave open on first paint / failed create.
+  const collapseConfigPanel = () => {
+    if (configDetails) configDetails.open = false;
   };
 
   const stopAnalysisPolling = () => {
@@ -1026,11 +1038,15 @@
     }
     const filesEl = boardWrapper.querySelector(".board_files");
     if (filesEl) {
+      // Chess/Xiangqi: a..i. Shogi UI: 1..9 (not letter files).
+      const numericFiles = boardGameType === "shogi";
       filesEl.replaceChildren(
         ...Array.from({ length: boardFiles }, (_, i) => {
           const span = document.createElement("span");
           span.className = "board_label";
-          span.textContent = String.fromCharCode("a".charCodeAt(0) + i);
+          span.textContent = numericFiles
+            ? String(i + 1)
+            : String.fromCharCode("a".charCodeAt(0) + i);
           return span;
         })
       );
@@ -2330,6 +2346,7 @@
       if (flagButton) flagButton.disabled = false;
       gameOver = false;
       setStatus("Game session ready.", "success");
+      collapseConfigPanel();
       input.focus();
     } catch (error) {
       setCatchStatus(error);
@@ -2614,6 +2631,7 @@
         }
 
         setStatus("Game setup applied. Click New Game to start.", "success");
+        collapseConfigPanel();
       } catch (error) {
         setCatchStatus(error);
       }
@@ -2814,12 +2832,213 @@
         clearSelectedSquare();
         cleanupSimulationControls();
         setStatus("New game started.", "success");
+        collapseConfigPanel();
         input.focus();
       } catch (error) {
         setCatchStatus(error);
       }
     });
   }
+
+  // Review playback: full UCI list + current ply; Back/Forward reload a prefix via load-moves.
+  let reviewPlaybackMoves = null;
+  let reviewPlaybackPly = 0;
+  let reviewPlaybackBusy = false;
+
+  const uciListFromSnapshot = (result) => {
+    const detailed = Array.isArray(result?.historyDetailed) ? result.historyDetailed : [];
+    const fromDetailed = detailed
+      .map((entry) => String(entry?.command || "").trim().toLowerCase())
+      .filter(Boolean);
+    if (fromDetailed.length) return fromDetailed;
+    const history = Array.isArray(result?.history) ? result.history : [];
+    return history
+      .map((line) => {
+        const text = String(line || "");
+        const idx = text.indexOf(":");
+        return (idx >= 0 ? text.slice(idx + 1) : text).trim().toLowerCase();
+      })
+      .filter(Boolean);
+  };
+
+  const updateReviewPlaybackControls = () => {
+    const total = Array.isArray(reviewPlaybackMoves) ? reviewPlaybackMoves.length : 0;
+    const ply = total ? reviewPlaybackPly : 0;
+    if (reviewMovesPlyLabel) {
+      reviewMovesPlyLabel.textContent = total ? `Ply ${ply} / ${total}` : "Ply 0 / 0";
+    }
+    if (reviewMovesPrev) {
+      reviewMovesPrev.disabled = !total || ply <= 0 || reviewPlaybackBusy;
+    }
+    if (reviewMovesNext) {
+      reviewMovesNext.disabled = !total || ply >= total || reviewPlaybackBusy;
+    }
+  };
+
+  const applyLoadedGameSnapshot = (result) => {
+    syncGameIdFromResult(result);
+    renderGameConfig(result.game, { syncClockSetup: true });
+    renderBoardFromState(result.state, result.game?.type);
+    renderMoveHistory(result.history, result.historyDetailed);
+    renderCurrentTurn(result.currentTurn);
+    renderCheckState(result.checkedSide || result?.game?.outcome?.checkedSide);
+    renderGameOutcome(result.game);
+    renderClocks(result.game);
+    if (result.game?.config?.humanColor) {
+      humanColor = String(result.game.config.humanColor).toLowerCase();
+    }
+    cachedAnalysis = null;
+    cachedCapturedSummary = null;
+    stopAnalysisPolling();
+    input.value = "";
+    resolvePromotionChoice("");
+    clearSelectedSquare();
+    cleanupSimulationControls();
+    renderGameInfo(result.captured, null);
+    updateReviewPlaybackControls();
+
+    if (gameOver) {
+      // renderGameOutcome already set end notes / disabled inputs.
+      return;
+    }
+
+    clearCoachNotesState();
+    const historyArray = Array.isArray(result.history) ? result.history : [];
+    const detailedArray = Array.isArray(result.historyDetailed) ? result.historyDetailed : [];
+    const targetMoveNumber = Math.max(historyArray.length, detailedArray.length);
+    if (targetMoveNumber > 0) {
+      lastExplanationText = "[coach] Thinking…";
+      refreshNotesBox();
+      void refreshSuggestedMoves();
+      startAnalysisPolling(targetMoveNumber, result.captured);
+    } else {
+      clearCoachNotesState();
+      refreshNotesBox();
+      void refreshSuggestedMoves();
+    }
+  };
+
+  const postLoadMovesRaw = async (raw) => {
+    const response = await fetch(
+      `/api/games/${encodeURIComponent(currentGameId)}/load-moves`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ raw }),
+      }
+    );
+    if (!response.ok) {
+      const errorMessage = await readErrorMessage(response, "Failed to load moves.");
+      throw new Error(errorMessage || "Failed to load moves.");
+    }
+    return response.json();
+  };
+
+  const seekReviewPlayback = async (targetPly) => {
+    if (!Array.isArray(reviewPlaybackMoves) || !reviewPlaybackMoves.length) {
+      setStatus("Load moves first to enable playback.", "error");
+      return;
+    }
+    if (!currentGameId) {
+      setStatus("Missing game session. Start a new game first.", "error");
+      return;
+    }
+    const total = reviewPlaybackMoves.length;
+    const ply = Math.max(0, Math.min(total, Number(targetPly) || 0));
+    if (reviewPlaybackBusy) return;
+    reviewPlaybackBusy = true;
+    updateReviewPlaybackControls();
+    try {
+      const raw = ply <= 0 ? "" : reviewPlaybackMoves.slice(0, ply).join(" ");
+      setStatus(ply <= 0 ? "Review: start position…" : `Review: ply ${ply} / ${total}…`, "success");
+      const result = await postLoadMovesRaw(raw);
+      reviewPlaybackPly = ply;
+      applyLoadedGameSnapshot(result);
+      setStatus(ply <= 0 ? "Review at start position." : `Review at ply ${ply} / ${total}.`, "success");
+    } catch (error) {
+      setStatus(error?.message || "Review seek failed.", "error");
+    } finally {
+      reviewPlaybackBusy = false;
+      updateReviewPlaybackControls();
+    }
+  };
+
+  if (reviewMovesFile && reviewMovesInput) {
+    reviewMovesFile.addEventListener("change", async () => {
+      const file = reviewMovesFile.files && reviewMovesFile.files[0];
+      if (!file) return;
+      try {
+        reviewMovesInput.value = await file.text();
+        setStatus(`Loaded file ${file.name} into review box.`, "success");
+      } catch (error) {
+        setCatchStatus(error);
+      }
+    });
+  }
+
+  if (reviewMovesLoad) {
+    reviewMovesLoad.addEventListener("click", async () => {
+      if (simulationRequestInFlight || isSimulationPlayback) {
+        setStatus("Simulation is in progress. Please wait for it to finish.", "error");
+        return;
+      }
+      const raw = String(reviewMovesInput?.value || "").trim();
+      if (!raw) {
+        setStatus("Paste UCI moves or a game JSON first.", "error");
+        return;
+      }
+      if (!currentGameId) {
+        setStatus("Missing game session. Start a new game first.", "error");
+        return;
+      }
+      if (reviewPlaybackBusy) return;
+      reviewPlaybackBusy = true;
+      updateReviewPlaybackControls();
+      try {
+        setStatus("Loading moves…", "success");
+        const result = await postLoadMovesRaw(raw);
+        const moves = uciListFromSnapshot(result);
+        if (!moves.length) {
+          setStatus("Load succeeded but no moves were found in the response.", "error");
+          return;
+        }
+        reviewPlaybackMoves = moves;
+        reviewPlaybackPly = moves.length;
+        applyLoadedGameSnapshot(result);
+        collapseConfigPanel();
+        setStatus(`Loaded ${moves.length} move(s) for review. Use Back / Forward to step.`, "success");
+        input.focus();
+      } catch (error) {
+        setStatus(error?.message || "Failed to load moves.", "error");
+      } finally {
+        reviewPlaybackBusy = false;
+        updateReviewPlaybackControls();
+      }
+    });
+  }
+
+  if (reviewMovesPrev) {
+    reviewMovesPrev.addEventListener("click", () => {
+      if (simulationRequestInFlight || isSimulationPlayback) {
+        setStatus("Simulation is in progress. Please wait for it to finish.", "error");
+        return;
+      }
+      void seekReviewPlayback(reviewPlaybackPly - 1);
+    });
+  }
+
+  if (reviewMovesNext) {
+    reviewMovesNext.addEventListener("click", () => {
+      if (simulationRequestInFlight || isSimulationPlayback) {
+        setStatus("Simulation is in progress. Please wait for it to finish.", "error");
+        return;
+      }
+      void seekReviewPlayback(reviewPlaybackPly + 1);
+    });
+  }
+
+  updateReviewPlaybackControls();
+
   // --- Simulation Manual Playback Helpers ---
   function initialChessState() {
     const order = ["rook", "knight", "bishop", "queen", "king", "bishop", "knight", "rook"];

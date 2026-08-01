@@ -122,6 +122,39 @@ func TestFrontendSimulationDownload_Step1ButtonMarkers(t *testing.T) {
 	requireSnippet(t, source, "Download CSV")
 }
 
+func TestFrontendShogiBoard_NumericFileLabels(t *testing.T) {
+	jsSrc := loadChessCommandSource(t)
+	requireSnippet(t, jsSrc, `const numericFiles = boardGameType === "shogi"`)
+	requireSnippet(t, jsSrc, "? String(i + 1)")
+}
+
+func TestFrontendConfigPanel_DetailsCollapse(t *testing.T) {
+	indexSrc := loadIndexHandlerSource(t)
+	requireSnippet(t, indexSrc, `id="game_config_details"`)
+	requireSnippet(t, indexSrc, `class="game_config_details"`)
+	requireSnippet(t, indexSrc, `<summary class="config_panel_title">Setup new game</summary>`)
+
+	jsSrc := loadChessCommandSource(t)
+	requireSnippet(t, jsSrc, "collapseConfigPanel")
+	requireSnippet(t, jsSrc, "game_config_details")
+}
+
+func TestFrontendLoadMoves_ReviewMarkers(t *testing.T) {
+	indexSrc := loadIndexHandlerSource(t)
+	requireSnippet(t, indexSrc, `id="review_moves_input"`)
+	requireSnippet(t, indexSrc, `id="review_moves_load"`)
+	requireSnippet(t, indexSrc, `id="review_moves_file"`)
+	requireSnippet(t, indexSrc, `id="review_moves_prev"`)
+	requireSnippet(t, indexSrc, `id="review_moves_next"`)
+
+	jsSrc := loadChessCommandSource(t)
+	requireSnippet(t, jsSrc, "/load-moves")
+	requireSnippet(t, jsSrc, "applyLoadedGameSnapshot")
+	requireSnippet(t, jsSrc, "review_moves_load")
+	requireSnippet(t, jsSrc, "seekReviewPlayback")
+	requireSnippet(t, jsSrc, "reviewPlaybackMoves")
+}
+
 func TestFrontendSimulationDownload_Step2StyleMarkers(t *testing.T) {
 	source := loadInputCSSSource(t)
 
