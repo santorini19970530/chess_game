@@ -265,6 +265,21 @@ class SimulationPanel {
     }
   }
 
+  // resetSimulationCapturedPanel - clears the side-panel captured icons for a new sim game
+  resetSimulationCapturedPanel() {
+    this.app.gameInfo.renderGameInfo(this.app.gameInfo.normalizeCapturedSummary(null), null);
+  }
+
+  // recordSimulationCapture - adds one captured piece to the side panel during next-move playback
+  recordSimulationCapture(side, capturedPieceKind) {
+    const kind = String(capturedPieceKind || "").toLowerCase();
+    if (!kind) return;
+    const capturer = String(side || "").toLowerCase() === "black" ? "black" : "white";
+    const summary = this.app.gameInfo.normalizeCapturedSummary(this.app.state.cachedCapturedSummary);
+    summary[capturer][kind] = (summary[capturer][kind] || 0) + 1;
+    this.app.gameInfo.renderGameInfo(summary, null);
+  }
+
   // initialXiangqiState - builds the starting piece list for xiangqi
   initialXiangqiState() {
     const state = [];
@@ -439,6 +454,7 @@ class SimulationPanel {
 
     this.resetBoardToInitialState();
     this.resetSimulationHistoryPanels();
+    this.resetSimulationCapturedPanel();
     this.setPlayingResultLabels();
     this.app.coach.highlightSuggestedMoves([]);
 
@@ -467,10 +483,13 @@ class SimulationPanel {
     const uciMove = String(moveEntry.command || "").trim();
     if (uciMove) {
       this.app.board.applyUciMoveToBoard(uciMove);
-      this.app.dom.playMoveSound(Boolean(moveEntry.isCapture));
+      const isCapture = Boolean(moveEntry.isCapture);
+      this.app.dom.playMoveSound(isCapture);
       const side = String(
         moveEntry.side || (this.app.state.currentSimMoveIdx % 2 === 0 ? "white" : "black")
       ).toLowerCase();
+      const capturedPieceKind = String(moveEntry.capturedPieceKind || "");
+      if (isCapture) this.recordSimulationCapture(side, capturedPieceKind);
       const listEl = side === "black" ? this.app.el.moveHistoryBlackList : this.app.el.moveHistoryWhiteList;
       if (listEl) {
         this.app.moveHistory.clearHistoryPlaceholder(listEl);
@@ -480,8 +499,8 @@ class SimulationPanel {
           String(moveEntry.pieceKind || "pawn"),
           String(moveEntry.to || ""),
           this.app.moveHistory.destinationFromCommand(uciMove),
-          Boolean(moveEntry.isCapture),
-          String(moveEntry.capturedPieceKind || "")
+          isCapture,
+          capturedPieceKind
         );
         listEl.scrollTop = listEl.scrollHeight;
       }
