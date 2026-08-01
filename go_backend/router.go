@@ -30,7 +30,7 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 	styleCSSPath := frontendPath("styles", "style.css")
 	inputCSSPath := frontendPath("styles", "input.css")
 	tailwindPath := frontendPath("styles", "tailwindcss")
-	commandScriptPath := frontendPath("scripts", "chess_command.js")
+	scriptsDir := frontendPath("scripts")
 	iconPath := frontendPath("pic", "icon.png")
 	picDir := frontendPath("pic/")
 	soundDir := frontendPath("sounds")
@@ -51,7 +51,12 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 		serveNoCache(styleCSSPath)(w, r)
 	})
 	mux.HandleFunc("/styles/input.css", serveNoCache(inputCSSPath))
-	mux.HandleFunc("/scripts/chess_command.js", serveNoCache(commandScriptPath))
+	scriptFileServer := http.StripPrefix("/scripts/", http.FileServer(http.Dir(scriptsDir)))
+	mux.Handle("/scripts/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Pragma", "no-cache")
+		scriptFileServer.ServeHTTP(w, r)
+	}))
 
 	// favicon and icon routes
 	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {

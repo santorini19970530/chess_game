@@ -6,6 +6,7 @@ package handlers
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -14,13 +15,36 @@ import (
 func loadChessCommandSource(t *testing.T) string {
 	t.Helper()
 
-	candidates := []string{
-		filepath.Join("..", "..", "frontend", "scripts", "chess_command.js"),
-		filepath.Join("..", "frontend", "scripts", "chess_command.js"),
-		filepath.Join("frontend", "scripts", "chess_command.js"),
+	roots := []string{
+		filepath.Join("..", "..", "frontend", "scripts"),
+		filepath.Join("..", "frontend", "scripts"),
+		filepath.Join("frontend", "scripts"),
+	}
+	for _, root := range roots {
+		partFiles, err := filepath.Glob(filepath.Join(root, "js_parts", "*.js"))
+		if err != nil || len(partFiles) == 0 {
+			continue
+		}
+		sort.Strings(partFiles)
+		var source strings.Builder
+		for _, partFile := range partFiles {
+			data, err := os.ReadFile(partFile)
+			if err != nil {
+				t.Fatalf("failed to load frontend script part %s: %v", partFile, err)
+			}
+			source.Write(data)
+			source.WriteByte('\n')
+		}
+		data, err := os.ReadFile(filepath.Join(root, "chess_command.js"))
+		if err != nil {
+			t.Fatalf("failed to load frontend boot script: %v", err)
+		}
+		source.Write(data)
+		return source.String()
 	}
 
-	return loadFrontendSource(t, candidates, "chess_command.js")
+	t.Fatal("failed to load frontend script parts for regression test")
+	return ""
 }
 
 // loadInputCSSSource - returns input css source
@@ -92,7 +116,12 @@ func loadFrontendSource(t *testing.T, candidates []string, label string) string 
 // requireSnippet - returns require snippet
 func requireSnippet(t *testing.T, source string, snippet string) {
 	t.Helper()
-	if strings.Contains(source, snippet) {
+	canonicalSource := strings.NewReplacer(
+		"G.state.", "", "G.el.", "", "G.",
+		"", "this.app.state.", "", "this.app.el.", "", "this.app.",
+		"",
+	).Replace(source)
+	if strings.Contains(source, snippet) || strings.Contains(canonicalSource, snippet) {
 		return
 	}
 	t.Fatalf("expected frontend simulation logic snippet missing: %q", snippet)
@@ -111,7 +140,7 @@ func TestFrontendSimulationState_RunPlaybackDoneMarkers(t *testing.T) {
 	requireSnippet(t, source, "cleanupSimulationControls();")
 	requireSnippet(t, source, `simRunBtn.style.display = "inline-block";`)
 	requireSnippet(t, source, `simRunBtn.disabled = false;`)
-	requireSnippet(t, source, "if (!isAIVsAIModeSelected()) {")
+	requireSnippet(t, source, "if (!this.app.util.isAIVsAIModeSelected()) {")
 	requireSnippet(t, source, `simRunBtn.style.display = "none";`)
 }
 
@@ -217,4 +246,30 @@ func TestFrontendSimulationDownload_ExportMarkers(t *testing.T) {
 	requireSnippet(t, source, "buildSimulationCSV")
 	requireSnippet(t, source, "downloadTextFile")
 	requireSnippet(t, source, "setSimulationDownloadEnabled")
+}
+
+// TestFrontendGameAppClasses - checks the frontend uses class-based controllers
+func TestFrontendGameAppClasses(t *testing.T) {
+	source := loadChessCommandSource(t)
+
+	for _, snippet := range []string{
+		"class GameApp",
+		"class DomState",
+		"class Util",
+		"class SocketClient",
+		"class ClockController",
+		"class BoardView",
+		"class BoardInteraction",
+		"class HintsCoach",
+		"class GameInfoView",
+		"class SetupCommand",
+		"class ReviewPlayback",
+		"class SimulationPanel",
+		"new GameApp()",
+	} {
+		requireSnippet(t, source, snippet)
+	}
+	if strings.Contains(source, "G.register") || strings.Contains(source, "G.parts") {
+		t.Fatal("frontend must not use the GameUI callback registry")
+	}
 }
