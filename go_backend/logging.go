@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-// statusRecorder captures response status codes	
+// statusRecorder captures response status codes
 type statusRecorder struct {
 	http.ResponseWriter
 	statusCode int

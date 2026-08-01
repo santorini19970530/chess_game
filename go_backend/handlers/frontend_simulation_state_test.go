@@ -49,16 +49,27 @@ func loadSimulationCSSSource(t *testing.T) string {
 	return loadFrontendSource(t, candidates, "simulation.css")
 }
 
-// loadIndexHandlerSource - returns index handler source
+// loadIndexHandlerSource - returns concatenated game-panel html puzzles (markup lives in templates now)
 func loadIndexHandlerSource(t *testing.T) string {
 	t.Helper()
 
-	candidates := []string{
-		"index.go",
-		filepath.Join("handlers", "index.go"),
+	puzzleNames := []string{
+		"game_panel.html",
+		"game_config.html",
+		"game_info.html",
+		"game_play.html",
 	}
-
-	return loadFrontendSource(t, candidates, "index.go")
+	var b strings.Builder
+	for _, name := range puzzleNames {
+		candidates := []string{
+			filepath.Join("..", "..", "frontend", "html_puzzles", name),
+			filepath.Join("..", "frontend", "html_puzzles", name),
+			filepath.Join("frontend", "html_puzzles", name),
+		}
+		b.WriteString(loadFrontendSource(t, candidates, name))
+		b.WriteByte('\n')
+	}
+	return b.String()
 }
 
 // loadFrontendSource - returns frontend source
@@ -154,16 +165,20 @@ func TestFrontendShogiBoard_NumericFileLabels(t *testing.T) {
 	requireSnippet(t, jsSrc, "? String(i + 1)")
 }
 
-// TestFrontendConfigPanel_DetailsCollapse - checks frontend config panel details collapse
-func TestFrontendConfigPanel_DetailsCollapse(t *testing.T) {
+// TestFrontendConfigPanel_AlwaysVisibleLeft - checks setup panel is a static left column, not a details toggle
+func TestFrontendConfigPanel_AlwaysVisibleLeft(t *testing.T) {
 	indexSrc := loadIndexHandlerSource(t)
-	requireSnippet(t, indexSrc, `id="game_config_details"`)
-	requireSnippet(t, indexSrc, `class="game_config_details"`)
-	requireSnippet(t, indexSrc, `<summary class="config_panel_title">Setup new game</summary>`)
+	requireSnippet(t, indexSrc, `id="game_config_panel"`)
+	requireSnippet(t, indexSrc, `class="game_config_panel"`)
+	requireSnippet(t, indexSrc, `<div class="config_panel_title">Setup new game</div>`)
+	if strings.Contains(indexSrc, `id="game_config_details"`) || strings.Contains(indexSrc, `<summary class="config_panel_title">Setup new game</summary>`) {
+		t.Fatal("setup panel must not use details/summary collapse")
+	}
 
 	jsSrc := loadChessCommandSource(t)
-	requireSnippet(t, jsSrc, "collapseConfigPanel")
-	requireSnippet(t, jsSrc, "game_config_details")
+	if strings.Contains(jsSrc, "collapseConfigPanel") || strings.Contains(jsSrc, "game_config_details") {
+		t.Fatal("chess_command.js must not collapse the setup panel")
+	}
 }
 
 // TestFrontendLoadMoves_ReviewMarkers - checks frontend load moves review markers

@@ -1,0 +1,51 @@
+<!-- CM3070 FP code -->
+<!-- game_info.html - side clocks, captures, and move history -->
+{{define "game_info"}}
+<div class="game_panel_right_top" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">
+  <div class="game_info_table" role="table" aria-label="Game information table">
+    <div class="game_info_winprob_wrapper" role="presentation">
+      <div class="game_info_winprob_track">
+        <div id="game_info_winprob_white_bar" class="game_info_winprob_segment game_info_winprob_segment_white" style="width: 50%;">
+          <span id="game_info_winprob_white" class="game_info_winprob_label">50%</span>
+        </div>
+        <div id="game_info_winprob_black_bar" class="game_info_winprob_segment game_info_winprob_segment_black" style="width: 50%;">
+          <span id="game_info_winprob_black" class="game_info_winprob_label">50%</span>
+        </div>
+      </div>
+    </div>
+    <div class="game_info_row game_info_header" role="row">
+      <div id="game_info_side_white" class="game_info_cell game_info_side {{.WhiteTurnClass}}" role="columnheader">White</div>
+      <div id="game_info_side_black" class="game_info_cell game_info_side {{.BlackTurnClass}}" role="columnheader">Black</div>
+    </div>
+    <div class="game_info_row" role="row">
+      <div class="game_info_cell {{.WhiteTurnClass}}" role="cell"><span id="game_info_captured_white" class="game_info_item_value game_info_capture_value"></span></div>
+      <div class="game_info_cell {{.BlackTurnClass}}" role="cell"><span id="game_info_captured_black" class="game_info_item_value game_info_capture_value"></span></div>
+    </div>
+    <div class="game_info_row" role="row">
+      <div class="game_info_cell {{.WhiteTurnClass}}" role="cell"><span id="game_info_time_white" class="game_info_item_value">⏱ --:--</span></div>
+      <div class="game_info_cell {{.BlackTurnClass}}" role="cell"><span id="game_info_time_black" class="game_info_item_value">⏱ --:--</span></div>
+    </div>
+    <div class="game_info_row" role="row">
+      <div class="game_info_cell {{.WhiteTurnClass}}" role="cell"><span id="game_info_result_white" class="game_info_item_value">Result: PLAYING</span></div>
+      <div class="game_info_cell {{.BlackTurnClass}}" role="cell"><span id="game_info_result_black" class="game_info_item_value">Result: PLAYING</span></div>
+    </div>
+  </div>
+  <div class="chess_move_history_section" style="margin-top:16px;display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
+    <h3 class="chess_move_history_title">Move history</h3>
+    <div class="chess_move_history_panels" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;min-height:0;flex:1;overflow:hidden;">
+      <div class="chess_move_history_panel" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">
+        <h4 class="chess_move_history_side_title">White</h4>
+        <ol id="chess_move_history_white" class="chess_move_history_list" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;">
+          <li class="chess_move_history_placeholder">No moves yet.</li>
+        </ol>
+      </div>
+      <div class="chess_move_history_panel" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">
+        <h4 class="chess_move_history_side_title">Black</h4>
+        <ol id="chess_move_history_black" class="chess_move_history_list" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;">
+          <li class="chess_move_history_placeholder">No moves yet.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

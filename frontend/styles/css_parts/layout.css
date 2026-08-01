@@ -62,37 +62,14 @@
 
 .config_panel_title {
   margin-bottom: 4px;
+  font-size: 1.05rem;
+  font-weight: 700;
 }
 
-.game_config_details[open] {
+.game_config_panel {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-.game_config_details > summary.config_panel_title {
-  cursor: pointer;
-  list-style: none;
-  font-size: 1.05rem;
-  font-weight: 700;
-  user-select: none;
-}
-
-.game_config_details > summary.config_panel_title::-webkit-details-marker {
-  display: none;
-}
-
-.game_config_details > summary.config_panel_title::before {
-  content: "▸ ";
-  color: #9ca3af;
-}
-
-.game_config_details[open] > summary.config_panel_title::before {
-  content: "▾ ";
-}
-
-.game_config_details:not([open]) > summary.config_panel_title {
-  margin-bottom: 0;
 }
 
 /* Tablet: board + side first; setup full width at the bottom. */

@@ -11,7 +11,7 @@ import (
 	"net/http"
 )
 
-// main - starts the go http server for the chess game backend
+// starts the go http server for the chess game backend
 func main() {
 	session.SetArchiveStore(gamearchive.NewJSONFileStore(gamearchive.ResolvePath()))
 
