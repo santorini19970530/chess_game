@@ -1,8 +1,5 @@
-/*
- * Xiangqi: real point geometry inside an inset field.
- * Outer points sit on the line frame; padding around the field absorbs piece overhang
- * (junction pieces would otherwise clip at top/bottom/side ranks & files).
- */
+/* xianqiboard.css - .chess_board_wrapper[data-game-type=xianqi] point board + labels (board SSR) */
+/* pad around the line field absorbs piece overhang at edge junctions */
 
 .chess_board_wrapper[data-game-type="xianqi"] {
   --xq-line: #2b1a0e;
