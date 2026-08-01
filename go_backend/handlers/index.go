@@ -30,9 +30,7 @@ type gameStateResponse struct {
 
 // generateChessBoard - builds the chessboard html for the index page
 func generateChessBoard() template.HTML {
-	gameBoard := chessboard.NewChessBoard()
-
-	return gameBoard.Draw()
+	return DrawChessBoard(chessboard.NewChessBoard())
 }
 
 // Index - renders the main game page template

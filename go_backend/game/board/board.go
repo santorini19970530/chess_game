@@ -1,12 +1,9 @@
 // CM3070 FP code
-// chessboard.go defines chessboard rendering for the index page
+// chessboard.go defines board geometry for files×ranks grids
 
 package chessboard
 
 import (
-	"fmt"
-	pieces "go_backend/game/piece"
-	"html/template"
 	"strings"
 )
 
@@ -22,7 +19,7 @@ func NewChessBoard() *ChessBoard {
 	return NewBoard(8, 8)
 }
 
-// NewBoard - creates a files×ranks div-square board (Xiangqi 9×10, Shogi 9×9, …)
+// NewBoard - creates a files×ranks square board (Xiangqi 9×10, Shogi 9×9, …)
 func NewBoard(files, ranks int) *ChessBoard {
 	if files <= 0 {
 		files = 8
@@ -42,6 +39,11 @@ func NewBoard(files, ranks int) *ChessBoard {
 	return board
 }
 
+// Squares - returns board squares in display sequence order
+func (c *ChessBoard) Squares() []ChessBoardSquare {
+	return c.squares
+}
+
 // SequenceByFileRank - maps 1-based file/rank to data-sequence (rank max at top)
 func SequenceByFileRank(file, rank, files, maxRank int) int {
 	return (maxRank-rank)*files + (file - 1)
@@ -54,101 +56,8 @@ func FileRankFromSequence(sequence, files, maxRank int) (file, rank int) {
 	return file, rank
 }
 
-// Draw - renders the board wrapper, labels, and squares
-func (c *ChessBoard) Draw() template.HTML {
-	var htmlBuilder strings.Builder
-
-	fmt.Fprintf(
-		&htmlBuilder,
-		`<div class="chess_board_wrapper" style="--board-files: %d; --board-ranks: %d;">`,
-		c.Files,
-		c.Ranks,
-	)
-
-	htmlBuilder.WriteString(`<div class="board_ranks board_ranks_left">`)
-	htmlBuilder.WriteString(generateRankLabels(c.Ranks))
-	htmlBuilder.WriteString(`</div>`)
-
-	htmlBuilder.WriteString(string(c.DrawChessBoardSquares()))
-
-	htmlBuilder.WriteString(`<div class="board_spacer"></div>`)
-
-	htmlBuilder.WriteString(`<div class="board_files board_files_bottom">`)
-	htmlBuilder.WriteString(generateFileLabels(c.Files))
-	htmlBuilder.WriteString(`</div>`)
-
-	htmlBuilder.WriteString(`</div>`)
-
-	return template.HTML(htmlBuilder.String())
-}
-
-// DrawChessBoardSquares - renders only square tiles
-func (c *ChessBoard) DrawChessBoardSquares() template.HTML {
-	var htmlBuilder strings.Builder
-
-	htmlBuilder.WriteString(`<div class="chess_board">`)
-
-	type pieceRender struct {
-		src   string
-		color string
-		kind  string
-	}
-	pieceAt := make(map[string]pieceRender)
-	// sSR initial pieces only for classic chess start layout
-	if c.Files == 8 && c.Ranks == 8 {
-		pieceAt = make(map[string]pieceRender, len(pieces.ChessPieces))
-		for _, p := range pieces.ChessPieces {
-			key := fmt.Sprintf("%d_%d", p.File, p.Rank)
-			pieceAt[key] = pieceRender{
-				src:   "/" + p.ImgFile,
-				color: string(p.Color),
-				kind:  string(p.Kind),
-			}
-		}
-	}
-
-	for _, square := range c.squares {
-		squareClass := "chess_board_square_dark"
-		if square.IsLight {
-			squareClass = "chess_board_square_light"
-		}
-
-		file, rank := FileRankFromSequence(square.Sequence, c.Files, c.Ranks)
-		key := fmt.Sprintf("%d_%d", file, rank)
-		extra := squareCueClasses(c.Files, c.Ranks, file, rank)
-		if extra != "" {
-			squareClass = squareClass + " " + extra
-		}
-
-		fmt.Fprintf(
-			&htmlBuilder,
-			`<div class="chess_board_square %s" data-sequence="%d" data-file="%d" data-rank="%d">`,
-			squareClass,
-			square.Sequence,
-			file,
-			rank,
-		)
-
-		if pieceMeta, ok := pieceAt[key]; ok {
-			fmt.Fprintf(
-				&htmlBuilder,
-				`<img class="piece_img" src="%s" alt="piece_%s" data-color="%s" data-kind="%s" draggable="true">`,
-				pieceMeta.src,
-				key,
-				pieceMeta.color,
-				pieceMeta.kind,
-			)
-		}
-		htmlBuilder.WriteString(`</div>`)
-	}
-
-	htmlBuilder.WriteString(`</div>`)
-
-	return template.HTML(htmlBuilder.String())
-}
-
-// squareCueClasses - adds Xiangqi edge/river/palace cues (9×10 only). no board PNG
-func squareCueClasses(files, ranks, file, rank int) string {
+// SquareCueClasses - adds Xiangqi edge/river/palace cues (9×10 only)
+func SquareCueClasses(files, ranks, file, rank int) string {
 	if files != 9 || ranks != 10 {
 		return ""
 	}
@@ -176,26 +85,4 @@ func squareCueClasses(files, ranks, file, rank int) string {
 		parts = append(parts, "chess_board_square_palace")
 	}
 	return strings.Join(parts, " ")
-}
-
-// generateFileLabels - returns generate file labels
-func generateFileLabels(files int) string {
-	var htmlBuilder strings.Builder
-	for i := 0; i < files; i++ {
-		htmlBuilder.WriteString(`<span class="board_label">`)
-		htmlBuilder.WriteByte(byte('a' + i))
-		htmlBuilder.WriteString(`</span>`)
-	}
-	return htmlBuilder.String()
-}
-
-// generateRankLabels - returns generate rank labels
-func generateRankLabels(ranks int) string {
-	var htmlBuilder strings.Builder
-	for r := ranks; r >= 1; r-- {
-		htmlBuilder.WriteString(`<span class="board_label">`)
-		htmlBuilder.WriteString(fmt.Sprintf("%d", r))
-		htmlBuilder.WriteString(`</span>`)
-	}
-	return htmlBuilder.String()
 }

@@ -27,22 +27,21 @@ func TestSequenceByFileRank_ChessAndXiangqi(t *testing.T) {
 	}
 }
 
-// TestNewBoard_XiangqiDrawHas90SquaresAndLabels - checks new board xiangqi draw has90 squares and labels
-func TestNewBoard_XiangqiDrawHas90SquaresAndLabels(t *testing.T) {
-	html := string(NewBoard(9, 10).Draw())
-	if !strings.Contains(html, `--board-files: 9`) || !strings.Contains(html, `--board-ranks: 10`) {
-		t.Fatalf("expected CSS vars for 9×10, got snippet missing vars")
+// TestNewBoard_XiangqiHas90SquaresAndCueClasses - checks 9×10 geometry and palace/river cues
+func TestNewBoard_XiangqiHas90SquaresAndCueClasses(t *testing.T) {
+	board := NewBoard(9, 10)
+	if board.Files != 9 || board.Ranks != 10 {
+		t.Fatalf("expected 9×10 board, got %d×%d", board.Files, board.Ranks)
 	}
-	if strings.Count(html, `data-sequence=`) != 90 {
-		t.Fatalf("expected 90 squares, got %d", strings.Count(html, `data-sequence=`))
+	if len(board.Squares()) != 90 {
+		t.Fatalf("expected 90 squares, got %d", len(board.Squares()))
 	}
-	if !strings.Contains(html, `>i<`) || !strings.Contains(html, `>10<`) {
-		t.Fatalf("expected file i and rank 10 labels")
+	cues := SquareCueClasses(9, 10, 5, 6)
+	if !strings.Contains(cues, "xq_river_break") {
+		t.Fatalf("expected river cue on file 5 rank 6, got %q", cues)
 	}
-	if !strings.Contains(html, "xq_river_break") || !strings.Contains(html, "chess_board_square_palace") {
-		t.Fatalf("expected river/palace cue classes on 9×10 board")
-	}
-	if !strings.Contains(html, "xq_edge_w") || !strings.Contains(html, "xq_edge_e") {
-		t.Fatalf("expected edge cue classes on 9×10 board")
+	palace := SquareCueClasses(9, 10, 5, 2)
+	if !strings.Contains(palace, "chess_board_square_palace") {
+		t.Fatalf("expected palace cue on file 5 rank 2, got %q", palace)
 	}
 }

@@ -33,6 +33,19 @@ func loadInputCSSSource(t *testing.T) string {
 	return loadFrontendSource(t, candidates, "input.css")
 }
 
+// loadSimulationCSSSource - returns simulation stylesheet (download button rules live here)
+func loadSimulationCSSSource(t *testing.T) string {
+	t.Helper()
+
+	candidates := []string{
+		filepath.Join("..", "..", "frontend", "styles", "css_parts", "simulation.css"),
+		filepath.Join("..", "frontend", "styles", "css_parts", "simulation.css"),
+		filepath.Join("frontend", "styles", "css_parts", "simulation.css"),
+	}
+
+	return loadFrontendSource(t, candidates, "simulation.css")
+}
+
 // loadIndexHandlerSource - returns index handler source
 func loadIndexHandlerSource(t *testing.T) string {
 	t.Helper()
@@ -96,9 +109,9 @@ func TestFrontendSimulationState_ErrorAndConflictRecoveryMarkers(t *testing.T) {
 	requireSnippet(t, source, "Simulation already running on server.")
 	requireSnippet(t, source, "Simulation failed: ")
 	requireSnippet(t, source, "Simulation failed: missing results payload.")
-	requireSnippet(t, source, "setStatus(\"Network error while loading simulation.\", \"error\");")
+	requireSnippet(t, source, `setCatchStatus(error, "Network error while loading simulation.");`)
 
-	// ponytail: if cleanup call is removed from any error path, UI can get stuck in playback mode.
+	// if cleanup is removed from error paths, UI can get stuck in playback mode
 	if strings.Count(source, "cleanupSimulationControls();") < 4 {
 		t.Fatalf("expected multiple cleanupSimulationControls() calls across error and done paths")
 	}
@@ -169,7 +182,7 @@ func TestFrontendLoadMoves_ReviewMarkers(t *testing.T) {
 
 // TestFrontendSimulationDownload_Step2StyleMarkers - checks frontend simulation download step2 style markers
 func TestFrontendSimulationDownload_Step2StyleMarkers(t *testing.T) {
-	source := loadInputCSSSource(t)
+	source := loadSimulationCSSSource(t)
 
 	requireSnippet(t, source, ".simulation_download_actions")
 	requireSnippet(t, source, ".simulation_download_btn")

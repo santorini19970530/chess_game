@@ -4,6 +4,8 @@
 package main
 
 import (
+	"go_backend/game/session"
+	"go_backend/gamearchive"
 	"go_backend/handlers"
 	"log"
 	"net/http"
@@ -11,6 +13,8 @@ import (
 
 // main - starts the go http server for the chess game backend
 func main() {
+	session.SetArchiveStore(gamearchive.NewJSONFileStore(gamearchive.ResolvePath()))
+
 	// initialize handler and router
 	h := handlers.NewHandler()
 	handlers.StartAnalyzerWorker()

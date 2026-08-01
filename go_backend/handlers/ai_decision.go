@@ -81,7 +81,7 @@ func resetFairyStockfish(side string) (*engine.FairyStockfish, error) {
 	return getFairyStockfish(side)
 }
 
-// SelectAIMove - returns a go-legal ai move; fs/python only propose candidates
+// SelectAIMove - builds move context then runs aiMoveStrategies until a go-legal move is accepted
 func SelectAIMove(gameID string) (string, error) {
 	fen, err := sessionpkg.CurrentFENByID(gameID)
 	if err != nil {
@@ -100,7 +100,7 @@ func SelectAIMove(gameID string) (string, error) {
 		return "", err
 	}
 
-	// go rules engine is the only legality source.
+	// go rules engine is the only legality source
 	legalMoves, err := sessionpkg.AllLegalUCIMovesByID(gameID)
 	if err != nil {
 		return "", err
@@ -113,87 +113,24 @@ func SelectAIMove(gameID string) (string, error) {
 	if gameType == "" {
 		gameType = "chess"
 	}
-	// map normalized key → Go-canonical move string (what we return / apply).
 	legalByNorm := make(map[string]string, len(legalMoves))
 	for _, mv := range legalMoves {
 		legalByNorm[normalizeAIMove(gameType, mv)] = mv
 	}
 
-	profile := sessionpkg.ProfileForSide(snapshot.Game.Config, color)
-	allowDegrade := snapshot.Game.Mode == sessionpkg.GameModeAIVsAI
-
-	pickGoLegal := func(candidate string) (string, bool) {
-		canon, ok := legalByNorm[normalizeAIMove(gameType, candidate)]
-		return canon, ok
+	ctx := &aiMoveContext{
+		GameID:       gameID,
+		FEN:          fen,
+		Side:         color,
+		GameType:     gameType,
+		Profile:      sessionpkg.ProfileForSide(snapshot.Game.Config, color),
+		AllowDegrade: snapshot.Game.Mode == sessionpkg.GameModeAIVsAI,
+		Clock:        snapshot.Game.Clock,
+		History:      history,
+		LegalMoves:   legalMoves,
+		LegalByNorm:  legalByNorm,
 	}
-
-	// fs proposes; go accepts only if in legalByNorm
-	if useFairyStockfish() {
-		if move, err := selectMoveWithFairyStockfish(fen, profile, color, allowDegrade, gameType, snapshot.Game.Clock); err == nil && move != "" {
-			if canon, ok := pickGoLegal(move); ok {
-				return canon, nil
-			}
-			log.Printf("warning: fairy-stockfish move %q rejected (not in Go legal set) %s", move, gameIDLabel(gameID))
-		} else if err != nil {
-			if !allowDegrade {
-				if _, ferr := sessionpkg.FlagCurrentTurnByID(gameID); ferr != nil {
-					log.Printf("warning: failed to flag AI after FS timeout %s: %v", gameIDLabel(gameID), ferr)
-				} else {
-					log.Printf("human_vs_ai: AI thinking timeout/failure — AI flagged (%v)", err)
-				}
-				return "", fmt.Errorf("ai thinking timeout: %w", err)
-			}
-			log.Printf("warning: fairy-stockfish unavailable for %s: %v", gameIDLabel(gameID), err)
-		}
-	}
-
-	// python agents are chess advice only — never used for xianqi/shogi.
-	if gameType == "chess" {
-		ai := NewAIClient()
-		commonReq := AICommonRequest{
-			RequestID:   fmt.Sprintf("%s-ai-%d", gameID, len(history)+1),
-			GameID:      gameID,
-			GameType:    gameType,
-			Variant:     gameType,
-			FEN:         fen,
-			Color:       strings.ToLower(color),
-			MoveNumber:  len(history) + 1,
-			MoveHistory: history,
-			Profile:     profile,
-		}
-		if _, err := ai.History(commonReq); err != nil {
-			log.Printf("warning: ai history unavailable for %s: %v", gameIDLabel(gameID), err)
-		}
-		if _, err := ai.Value(commonReq); err != nil {
-			log.Printf("warning: ai value unavailable for %s: %v", gameIDLabel(gameID), err)
-		}
-		topK := len(legalMoves)
-		if topK < 5 {
-			topK = 5
-		}
-		if topK > 20 {
-			topK = 20
-		}
-		policyResp, err := ai.Policy(AIPolicyRequest{
-			AICommonRequest: commonReq,
-			TopK:            topK,
-		})
-		if err == nil && policyResp != nil {
-			for _, c := range policyResp.Candidates {
-				if canon, ok := pickGoLegal(c.UCI); ok {
-					return canon, nil
-				}
-			}
-		}
-		if err != nil {
-			log.Printf("warning: ai policy unavailable for %s: %v", gameIDLabel(gameID), err)
-		}
-	} else if !useFairyStockfish() {
-		log.Printf("warning: %s AI without USE_FAIRY_STOCKFISH — Go first-legal fallback (weak)", gameType)
-	}
-
-	// always a Go-legal move.
-	return legalMoves[0], nil
+	return runAIMoveStrategies(ctx)
 }
 
 // legalUCIMovesByID - collects legal uci moves for one side from piece destinations

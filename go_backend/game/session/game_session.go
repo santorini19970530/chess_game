@@ -6,10 +6,7 @@ package session
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"	
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -106,37 +103,15 @@ type ArchivedGame struct {
 
 // global variables for the game
 var (
-	gameSessionMu sync.RWMutex
+	gameSessionMu  sync.RWMutex
 	runtimeStateMu sync.Mutex
-	sessionStore  = NewSessionStore()
-	activeGameID  string
-	archivePath   string // resolved at init time to an absolute path under the executable dir (or fallback)
+	sessionStore   = NewSessionStore()
+	activeGameID   string
 )
 
 // init - runs package initialization
 func init() {
 	initializeSessionStore()
-	archivePath = resolveArchivePath()
-}
-
-// resolveArchivePath - resolves archive path
-func resolveArchivePath() string {
-	// prefer directory next to the running binary so "go run ." and built binary behave the same.
-	if execPath, err := os.Executable(); err == nil {
-		if execPath != "" && execPath != "." {
-			base := filepath.Dir(execPath)
-			return filepath.Join(base, "data", "game_history.json")
-		}
-	}
-	// fallback: user cache dir (cross-platform, no cwd pollution).
-	if cacheDir, err := os.UserCacheDir(); err == nil {
-		return filepath.Join(cacheDir, "chess_game", "data", "game_history.json")
-	}
-	// last resort: cwd/data (still better than letting handlers/ subdir appear).
-	if cwd, err := os.Getwd(); err == nil {
-		return filepath.Join(cwd, "data", "game_history.json")
-	}
-	return filepath.Join("data", "game_history.json")
 }
 
 // newUniqueGameID - builds a unique game id from nanosecond time plus random hex
@@ -345,37 +320,6 @@ func ArchiveActiveGameIfNeeded() error {
 	game.Session.Archived = true
 	unlockActiveRuntimeState(game)
 	return nil
-}
-
-// loadArchivedGames - returns archived games
-func loadArchivedGames() ([]ArchivedGame, error) {
-	bytes, err := os.ReadFile(archivePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return []ArchivedGame{}, nil
-		}
-		return nil, err
-	}
-	var records []ArchivedGame
-	if len(bytes) == 0 {
-		return []ArchivedGame{}, nil
-	}
-	if err := json.Unmarshal(bytes, &records); err != nil {
-		return nil, err
-	}
-	return records, nil
-}
-
-// saveArchivedGames - returns save archived games
-func saveArchivedGames(records []ArchivedGame) error {
-	if err := os.MkdirAll(filepath.Dir(archivePath), 0o755); err != nil {
-		return err
-	}
-	bytes, err := json.MarshalIndent(records, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(archivePath, bytes, 0o644)
 }
 
 // UpdateGameConfig - updates game config
