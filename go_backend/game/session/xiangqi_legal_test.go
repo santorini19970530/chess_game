@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_legal_test.go - tests for xiangqi legal
+
 package session
 
 import (

@@ -1,3 +1,6 @@
+// CM3070 FP code
+// socket_hub.go - websocket hub for per-game broadcasts
+
 package handlers
 
 import (
@@ -11,11 +14,11 @@ type socketEventType string
 
 // event types for the socket hub
 const (
-	socketEventMoveApplied       socketEventType = "move_applied"
-	socketEventTurnChanged       socketEventType = "turn_changed"
-	socketEventGameOutcome       socketEventType = "game_outcome"
-	socketEventAnalysisStatus    socketEventType = "analysis_status_update"
-	socketEventExplanationReady  socketEventType = "explanation_ready"
+	socketEventMoveApplied      socketEventType = "move_applied"
+	socketEventTurnChanged      socketEventType = "turn_changed"
+	socketEventGameOutcome      socketEventType = "game_outcome"
+	socketEventAnalysisStatus   socketEventType = "analysis_status_update"
+	socketEventExplanationReady socketEventType = "explanation_ready"
 
 	// simulation live progress events
 	socketEventSimulationStarted socketEventType = "simulation_started"

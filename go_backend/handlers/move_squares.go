@@ -1,3 +1,6 @@
+// CM3070 FP code
+// move_squares.go - square / sequence helpers for move requests
+
 package handlers
 
 import (

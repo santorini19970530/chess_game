@@ -1,3 +1,6 @@
+// CM3070 FP code
+// uci_test.go - tests for uci
+
 package engine
 
 import (

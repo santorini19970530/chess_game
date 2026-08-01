@@ -1,8 +1,5 @@
-// commandlist.go
-
-// supported command standards (string-level representation only)
-// 1) UCI/long algebraic style: "e2e4", "g1f3", "e7e8q" (promotion suffix)
-// 2) Piece-prefixed style used by this project: "<piece><from><to>", e.g. "ng1f3"
+// CM3070 FP code
+// commandlist.go - lists supported chess command strings
 
 package command
 

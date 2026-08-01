@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_config_test.go - tests for xiangqi config
+
 package session
 
 import "testing"

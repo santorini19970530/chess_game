@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_bishop.go - implements the shogi bishop movement strategy
+
 package movement
 
 // ShogiBishopStrategy - diagonal slides (shogi kaku)

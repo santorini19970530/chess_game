@@ -1,3 +1,6 @@
+// CM3070 FP code
+// socket_ws.go - websocket upgrade and client read loop
+
 package handlers
 
 import (

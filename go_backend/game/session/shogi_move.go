@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_move.go - applies shogi uci moves to the session
+
 package session
 
 import (

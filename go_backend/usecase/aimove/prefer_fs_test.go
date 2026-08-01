@@ -1,4 +1,7 @@
-package handlers
+// CM3070 FP code
+// prefer_fs_test.go - tests for prefer fs
+
+package aimove
 
 import (
 	"os"
@@ -11,19 +14,19 @@ import (
 // TestUseFairyStockfish_EnvFlag - maps USE_FAIRY_STOCKFISH true/1 to on and other values to off
 func TestUseFairyStockfish_EnvFlag(t *testing.T) {
 	t.Setenv("USE_FAIRY_STOCKFISH", "")
-	if useFairyStockfish() {
+	if UseFairyStockfish() {
 		t.Fatal("empty env should be off")
 	}
 	t.Setenv("USE_FAIRY_STOCKFISH", "true")
-	if !useFairyStockfish() {
+	if !UseFairyStockfish() {
 		t.Fatal("true should be on")
 	}
 	t.Setenv("USE_FAIRY_STOCKFISH", "1")
-	if !useFairyStockfish() {
+	if !UseFairyStockfish() {
 		t.Fatal("1 should be on")
 	}
 	t.Setenv("USE_FAIRY_STOCKFISH", "false")
-	if useFairyStockfish() {
+	if UseFairyStockfish() {
 		t.Fatal("false should be off")
 	}
 }
@@ -35,13 +38,13 @@ func TestSelectAIMove_SourceStillPrefersFairyStockfishPath(t *testing.T) {
 		t.Fatal("runtime.Caller failed")
 	}
 	dir := filepath.Dir(thisFile)
-	decisionRaw, err := os.ReadFile(filepath.Join(dir, "ai_decision.go"))
+	decisionRaw, err := os.ReadFile(filepath.Join(dir, "select.go"))
 	if err != nil {
-		t.Fatalf("read ai_decision.go: %v", err)
+		t.Fatalf("read select.go: %v", err)
 	}
-	strategyRaw, err := os.ReadFile(filepath.Join(dir, "ai_move_strategy.go"))
+	strategyRaw, err := os.ReadFile(filepath.Join(dir, "strategy.go"))
 	if err != nil {
-		t.Fatalf("read ai_move_strategy.go: %v", err)
+		t.Fatalf("read strategy.go: %v", err)
 	}
 	decision := string(decisionRaw)
 	strategy := string(strategyRaw)
@@ -57,12 +60,14 @@ func TestSelectAIMove_SourceStillPrefersFairyStockfishPath(t *testing.T) {
 		"type FairyStockfishPlayStrategy struct",
 		"type HPVFallbackStrategy struct",
 		"type FirstLegalFallbackStrategy struct",
-		"selectMoveWithFairyStockfish(",
 		"func aiMoveStrategies(",
 	} {
 		if !strings.Contains(strategy, snip) {
-			t.Fatalf("ai_move_strategy.go missing %q — FS-prefer path may have been removed", snip)
+			t.Fatalf("strategy.go missing %q — FS-prefer path may have been removed", snip)
 		}
+	}
+	if !strings.Contains(decision, "selectMoveWithFairyStockfish(") {
+		t.Fatal("select.go missing selectMoveWithFairyStockfish — FS path may have been removed")
 	}
 
 	chainFn := "func aiMoveStrategies("
@@ -85,8 +90,8 @@ func TestSelectAIMove_SourceStillPrefersFairyStockfishPath(t *testing.T) {
 	if !(fsAt < hpvAt && hpvAt < firstAt) {
 		t.Fatal("aiMoveStrategies must order FS before HPV before first-legal")
 	}
-	if !strings.Contains(body, "useFairyStockfish()") {
-		t.Fatal("aiMoveStrategies must gate FairyStockfishPlayStrategy with useFairyStockfish()")
+	if !strings.Contains(body, "UseFairyStockfish()") {
+		t.Fatal("aiMoveStrategies must gate FairyStockfishPlayStrategy with UseFairyStockfish()")
 	}
 }
 

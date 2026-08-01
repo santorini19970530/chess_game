@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_horse.go - implements the xiangqi horse movement strategy
+
 package movement
 
 // xiangqiHorseStrategy - knight L-move blocked by adjacent “hump” square

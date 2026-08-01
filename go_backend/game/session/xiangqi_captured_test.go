@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_captured_test.go - tests for xiangqi captured
+
 package session
 
 import "testing"

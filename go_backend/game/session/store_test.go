@@ -1,3 +1,6 @@
+// CM3070 FP code
+// store_test.go - tests for store
+
 package session
 
 import (

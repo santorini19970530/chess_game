@@ -1,3 +1,6 @@
+// CM3070 FP code
+// move_applied_test.go - tests for move applied
+
 package handlers
 
 import (

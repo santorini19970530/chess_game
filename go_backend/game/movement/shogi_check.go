@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_check.go - shogi check detection helpers
+
 package movement
 
 import pieces "go_backend/game/piece"

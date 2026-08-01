@@ -1,3 +1,6 @@
+// CM3070 FP code
+// parser.go - parses player command text into moves
+
 package command
 
 import (

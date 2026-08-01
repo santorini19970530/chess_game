@@ -1,4 +1,7 @@
-package handlers
+// CM3070 FP code
+// hpv_client.go - python history/policy/value http client for ai fallback
+
+package aimove
 
 import (
 	"bytes"
@@ -22,8 +25,8 @@ type AIClient struct {
 // NewAIClient - builds a client using existing analyzer config defaults
 func NewAIClient() *AIClient {
 	return &AIClient{
-		baseURL:    analyzerBaseURL(),
-		httpClient: pyAnalyzerHTTPClient,
+		baseURL:    hpvBaseURL(),
+		httpClient: hpvHTTPClient,
 	}
 }
 
@@ -173,9 +176,9 @@ func (c *AIClient) doJSONPost(path string, payload any, out any) error {
 	baseURL := strings.TrimRight(c.baseURL, "/")
 	client := c.httpClient
 	if client == nil {
-		client = pyAnalyzerHTTPClient
+		client = hpvHTTPClient
 	}
-	return doJSONPost(client, baseURL+path, analyzerRequestTimeout(), payload, out)
+	return doJSONPost(client, baseURL+path, hpvRequestTimeout(), payload, out)
 }
 
 // doJSONPost - executes a JSON HTTP POST and decodes JSON response into out
@@ -201,7 +204,7 @@ func doJSONPost(httpClient *http.Client, endpoint string, timeout time.Duration,
 	req.Header.Set("Content-Type", "application/json")
 
 	if httpClient == nil {
-		httpClient = pyAnalyzerHTTPClient
+		httpClient = hpvHTTPClient
 	}
 
 	resp, err := httpClient.Do(req)

@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_horse.go - implements the shogi horse movement strategy
+
 package movement
 
 // ShogiHorseStrategy - promoted bishop: diagonal slides plus orthogonal steps

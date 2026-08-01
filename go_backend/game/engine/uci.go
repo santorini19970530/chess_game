@@ -1,3 +1,6 @@
+// CM3070 FP code
+// uci.go - fairy-stockfish uci process adapter
+
 package engine
 
 import (

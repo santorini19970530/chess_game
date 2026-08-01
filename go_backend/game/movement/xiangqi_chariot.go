@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_chariot.go - implements the xiangqi chariot movement strategy
+
 package movement
 
 // xiangqiChariotStrategy - rook-like on 9×10

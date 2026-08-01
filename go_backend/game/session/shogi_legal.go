@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_legal.go - shogi legal move enumeration for the session
+
 package session
 
 import (

@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_dragon.go - implements the shogi dragon movement strategy
+
 package movement
 
 // ShogiDragonStrategy - promoted rook: orthogonal slides plus diagonal steps

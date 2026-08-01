@@ -1,3 +1,6 @@
+// CM3070 FP code
+// frontend_simulation_state_test.go - tests for frontend simulation state
+
 package handlers
 
 import (

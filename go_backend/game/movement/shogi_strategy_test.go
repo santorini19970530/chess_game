@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_strategy_test.go - tests for shogi strategy
+
 package movement
 
 import (

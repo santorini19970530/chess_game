@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_general.go - implements the xiangqi general movement strategy
+
 package movement
 
 // xiangqiGeneralStrategy - one orthogonal step inside the palace

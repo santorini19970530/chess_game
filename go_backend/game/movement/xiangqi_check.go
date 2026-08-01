@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_check.go - xiangqi check detection helpers
+
 package movement
 
 import pieces "go_backend/game/piece"

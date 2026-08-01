@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_common.go - shared xiangqi board helpers for strategies
+
 package movement
 
 import pieces "go_backend/game/piece"

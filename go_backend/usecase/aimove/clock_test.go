@@ -1,4 +1,7 @@
-package handlers
+// CM3070 FP code
+// clock_test.go - tests for clock
+
+package aimove
 
 import (
 	"testing"
@@ -9,7 +12,7 @@ import (
 
 // TestFsLimitForGame_ClockOffKeepsProfileMovetime - checks fs limit for game clock off keeps profile movetime
 func TestFsLimitForGame_ClockOffKeepsProfileMovetime(t *testing.T) {
-	limit := fsLimitForGame("beginner", nil, "white")
+	limit := FsLimitForGame("beginner", nil, "white")
 	if limit.MoveTime != 250*time.Millisecond {
 		t.Fatalf("movetime=%v", limit.MoveTime)
 	}
@@ -18,7 +21,7 @@ func TestFsLimitForGame_ClockOffKeepsProfileMovetime(t *testing.T) {
 	}
 
 	disabled := sessionpkg.NewClock(0, 0, 0)
-	limit = fsLimitForGame("beginner", disabled, "white")
+	limit = FsLimitForGame("beginner", disabled, "white")
 	if limit.WhiteTime != 0 || limit.MoveTime != 250*time.Millisecond {
 		t.Fatalf("disabled clock should use profile only: %+v", limit)
 	}
@@ -28,7 +31,7 @@ func TestFsLimitForGame_ClockOffKeepsProfileMovetime(t *testing.T) {
 func TestFsLimitForGame_ClockOnSetsWtimeAndCapsMovetime(t *testing.T) {
 	clk := sessionpkg.NewClock(300_000, 60_000, 30_000)
 	clk.Start("black", time.Unix(0, 0).UTC())
-	limit := fsLimitForGame("master", clk, "black")
+	limit := FsLimitForGame("master", clk, "black")
 	if limit.WhiteTime != 300_000*time.Millisecond || limit.BlackTime != 60_000*time.Millisecond {
 		t.Fatalf("w/b time: white=%v black=%v", limit.WhiteTime, limit.BlackTime)
 	}
@@ -43,7 +46,7 @@ func TestFsLimitForGame_ClockOnSetsWtimeAndCapsMovetime(t *testing.T) {
 	// Short remaining: cap below profile budget.
 	short := sessionpkg.NewClock(1000, 1000, 0)
 	short.Start("white", time.Unix(0, 0).UTC())
-	limit = fsLimitForGame("master", short, "white")
+	limit = FsLimitForGame("master", short, "white")
 	// remaining/20 = 50ms → floor 50ms
 	if limit.MoveTime != 50*time.Millisecond {
 		t.Fatalf("short remaining movetime=%v want 50ms", limit.MoveTime)

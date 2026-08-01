@@ -1,3 +1,6 @@
+// CM3070 FP code
+// latency.go - records move latency during simulation
+
 package simulation
 
 import "sort"

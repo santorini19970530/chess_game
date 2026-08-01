@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_silver.go - implements the shogi silver movement strategy
+
 package movement
 
 // ShogiSilverStrategy - silver-general steps (shogi gin)

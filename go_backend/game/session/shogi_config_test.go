@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_config_test.go - tests for shogi config
+
 package session
 
 import "testing"

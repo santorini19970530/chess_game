@@ -1,3 +1,6 @@
+// CM3070 FP code
+// main.go - cli entrypoint for formal ai-vs-ai match batches
+
 package main
 
 import (
@@ -11,8 +14,8 @@ import (
 	"time"
 
 	session "go_backend/game/session"
-	"go_backend/handlers"
 	"go_backend/simulation"
+	"go_backend/usecase/aimove"
 )
 
 // main - cli entrypoint for running formal ai-vs-ai match batches
@@ -76,7 +79,7 @@ func main() {
 		}
 
 		start := time.Now()
-		res, err := simulation.RunSingleAIGame(game.ID, handlers.SelectAIMove)
+		res, err := simulation.RunSingleAIGame(game.ID, aimove.SelectAIMove)
 		if err != nil {
 			// xiangqi/Shogi can loop past the ply cap; count as draw and keep the batch alive
 			// so -format json still writes a summary (empty file = this Fatal used to fire).

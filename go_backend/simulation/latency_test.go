@@ -1,3 +1,6 @@
+// CM3070 FP code
+// latency_test.go - tests for latency
+
 package simulation
 
 import "testing"

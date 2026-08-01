@@ -1,3 +1,6 @@
+// CM3070 FP code
+// runner.go - runs a single ai-vs-ai game loop
+
 package simulation
 
 import (

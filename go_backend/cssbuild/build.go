@@ -1,3 +1,6 @@
+// CM3070 FP code
+// build.go - builds and writes bundled frontend css
+
 package cssbuild
 
 import (

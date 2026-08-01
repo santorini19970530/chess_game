@@ -1,4 +1,7 @@
-package handlers
+// CM3070 FP code
+// strategy.go - ai move strategy types and ordered chain
+
+package aimove
 
 import (
 	"fmt"
@@ -124,7 +127,7 @@ func (FirstLegalFallbackStrategy) Propose(ctx *aiMoveContext) (string, error) {
 	if len(ctx.LegalMoves) == 0 {
 		return "", fmt.Errorf("no legal moves available")
 	}
-	if ctx.GameType != "chess" && !useFairyStockfish() {
+	if ctx.GameType != "chess" && !UseFairyStockfish() {
 		log.Printf("warning: %s AI without USE_FAIRY_STOCKFISH — Go first-legal fallback (weak)", ctx.GameType)
 	}
 	return ctx.LegalMoves[0], nil
@@ -133,7 +136,7 @@ func (FirstLegalFallbackStrategy) Propose(ctx *aiMoveContext) (string, error) {
 // aiMoveStrategies - ordered play strategies: fs (optional) → hpv (chess) → first-legal
 func aiMoveStrategies(ctx *aiMoveContext) []AIMoveStrategy {
 	out := make([]AIMoveStrategy, 0, 3)
-	if useFairyStockfish() {
+	if UseFairyStockfish() {
 		out = append(out, FairyStockfishPlayStrategy{})
 	}
 	if ctx.GameType == "chess" {

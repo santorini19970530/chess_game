@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_move_test.go - tests for shogi move
+
 package session
 
 import (

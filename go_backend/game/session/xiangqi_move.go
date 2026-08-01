@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_move.go - applies xiangqi uci moves to the session
+
 package session
 
 import (

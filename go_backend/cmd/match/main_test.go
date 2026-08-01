@@ -1,3 +1,6 @@
+// CM3070 FP code
+// main_test.go - tests for main
+
 package main
 
 import "testing"

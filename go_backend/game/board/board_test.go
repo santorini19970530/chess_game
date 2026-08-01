@@ -1,3 +1,6 @@
+// CM3070 FP code
+// board_test.go - tests for board
+
 package chessboard
 
 import (

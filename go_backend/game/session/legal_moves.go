@@ -1,3 +1,6 @@
+// CM3070 FP code
+// legal_moves.go - chess legal move enumeration for the session
+
 package session
 
 import (

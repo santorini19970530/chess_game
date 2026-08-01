@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_elephant.go - implements the xiangqi elephant movement strategy
+
 package movement
 
 import pieces "go_backend/game/piece"

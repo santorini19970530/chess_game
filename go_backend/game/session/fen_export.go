@@ -1,3 +1,6 @@
+// CM3070 FP code
+// fen_export.go - exports session position as fen text
+
 package session
 
 import "fmt"

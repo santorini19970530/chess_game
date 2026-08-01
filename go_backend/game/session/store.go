@@ -1,3 +1,6 @@
+// CM3070 FP code
+// store.go - in-memory game session store
+
 package session
 
 import (

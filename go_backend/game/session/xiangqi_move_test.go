@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_move_test.go - tests for xiangqi move
+
 package session
 
 import (

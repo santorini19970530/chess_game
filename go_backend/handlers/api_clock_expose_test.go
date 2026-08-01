@@ -1,3 +1,6 @@
+// CM3070 FP code
+// api_clock_expose_test.go - tests for api clock expose
+
 package handlers
 
 import (

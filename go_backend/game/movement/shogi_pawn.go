@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_pawn.go - implements the shogi pawn movement strategy
+
 package movement
 
 // ShogiPawnStrategy - one step forward (shogi fu)

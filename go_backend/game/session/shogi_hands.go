@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_hands.go - shogi hand / drop piece state helpers
+
 package session
 
 import pieces "go_backend/game/piece"

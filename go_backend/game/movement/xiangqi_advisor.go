@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_advisor.go - implements the xiangqi advisor movement strategy
+
 package movement
 
 // xiangqiAdvisorStrategy - one diagonal step inside the palace

@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_strategy_test.go - tests for xiangqi strategy
+
 package movement
 
 import (

@@ -1,3 +1,6 @@
+// CM3070 FP code
+// board_draw.go - renders board html for the index page
+
 package handlers
 
 import (

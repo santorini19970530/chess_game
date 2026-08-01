@@ -1,3 +1,6 @@
+// CM3070 FP code
+// move_applied.go - applies a validated move and refreshes response state
+
 package handlers
 
 import sessionpkg "go_backend/game/session"

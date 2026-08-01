@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_gold.go - implements the shogi gold movement strategy
+
 package movement
 
 // ShogiGoldStrategy - gold-general steps; also used for promoted pawn/lance/knight/silver

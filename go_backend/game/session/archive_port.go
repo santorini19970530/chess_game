@@ -1,3 +1,6 @@
+// CM3070 FP code
+// archive_port.go - archive store port and in-memory default
+
 package session
 
 import "sync"

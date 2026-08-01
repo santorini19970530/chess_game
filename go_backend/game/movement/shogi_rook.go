@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_rook.go - implements the shogi rook movement strategy
+
 package movement
 
 // ShogiRookStrategy - orthogonal slides (shogi hisha)

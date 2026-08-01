@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_hvai_test.go - tests for shogi hvai
+
 package session
 
 import (

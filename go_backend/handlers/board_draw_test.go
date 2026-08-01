@@ -1,3 +1,6 @@
+// CM3070 FP code
+// board_draw_test.go - tests for board draw
+
 package handlers
 
 import (

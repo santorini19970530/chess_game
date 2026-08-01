@@ -1,3 +1,6 @@
+// CM3070 FP code
+// api_games_test.go - tests for api games
+
 package handlers
 
 import (
@@ -371,8 +374,8 @@ func TestAPIGameLatestAnalysisRoute_ReturnsStatusShape(t *testing.T) {
 	}
 
 	var payload struct {
-		GameID string `json:"game_id"`
-		Pending bool  `json:"pending"`
+		GameID  string `json:"game_id"`
+		Pending bool   `json:"pending"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
 		t.Fatalf("expected valid json response, got %v", err)

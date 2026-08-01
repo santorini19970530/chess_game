@@ -1,3 +1,6 @@
+// CM3070 FP code
+// move_squares_test.go - tests for move squares
+
 package handlers
 
 import "testing"

@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_soldier.go - implements the xiangqi soldier movement strategy
+
 package movement
 
 import pieces "go_backend/game/piece"

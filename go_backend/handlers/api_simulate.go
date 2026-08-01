@@ -1,3 +1,6 @@
+// CM3070 FP code
+// api_simulate.go - http api for ai-vs-ai simulation runs
+
 package handlers
 
 import (
@@ -18,12 +21,12 @@ import (
 
 // request body for the simulate endpoint
 type simulateRequest struct {
-	Games         int    `json:"games"`
-	Profile       string `json:"profile"`
-	WhiteProfile  string `json:"white_profile"`
-	BlackProfile  string `json:"black_profile"`
-	GameType      string `json:"game"`
-	GameTypeAlt   string `json:"game_type"`
+	Games        int    `json:"games"`
+	Profile      string `json:"profile"`
+	WhiteProfile string `json:"white_profile"`
+	BlackProfile string `json:"black_profile"`
+	GameType     string `json:"game"`
+	GameTypeAlt  string `json:"game_type"`
 }
 
 // result of a single game simulation
@@ -38,18 +41,18 @@ type gameResult struct {
 
 // response body for the simulate endpoint
 type simulateResponse struct {
-	Games           int          `json:"games"`
-	GameType        string       `json:"game_type"`
-	WhiteProfile    string       `json:"white_profile"`
-	BlackProfile    string       `json:"black_profile"`
-	Profile         string       `json:"profile,omitempty"`
-	WhiteWins       int          `json:"white_wins"`
-	BlackWins       int          `json:"black_wins"`
-	Draws           int          `json:"draws"`
-	AvgMoves        float64      `json:"avg_moves"`
-	AvgDurationMs   float64      `json:"avg_duration_ms"`
-	P95DurationMs   int64        `json:"p95_duration_ms"`
-	Results         []gameResult `json:"results,omitempty"`
+	Games         int          `json:"games"`
+	GameType      string       `json:"game_type"`
+	WhiteProfile  string       `json:"white_profile"`
+	BlackProfile  string       `json:"black_profile"`
+	Profile       string       `json:"profile,omitempty"`
+	WhiteWins     int          `json:"white_wins"`
+	BlackWins     int          `json:"black_wins"`
+	Draws         int          `json:"draws"`
+	AvgMoves      float64      `json:"avg_moves"`
+	AvgDurationMs float64      `json:"avg_duration_ms"`
+	P95DurationMs int64        `json:"p95_duration_ms"`
+	Results       []gameResult `json:"results,omitempty"`
 }
 
 // maximum number of plies to simulate in a single game
@@ -303,15 +306,15 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 		})
 
 		archiveItems = append(archiveItems, simulation.ResultWithGameID{
-			GameID:       game.ID,
-			GameType:     gameTypeRaw,
-			WhiteProfile: whiteProfile,
-			BlackProfile: blackProfile,
-			Result:       snapshot.Game.Result,
-			Winner:       snapshot.Game.Outcome.Winner,
-			MoveCount:    moveCount,
-			DurationMs:   durationMs,
-			AvgMoveMs:    avgMoveMs,
+			GameID:          game.ID,
+			GameType:        gameTypeRaw,
+			WhiteProfile:    whiteProfile,
+			BlackProfile:    blackProfile,
+			Result:          snapshot.Game.Result,
+			Winner:          snapshot.Game.Outcome.Winner,
+			MoveCount:       moveCount,
+			DurationMs:      durationMs,
+			AvgMoveMs:       avgMoveMs,
 			HistoryDetailed: snapshot.HistoryDetailed,
 		})
 		if whiteProfile == blackProfile {
@@ -352,16 +355,16 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(resp)
 
 	gameSocketHub.BroadcastGlobal(socketEventSimulationDone, map[string]interface{}{
-		"games":            req.Games,
-		"game_type":        gameTypeRaw,
-		"white_profile":    whiteProfile,
-		"black_profile":    blackProfile,
-		"white_wins":       white,
-		"black_wins":       black,
-		"draws":            draws,
-		"avg_moves":        avg,
-		"avg_duration_ms":  avgDuration,
-		"p95_duration_ms":  p95Duration,
+		"games":           req.Games,
+		"game_type":       gameTypeRaw,
+		"white_profile":   whiteProfile,
+		"black_profile":   blackProfile,
+		"white_wins":      white,
+		"black_wins":      black,
+		"draws":           draws,
+		"avg_moves":       avg,
+		"avg_duration_ms": avgDuration,
+		"p95_duration_ms": p95Duration,
 	})
 }
 

@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_fen.go - xiangqi fen import and export for the session
+
 package session
 
 import (

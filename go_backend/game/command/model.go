@@ -1,3 +1,6 @@
+// CM3070 FP code
+// model.go - command model types for move parsing
+
 package command
 
 // parsedCommand is a lightweight parsed command model

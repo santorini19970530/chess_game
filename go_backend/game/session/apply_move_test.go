@@ -1,3 +1,6 @@
+// CM3070 FP code
+// apply_move_test.go - tests for apply move
+
 package session
 
 import (

@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_knight.go - implements the shogi knight movement strategy
+
 package movement
 
 // ShogiKnightStrategy - forward 2 then side 1 (shogi kei)

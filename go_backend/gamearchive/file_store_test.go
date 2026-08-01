@@ -1,3 +1,6 @@
+// CM3070 FP code
+// file_store_test.go - tests for file store
+
 package gamearchive
 
 import (

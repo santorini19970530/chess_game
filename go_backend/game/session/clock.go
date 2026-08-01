@@ -1,3 +1,6 @@
+// CM3070 FP code
+// clock.go - shared game clock rules and remaining time
+
 package session
 
 import (

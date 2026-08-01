@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_king.go - implements the shogi king movement strategy
+
 package movement
 
 // ShogiKingStrategy - one step in any direction (shogi ou/gyoku)

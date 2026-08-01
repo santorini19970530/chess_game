@@ -1,3 +1,6 @@
+// CM3070 FP code
+// clock_acceptance_test.go - tests for clock acceptance
+
 package handlers
 
 import (
@@ -10,6 +13,7 @@ import (
 
 	"go_backend/game/engine"
 	sessionpkg "go_backend/game/session"
+	"go_backend/usecase/aimove"
 )
 
 // TestClock_Acceptance - clock acceptance: TC create, increment, flag-on-timeout, clock-off unchanged, time-aware go
@@ -116,14 +120,14 @@ func TestClock_Acceptance(t *testing.T) {
 	t.Run("clock_on_ai_limit_is_time_aware", func(t *testing.T) {
 		clk := sessionpkg.NewClock(120_000, 120_000, 1000)
 		clk.Start("white", time.Unix(0, 0).UTC())
-		limit := fsLimitForGame("intermediate", clk, "white")
+		limit := aimove.FsLimitForGame("intermediate", clk, "white")
 		cmd := engine.GoCommand(limit)
 		for _, part := range []string{"wtime 120000", "btime 120000", "winc 1000", "binc 1000"} {
 			if !strings.Contains(cmd, part) {
 				t.Fatalf("time-aware go missing %q in %q", part, cmd)
 			}
 		}
-		offCmd := engine.GoCommand(fsLimitForGame("intermediate", nil, "white"))
+		offCmd := engine.GoCommand(aimove.FsLimitForGame("intermediate", nil, "white"))
 		if offCmd != "go movetime 600" {
 			t.Fatalf("clock-off go=%q", offCmd)
 		}

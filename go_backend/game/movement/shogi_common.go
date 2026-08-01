@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_common.go - shared shogi board helpers for strategies
+
 package movement
 
 import pieces "go_backend/game/piece"

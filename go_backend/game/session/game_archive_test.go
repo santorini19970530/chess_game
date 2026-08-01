@@ -1,3 +1,6 @@
+// CM3070 FP code
+// game_archive_test.go - tests for game archive
+
 package session
 
 import (

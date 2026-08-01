@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_hvai_test.go - tests for xiangqi hvai
+
 package session
 
 import (

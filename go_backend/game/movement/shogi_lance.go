@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_lance.go - implements the shogi lance movement strategy
+
 package movement
 
 // ShogiLanceStrategy - slides forward only (shogi kyo)

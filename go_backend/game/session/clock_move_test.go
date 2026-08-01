@@ -1,3 +1,6 @@
+// CM3070 FP code
+// clock_move_test.go - tests for clock move
+
 package session
 
 import (

@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_outcome_test.go - tests for xiangqi outcome
+
 package session
 
 import "testing"

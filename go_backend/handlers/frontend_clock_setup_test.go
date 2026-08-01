@@ -1,3 +1,6 @@
+// CM3070 FP code
+// frontend_clock_setup_test.go - tests for frontend clock setup
+
 package handlers
 
 import (

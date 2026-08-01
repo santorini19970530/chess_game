@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_outcome_test.go - tests for shogi outcome
+
 package session
 
 import "testing"

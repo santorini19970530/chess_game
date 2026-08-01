@@ -1,3 +1,6 @@
+// CM3070 FP code
+// clock_setup_html_test.go - tests for clock setup html
+
 package handlers
 
 import (

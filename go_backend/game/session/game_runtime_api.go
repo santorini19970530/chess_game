@@ -1,3 +1,6 @@
+// CM3070 FP code
+// game_runtime_api.go - runtime api for session snapshots and moves by id
+
 package session
 
 import (

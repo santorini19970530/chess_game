@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_legal.go - xiangqi legal move enumeration for the session
+
 package session
 
 import (

@@ -1,3 +1,6 @@
+// CM3070 FP code
+// api_simulate_test.go - tests for api simulate
+
 package handlers
 
 import (
@@ -212,11 +215,11 @@ func TestAPISimulate_SideProfiles_RecordedInResponse(t *testing.T) {
 	}
 
 	var resp struct {
-		GameType      string `json:"game_type"`
-		WhiteProfile  string `json:"white_profile"`
-		BlackProfile  string `json:"black_profile"`
-		Profile       string `json:"profile"`
-		Games         int    `json:"games"`
+		GameType      string  `json:"game_type"`
+		WhiteProfile  string  `json:"white_profile"`
+		BlackProfile  string  `json:"black_profile"`
+		Profile       string  `json:"profile"`
+		Games         int     `json:"games"`
 		AvgDurationMs float64 `json:"avg_duration_ms"`
 		P95DurationMs int64   `json:"p95_duration_ms"`
 		Results       []struct {

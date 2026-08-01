@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_cannon.go - implements the xiangqi cannon movement strategy
+
 package movement
 
 // xiangqiCannonStrategy - slides like a chariot; captures only by jumping exactly one screen

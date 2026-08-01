@@ -1,3 +1,6 @@
+// CM3070 FP code
+// archive.go - archives simulation game results
+
 package simulation
 
 import (

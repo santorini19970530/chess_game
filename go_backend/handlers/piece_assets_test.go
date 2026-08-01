@@ -1,3 +1,6 @@
+// CM3070 FP code
+// piece_assets_test.go - tests for piece assets
+
 package handlers
 
 import (

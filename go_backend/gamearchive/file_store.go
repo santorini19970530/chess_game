@@ -1,3 +1,6 @@
+// CM3070 FP code
+// file_store.go - json file adapter for archived game history
+
 package gamearchive
 
 import (

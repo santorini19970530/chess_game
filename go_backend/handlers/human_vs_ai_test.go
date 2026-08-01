@@ -1,3 +1,6 @@
+// CM3070 FP code
+// human_vs_ai_test.go - tests for human vs ai
+
 package handlers
 
 import (

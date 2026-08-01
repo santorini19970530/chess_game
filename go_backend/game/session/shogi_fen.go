@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_fen.go - shogi fen import and export for the session
+
 package session
 
 import (

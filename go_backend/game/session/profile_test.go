@@ -1,3 +1,6 @@
+// CM3070 FP code
+// profile_test.go - tests for profile
+
 package session
 
 import "testing"

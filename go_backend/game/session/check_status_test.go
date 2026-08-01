@@ -1,3 +1,6 @@
+// CM3070 FP code
+// check_status_test.go - tests for check status
+
 package session
 
 import (
