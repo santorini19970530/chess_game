@@ -140,3 +140,16 @@ func shogiSilverDeltas(color pieces.PieceColor) [][2]int {
 		{-1, -fwd}, {1, -fwd},
 	}
 }
+
+// shogiBoardFrom - casts board/from to MovementBoard and Square
+func shogiBoardFrom(board any, from any) (MovementBoard, Square, bool) {
+	ctx, ok := board.(MovementBoard)
+	if !ok {
+		return MovementBoard{}, Square{}, false
+	}
+	src, ok := from.(Square)
+	if !ok {
+		return MovementBoard{}, Square{}, false
+	}
+	return ctx, src, true
+}
