@@ -1,15 +1,5 @@
 #!/usr/bin/env python3
-"""Teacher-quality smoke — runnable regression gate.
-
-Always-on (offline):
-  - chess + xiangqi + shogi terms/tone JSON load (issue0048 / issue0051)
-  - beginner vs advanced prompts differ (chess)
-  - variant prompts use game vocab, not chess copy (issue0051)
-  - /explain heuristic path non-empty
-
-Optional live Ollama (set TEACHER_SMOKE_OLLAMA=1 with ollama up):
-  - beginner + advanced /explain → source ollama, non-empty, different skill_level echo
-"""
+# test_teacher_smoke.py - offline teacher smoke; set TEACHER_SMOKE_OLLAMA=1 for live ollama
 
 from __future__ import annotations
 
@@ -49,7 +39,7 @@ class TestTeacherSmokeOffline(unittest.TestCase):
                 self.assertIn(level, data, f"{name} missing {level}")
 
     def test_prompts_differ_beginner_vs_advanced(self) -> None:
-        from llm_providers import build_teacher_prompt
+        from teacher_prompt import build_teacher_prompt
 
         kwargs = dict(
             fen=FEN_AFTER_E4,
@@ -65,7 +55,7 @@ class TestTeacherSmokeOffline(unittest.TestCase):
         self.assertIn("prophylaxis", adv)
 
     def test_variant_prompts_use_own_terms(self) -> None:
-        from llm_providers import build_teacher_prompt
+        from teacher_prompt import build_teacher_prompt
 
         kwargs = dict(
             fen=FEN_AFTER_E4,

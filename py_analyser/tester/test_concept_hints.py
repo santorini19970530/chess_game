@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""issue0047 step 1: tiny concept hints from /analyze-shaped payloads."""
+# test_concept_hints.py - checks tiny concept hints from analyze-shaped payloads
 
 from __future__ import annotations
 

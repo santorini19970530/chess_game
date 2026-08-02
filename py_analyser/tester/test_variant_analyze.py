@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""issue0049 step 1: /analyze for xianqi / shogi (no chess.Board on variant FEN)."""
+# test_variant_analyze.py - checks /analyze for xianqi/shogi without chess.Board on variant fen
 
 from __future__ import annotations
 

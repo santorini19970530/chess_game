@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""issue0049 step 2: /explain for xianqi / shogi (no chess.Board on variant FEN)."""
+# test_variant_explain.py - checks /explain for xianqi/shogi without chess.Board on variant fen
 
 from __future__ import annotations
 
@@ -77,9 +77,9 @@ class TestVariantExplain(unittest.TestCase):
         self.assertEqual(payload["status"], "ok")
         self.assertTrue(str(payload.get("explanation", "")).strip())
 
+    # test_teacher_prompt_loads_variant_terms - checks xianqi/shogi prompts use that game's terms, not chess copy
     def test_teacher_prompt_loads_variant_terms(self) -> None:
-        """issue0051: xianqi/shogi prompts inject that game's terms, not chess copy."""
-        from llm_providers import build_teacher_prompt
+        from teacher_prompt import build_teacher_prompt
 
         kwargs = dict(
             fen=XIANGQI_START,

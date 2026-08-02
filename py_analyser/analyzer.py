@@ -158,20 +158,15 @@ def uci_score_as_white(score_cp: int, fen: str) -> int:
     return int(score_cp)
 
 
-def suggest_moves_fs_variant(
+# _fs_variant_suggest_impl - runs raw-UCI MultiPV for xianqi/shogi and returns white-pov eval
+def _fs_variant_suggest_impl(
     fen: str,
     game_type: str,
     top_k: int = 5,
     profile: str = "intermediate",
 ) -> Tuple[List[MoveSuggestion], Optional[int]]:
-    """MultiPV search for xianqi/shogi via raw UCI (no chess.Board).
-
-    Returns (suggestions, eval_cp_white). Win% uses the same white-POV + cp_to_win_chance
-    path as chess; search is full-strength (not Skill Level handicap) so the bar does not
-    thrash from weak-profile noise.
-    """
     variant = uci_variant_name(game_type)
-    # Match chess analyze stability: true eval, not profile-handicapped search.
+    # match chess analyze stability: true eval, not profile-handicapped search
     _ = profile  # kept for API compatibility with callers
     skill = 20
     limit = chess.engine.Limit(depth=10, time=0.5)
@@ -217,6 +212,26 @@ def suggest_moves_fs_variant(
 
         suggestions = [seen[i] for i in range(1, multipv + 1) if i in seen]
         return suggestions[:top_k], eval_cp_white
+
+
+# suggest_moves_fs_variant - wraps FairyStockfishVariantSuggest for existing callers
+def suggest_moves_fs_variant(
+    fen: str,
+    game_type: str,
+    top_k: int = 5,
+    profile: str = "intermediate",
+) -> Tuple[List[MoveSuggestion], Optional[int]]:
+    from move_suggest import FairyStockfishVariantSuggest, MoveSuggestContext
+
+    return FairyStockfishVariantSuggest().suggest_with_eval(
+        MoveSuggestContext(
+            fen=fen,
+            color="white",
+            top_k=top_k,
+            profile=profile,
+            game_type=game_type,
+        )
+    )
 
 
 def _profile_to_uci_options(profile: str) -> tuple[dict, chess.engine.Limit]:
@@ -304,11 +319,12 @@ def evaluate_position(board: chess.Board, perspective: chess.Color) -> int:
     return score
 
 
-def suggest_moves(fen: str, color: str, top_k: int = 5) -> List[MoveSuggestion]:
+# _heuristic_suggest_impl - ranks chess legal moves with the heuristic evaluator
+def _heuristic_suggest_impl(fen: str, color: str, top_k: int = 5) -> List[MoveSuggestion]:
     board = chess.Board(fen)
     target_color = parse_color(color)
 
-    # Analyze from requested player's perspective even if FEN turn differs.
+    # analyze from requested player's perspective even if FEN turn differs
     analysis_board = board.copy(stack=False)
     analysis_board.turn = target_color
 
@@ -333,13 +349,13 @@ def suggest_moves(fen: str, color: str, top_k: int = 5) -> List[MoveSuggestion]:
     return ranked
 
 
-def suggest_moves_fs(
+# _fs_suggest_impl - runs Fairy-Stockfish MultiPV for chess; raises on engine failure
+def _fs_suggest_impl(
     fen: str,
     color: str,
     top_k: int = 5,
     profile: str = "intermediate",
 ) -> List[MoveSuggestion]:
-    """Use Fairy-Stockfish to generate move suggestions according to the given strength profile."""
     board = chess.Board(fen)
     target_color = parse_color(color)
     board.turn = target_color
@@ -347,37 +363,64 @@ def suggest_moves_fs(
     if board.is_game_over():
         return []
 
-    try:
-        engine = _get_engine()
-        options, limit = _profile_to_uci_options(profile)
-        engine.configure(options)
+    engine = _get_engine()
+    options, limit = _profile_to_uci_options(profile)
+    engine.configure(options)
 
-        # Use MultiPV to get multiple candidate moves when top_k > 1
-        multipv = max(1, min(top_k, 10))
-        analysis = engine.analyse(board, limit, multipv=multipv)
+    multipv = max(1, min(top_k, 10))
+    analysis = engine.analyse(board, limit, multipv=multipv)
 
-        suggestions: List[MoveSuggestion] = []
-        for idx, info in enumerate(analysis, start=1):
-            move = info.get("pv", [None])[0]
-            if move is None:
-                continue
-            score = info.get("score")
-            cp = score.white().score(mate_score=100000) if score else 0
+    suggestions: List[MoveSuggestion] = []
+    for idx, info in enumerate(analysis, start=1):
+        move = info.get("pv", [None])[0]
+        if move is None:
+            continue
+        score = info.get("score")
+        cp = score.white().score(mate_score=100000) if score else 0
+        san = board.san(move)
+        suggestions.append(
+            MoveSuggestion(rank=idx, uci=move.uci(), san=san, score=cp)
+        )
+
+    # pad with legal moves when MultiPV returns fewer than top_k (still FS path)
+    if len(suggestions) < top_k:
+        for move in list(board.legal_moves)[len(suggestions) : top_k]:
             san = board.san(move)
             suggestions.append(
-                MoveSuggestion(rank=idx, uci=move.uci(), san=san, score=cp)
+                MoveSuggestion(rank=len(suggestions) + 1, uci=move.uci(), san=san, score=0)
             )
 
-        # If we got fewer than requested, fall back to legal moves
-        if len(suggestions) < top_k:
-            for move in list(board.legal_moves)[len(suggestions) : top_k]:
-                san = board.san(move)
-                suggestions.append(MoveSuggestion(rank=len(suggestions) + 1, uci=move.uci(), san=san, score=0))
+    return suggestions[:top_k]
 
-        return suggestions[:top_k]
-    except Exception:
-        # On any engine error, fall back to the old heuristic so the service stays up
-        return suggest_moves(fen, color, top_k)
+
+# suggest_moves - wraps HeuristicSuggest for existing callers
+def suggest_moves(fen: str, color: str, top_k: int = 5) -> List[MoveSuggestion]:
+    from move_suggest import HeuristicSuggest, MoveSuggestContext
+
+    return HeuristicSuggest().suggest(
+        MoveSuggestContext(fen=fen, color=color, top_k=top_k, game_type="chess")
+    )
+
+
+# suggest_moves_fs - wraps select_suggestions (FS then Heuristic) for existing callers
+def suggest_moves_fs(
+    fen: str,
+    color: str,
+    top_k: int = 5,
+    profile: str = "intermediate",
+) -> List[MoveSuggestion]:
+    from move_suggest import MoveSuggestContext, select_suggestions
+
+    suggestions, _name = select_suggestions(
+        MoveSuggestContext(
+            fen=fen,
+            color=color,
+            top_k=top_k,
+            profile=profile,
+            game_type="chess",
+        )
+    )
+    return suggestions
 
 
 def cp_to_win_chance(cp_score: int) -> float:
@@ -631,20 +674,12 @@ def build_move_ground_truth(
         }
 
 
+# build_concept_hints - builds up to max_hints cues from an analyze-shaped dict (threat, material, replies)
 def build_concept_hints(
     analysis: Optional[Dict[str, object]] = None,
     *,
     max_hints: int = 3,
 ) -> List[str]:
-    """Tiny human-readable cues from an /analyze-shaped dict (issue0047 step 1).
-
-    Order (at most ``max_hints``):
-      1. threat / check / mate note
-      2. material note (when clearly unbalanced)
-      3. engine suggested replies (up to 3, SAN preferred)
-
-    Missing or empty analysis → []. Never raises on bad shape.
-    """
     if not analysis or max_hints <= 0:
         return []
 
@@ -859,7 +894,8 @@ def _phase_from_board(board: chess.Board) -> str:
     return "middlegame"
 
 
-def build_history_payload(
+# _history_agent_impl - builds history-agent features and tags for a chess position
+def _history_agent_impl(
     fen: str,
     color: str,
     move_history: List[str] | None = None,
@@ -870,6 +906,7 @@ def build_history_payload(
     board = chess.Board(fen)
     requested_color = parse_color(color)
     move_history = move_history or []
+    _ = profile
 
     perspective_eval = evaluate_position(board, requested_color)
     features = {
@@ -903,7 +940,8 @@ def build_history_payload(
     }
 
 
-def build_policy_payload(
+# _policy_agent_impl - builds policy-agent candidates from FS→Heuristic suggestions
+def _policy_agent_impl(
     fen: str,
     color: str,
     top_k: int = 5,
@@ -912,7 +950,7 @@ def build_policy_payload(
 ) -> Dict[str, object]:
     started_at = time.perf_counter()
 
-    # Use real Fairy-Stockfish when available (profile controls UCI options)
+    # profile controls Fairy-Stockfish UCI options inside select_suggestions
     suggestions = suggest_moves_fs(fen, color, top_k, profile)
 
     if not suggestions:
@@ -945,7 +983,8 @@ def build_policy_payload(
     }
 
 
-def build_value_payload(
+# _value_agent_impl - builds value-agent score and win-chance for a chess position
+def _value_agent_impl(
     fen: str,
     color: str,
     request_id: str | None = None,
@@ -954,6 +993,7 @@ def build_value_payload(
     started_at = time.perf_counter()
     board = chess.Board(fen)
     _ = parse_color(color)  # validated for consistency with shared API contract
+    _ = profile
     score_cp = evaluate_position(board, chess.WHITE)
     value = math.tanh(score_cp / 400.0)
     win_chance_white = cp_to_win_chance(score_cp)
@@ -971,6 +1011,67 @@ def build_value_payload(
         "win_chance_black": round(float(win_chance_black), 6),
         "latency_ms": latency_ms,
     }
+
+
+# build_history_payload - wraps HistoryAgent for existing callers
+def build_history_payload(
+    fen: str,
+    color: str,
+    move_history: List[str] | None = None,
+    request_id: str | None = None,
+    profile: str = "intermediate",
+) -> Dict[str, object]:
+    from agents import AgentContext, HistoryAgent
+
+    return HistoryAgent().run(
+        AgentContext(
+            fen=fen,
+            color=color,
+            move_history=move_history,
+            request_id=request_id,
+            profile=profile,
+        )
+    )
+
+
+# build_policy_payload - wraps PolicyAgent for existing callers
+def build_policy_payload(
+    fen: str,
+    color: str,
+    top_k: int = 5,
+    request_id: str | None = None,
+    profile: str = "intermediate",
+) -> Dict[str, object]:
+    from agents import AgentContext, PolicyAgent
+
+    return PolicyAgent().run(
+        AgentContext(
+            fen=fen,
+            color=color,
+            top_k=top_k,
+            request_id=request_id,
+            profile=profile,
+        )
+    )
+
+
+# build_value_payload - wraps ValueAgent for existing callers
+def build_value_payload(
+    fen: str,
+    color: str,
+    request_id: str | None = None,
+    profile: str = "intermediate",
+) -> Dict[str, object]:
+    from agents import AgentContext, ValueAgent
+
+    return ValueAgent().run(
+        AgentContext(
+            fen=fen,
+            color=color,
+            request_id=request_id,
+            profile=profile,
+        )
+    )
 
 
 def _build_parser() -> argparse.ArgumentParser:

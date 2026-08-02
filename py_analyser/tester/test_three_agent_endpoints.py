@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verification tests for /history, /policy, and /value endpoints."""
+# test_three_agent_endpoints.py - checks /history, /policy, and /value endpoints
 
 from __future__ import annotations
 

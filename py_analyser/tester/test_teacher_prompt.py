@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""issue0045: terms/tone JSON + prompt assembly by skill_level."""
+# test_teacher_prompt.py - checks terms/tone json and prompt assembly by skill_level
 
 from __future__ import annotations
 
@@ -12,13 +12,12 @@ PARENT_DIR = os.path.dirname(CURRENT_DIR)
 if PARENT_DIR not in sys.path:
     sys.path.insert(0, PARENT_DIR)
 
-from llm_providers import (  # noqa: E402
-    HeuristicProvider,
+from explain_finalize import finalize_explanation, sanitize_explanation  # noqa: E402
+from llm_providers import HeuristicProvider  # noqa: E402
+from teacher_prompt import (  # noqa: E402
     _terms_tone_filenames,
     build_teacher_prompt,
-    finalize_explanation,
     normalize_skill_level,
-    sanitize_explanation,
 )
 
 
@@ -143,7 +142,7 @@ class TestTeacherPrompt(unittest.TestCase):
         self.assertIn("in-between idea", cleaned)
 
     def test_quick_coach_has_no_placeholder(self) -> None:
-        from llm_providers import build_quick_coach_line
+        from teacher_prompt import build_quick_coach_line
 
         fen = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL[] b - - 0 1"
         # Post c3c4-ish not required; label may be UCI-ish if fen mismatch — just ban Placeholder.
