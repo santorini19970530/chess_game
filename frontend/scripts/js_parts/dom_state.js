@@ -1,5 +1,5 @@
 // CM3070 FP code
-// 01_dom_state.js - captures puzzle page DOM refs and seeds shared game state
+// dom_state.js - captures puzzle page DOM refs and seeds shared game state
 
 // DomState - owns puzzle page DOM references, ui constants, and initial state
 class DomState {

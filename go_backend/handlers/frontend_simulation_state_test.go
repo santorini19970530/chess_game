@@ -6,7 +6,6 @@ package handlers
 import (
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
 )
@@ -20,14 +19,32 @@ func loadChessCommandSource(t *testing.T) string {
 		filepath.Join("..", "frontend", "scripts"),
 		filepath.Join("frontend", "scripts"),
 	}
+	// same order as frontend/html_puzzles/game_panel.html script tags
+	partNames := []string{
+		"game_app.js",
+		"dom_state.js",
+		"util.js",
+		"socket.js",
+		"clocks.js",
+		"board.js",
+		"interaction.js",
+		"promotion.js",
+		"hints_coach.js",
+		"game_info.js",
+		"move_history.js",
+		"setup_command.js",
+		"session_actions.js",
+		"review.js",
+		"simulation.js",
+	}
 	for _, root := range roots {
-		partFiles, err := filepath.Glob(filepath.Join(root, "js_parts", "*.js"))
-		if err != nil || len(partFiles) == 0 {
+		partsDir := filepath.Join(root, "js_parts")
+		if _, err := os.Stat(filepath.Join(partsDir, partNames[0])); err != nil {
 			continue
 		}
-		sort.Strings(partFiles)
 		var source strings.Builder
-		for _, partFile := range partFiles {
+		for _, name := range partNames {
+			partFile := filepath.Join(partsDir, name)
 			data, err := os.ReadFile(partFile)
 			if err != nil {
 				t.Fatalf("failed to load frontend script part %s: %v", partFile, err)
@@ -265,9 +282,11 @@ func TestFrontendGameAppClasses(t *testing.T) {
 		"class ClockController",
 		"class BoardView",
 		"class BoardInteraction",
+		"class PromotionPicker",
 		"class HintsCoach",
 		"class GameInfoView",
 		"class SetupCommand",
+		"class SessionActions",
 		"class ReviewPlayback",
 		"class SimulationPanel",
 		"new GameApp()",

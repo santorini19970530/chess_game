@@ -1,5 +1,5 @@
 // CM3070 FP code
-// 07_hints_coach.js - suggested-move hints and analysis polling for the puzzle page
+// hints_coach.js - suggested-move hints and analysis polling for the puzzle page
 // HintsCoach - owns top-move hints, highlights, and analysis poll triggers
 class HintsCoach {
   constructor(app) {
@@ -30,9 +30,7 @@ class HintsCoach {
       const res = await fetch(`/api/games/${encodeURIComponent(this.app.state.currentGameId)}/top-moves?k=3`);
       if (!res.ok) return;
       const data = await res.json();
-      if (data.suggestions && data.suggestions.length > 0) {
-        console.log("[Top moves]", data.suggestions);
-      }
+      this.highlightSuggestedMoves(Array.isArray(data?.suggestions) ? data.suggestions : []);
     } catch (_) {}
   }
 
@@ -273,9 +271,6 @@ class HintsCoach {
       const data = await resp.json();
       const suggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
       this.highlightSuggestedMoves(suggestions);
-      if (suggestions.length) {
-        console.log("[hints] showing", suggestions.length, "FS suggestions");
-      }
     } catch (_) {
       this.highlightSuggestedMoves([]);
     }

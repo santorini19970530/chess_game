@@ -1,5 +1,5 @@
 // CM3070 FP code
-// 10_review.js - load-moves review playback for the puzzle page
+// review.js - load-moves review playback for the puzzle page
 // ReviewPlayback - owns review load, seek, and playback controls
 class ReviewPlayback {
   constructor(app) {

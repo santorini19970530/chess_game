@@ -1,5 +1,5 @@
 // CM3070 FP code
-// 04_clocks.js - shared clock display, ticking, and presets for the puzzle page
+// clocks.js - shared clock display, ticking, and presets for the puzzle page
 // ClockController - owns clock paint, tick, flag timeout, and presets
 class ClockController {
   constructor(app) {

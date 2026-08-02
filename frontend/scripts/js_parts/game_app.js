@@ -1,5 +1,5 @@
 // CM3070 FP code
-// 00_game_app.js - owns the puzzle page controllers and shared application state
+// game_app.js - owns the puzzle page controllers and shared application state
 
 // GameApp - owns puzzle page controllers, shared el/state, and snapshot paint
 class GameApp {
@@ -50,7 +50,7 @@ class GameApp {
       this.gameInfo.renderGameInfo(result.captured, analysis);
     }
     if (opts.stopAnalysis) this.socket.stopAnalysisPolling();
-    if (opts.resolvePromotion) this.interaction.resolvePromotionChoice("");
+    if (opts.resolvePromotion) this.promotion.resolvePromotionChoice("");
     if (opts.clearSelection !== false) this.interaction.clearSelectedSquare();
     if (opts.cleanupSimulation) this.simulation.cleanupSimulationControls();
     return true;

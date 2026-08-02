@@ -1,5 +1,5 @@
 // CM3070 FP code
-// 05_board.js - board geometry, piece images, and state rendering for the puzzle page
+// board.js - board geometry, piece images, and state rendering for the puzzle page
 
 // BoardView - owns board grid rebuild, piece images, and board state paint
 class BoardView {

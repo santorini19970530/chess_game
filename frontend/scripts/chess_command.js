@@ -11,10 +11,12 @@
   app.clocks = new ClockController(app);
   app.board = new BoardView(app);
   app.interaction = new BoardInteraction(app);
+  app.promotion = new PromotionPicker(app);
   app.coach = new HintsCoach(app);
   app.gameInfo = new GameInfoView(app);
   app.moveHistory = new MoveHistoryView(app);
   app.setup = new SetupCommand(app);
+  app.session = new SessionActions(app);
   app.review = new ReviewPlayback(app);
   app.simulation = new SimulationPanel(app);
   window.gameApp = app;
@@ -26,7 +28,7 @@
       app.setup.submitCommand();
     }
   });
-  app.interaction.initPromotionPicker();
+  app.promotion.initPromotionPicker();
   app.interaction.initMouseMoveControls();
   if (typeof ResizeObserver !== "undefined" && app.el.boardElement) {
     const xqGutterRo = new ResizeObserver(() => app.board.syncXiangqiCoordGutters());
@@ -46,7 +48,7 @@
     config: { humanColor: "white", aiGameCount: 1, startFen: "" },
   });
   app.setup.updateSetupControlState();
-  void app.setup.createSessionOnLoad();
+  void app.session.createSessionOnLoad();
 
   // applyAIMoveFromResult - paints a companion ai uci move onto the board when the move api returns one
   window.applyAIMoveFromResult = (result) => {

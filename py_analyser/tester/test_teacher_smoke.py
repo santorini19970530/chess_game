@@ -80,7 +80,9 @@ class TestTeacherSmokeOffline(unittest.TestCase):
         self.assertIn("palace", xq)
         self.assertIn("drop", sh)
         self.assertNotIn("palace", chess)
-        self.assertNotIn("drop", chess)
+        # shared anti-hallucination text may say "drops"; chess Ok-terms must not list drop
+        self.assertRegex(chess, r"Ok terms:.*\bdevelopment\b")
+        self.assertNotRegex(chess, r"Ok terms:.*\bdrop\b")
 
     def test_explain_heuristic_nonempty(self) -> None:
         os.environ["LLM_PROVIDER"] = "heuristic"

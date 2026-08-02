@@ -1,5 +1,5 @@
 // CM3070 FP code
-// 03_socket.js - game websocket client and live event handling for the puzzle page
+// socket.js - game websocket client and live event handling for the puzzle page
 // SocketClient - owns game websocket connect, reconnect, and event dispatch
 class SocketClient {
   constructor(app) {

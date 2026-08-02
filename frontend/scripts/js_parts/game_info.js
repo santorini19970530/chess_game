@@ -1,5 +1,5 @@
 // CM3070 FP code
-// 08_game_info.js - side panel: win%, captures, turn/check, and outcome labels
+// game_info.js - side panel: win%, captures, turn/check, and outcome labels
 // GameInfoView - paints game info, captures, and outcome (history is MoveHistoryView)
 class GameInfoView {
   constructor(app) {

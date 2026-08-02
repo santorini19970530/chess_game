@@ -1,5 +1,5 @@
 // CM3070 FP code
-// 11_simulation.js - ai simulation run, playback, and download controls
+// simulation.js - ai simulation run, playback, and download controls
 
 // SimulationPanel - owns run-sim button, playback helpers, and download buttons
 class SimulationPanel {

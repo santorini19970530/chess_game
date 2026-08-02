@@ -1,6 +1,6 @@
 // CM3070 FP code
-// 06_interaction.js - square selection, legal moves, promotion, and drag for the puzzle page
-// BoardInteraction - owns click/drag interaction and promotion picker
+// interaction.js - square selection, legal moves, and drag for the puzzle page
+// BoardInteraction - owns click/drag interaction and legal-destination highlights
 class BoardInteraction {
   constructor(app) {
     this.app = app;
@@ -55,52 +55,6 @@ class BoardInteraction {
       must: Boolean(move.requiresPromotion),
       can: Boolean(move.canPromote),
     };
-  }
-
-  // closePromotionPicker - hides the promotion picker overlay
-  closePromotionPicker() {
-    if (!this.app.el.promotionPicker) return;
-    this.app.el.promotionPicker.classList.remove("promotion_picker_visible");
-    this.app.el.promotionPicker.classList.add("promotion_picker_hidden");
-    this.app.el.promotionPicker.setAttribute("aria-hidden", "true");
-  }
-
-  // openPromotionPicker - shows the promotion picker overlay
-  openPromotionPicker() {
-    if (!this.app.el.promotionPicker) return;
-    this.app.el.promotionPicker.classList.remove("promotion_picker_hidden");
-    this.app.el.promotionPicker.classList.add("promotion_picker_visible");
-    this.app.el.promotionPicker.setAttribute("aria-hidden", "false");
-  }
-
-  // configurePromotionPicker - fills promotion picker buttons for chess or shogi
-  configurePromotionPicker(mode) {
-    if (!this.app.el.promotionPicker) return;
-    const title = this.app.el.promotionPicker.querySelector("#promotion_picker_title");
-    const choices = this.app.el.promotionPicker.querySelector(".promotion_picker_choices");
-    if (!title || !choices) return;
-    if (mode === "shogi") {
-      title.textContent = "Promote this piece?";
-      choices.innerHTML =
-        `<button type="button" class="promotion_choice_btn" data-promotion="+">Promote</button>` +
-        `<button type="button" class="promotion_choice_btn" data-promotion="-">Do not promote</button>`;
-      return;
-    }
-    title.textContent = "Choose promotion piece";
-    choices.innerHTML =
-      `<button type="button" class="promotion_choice_btn" data-promotion="q">Queen</button>` +
-      `<button type="button" class="promotion_choice_btn" data-promotion="r">Rook</button>` +
-      `<button type="button" class="promotion_choice_btn" data-promotion="b">Bishop</button>` +
-      `<button type="button" class="promotion_choice_btn" data-promotion="n">Knight</button>`;
-  }
-
-  // resolvePromotionChoice - resolves a pending promotion promise with the chosen code
-  resolvePromotionChoice(pieceCode) {
-    if (!this.app.state.pendingPromotionResolve) return;
-    const resolver = this.app.state.pendingPromotionResolve;
-    this.app.state.pendingPromotionResolve = null;
-    this.closePromotionPicker();
-    resolver(pieceCode);
   }
 
   // clearSelectedSquare - clears piece selection, drop selection, and legal highlights
@@ -390,31 +344,6 @@ class BoardInteraction {
     });
   }
 
-  // initPromotionPicker - wires promotion picker clicks and escape cancel
-  initPromotionPicker() {
-    if (!this.app.el.promotionPicker) return;
-    this.closePromotionPicker();
-    // Delegate so chess/shogi button sets can be swapped per open.
-    this.app.el.promotionPicker.addEventListener("click", (event) => {
-      const buttonEl =
-        event.target instanceof Element ? event.target.closest(".promotion_choice_btn[data-promotion]") : null;
-      if (buttonEl) {
-        const choice = String(buttonEl.getAttribute("data-promotion") || "");
-        if (!choice) return;
-        this.resolvePromotionChoice(choice);
-        return;
-      }
-      if (event.target === this.app.el.promotionPicker && this.app.state.pendingPromotionResolve) {
-        this.resolvePromotionChoice("");
-      }
-    });
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && this.app.state.pendingPromotionResolve) {
-        this.resolvePromotionChoice("");
-      }
-    });
-  }
-
   // getSquareElement - finds the nearest board square element from an event target
   getSquareElement(target) {
     return target instanceof Element ? target.closest(".chess_board_square[data-sequence]") : null;
@@ -423,19 +352,6 @@ class BoardInteraction {
   // getPieceOnSquare - returns the piece image on a square, if any
   getPieceOnSquare(square) {
     return square?.querySelector(".piece_img") || null;
-  }
-
-  // requestPromotionChoice - requests a chess or shogi promotion choice
-  requestPromotionChoice(mode = "chess") {
-    return new Promise((resolve) => {
-      if (!this.app.el.promotionPicker) {
-        resolve(mode === "shogi" ? "+" : "q");
-        return;
-      }
-      this.configurePromotionPicker(mode);
-      this.app.state.pendingPromotionResolve = resolve;
-      this.openPromotionPicker();
-    });
   }
 }
 

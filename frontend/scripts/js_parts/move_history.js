@@ -1,5 +1,5 @@
 // CM3070 FP code
-// 12_move_history.js - white/black move history lists for the puzzle page
+// move_history.js - white/black move history lists for the puzzle page
 
 // MoveHistoryView - owns move history paint and history list rows
 class MoveHistoryView {

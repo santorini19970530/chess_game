@@ -1,5 +1,5 @@
 // CM3070 FP code
-// 02_util.js - status, coach notes, and shared fetch/error helpers for the puzzle page
+// util.js - status, coach notes, and shared fetch/error helpers for the puzzle page
 
 // Util - shared status, notes composition, and error helpers
 class Util {
