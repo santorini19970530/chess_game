@@ -6,6 +6,7 @@ import os
 import unittest
 
 
+# main - discovers the tester suite and hard-exits after the report
 def main() -> None:
     suite = unittest.defaultTestLoader.discover(
         start_dir=os.path.dirname(os.path.abspath(__file__)),

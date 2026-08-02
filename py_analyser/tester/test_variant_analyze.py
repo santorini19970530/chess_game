@@ -100,10 +100,12 @@ class TestVariantAnalyze(unittest.TestCase):
         self.assertEqual(response.get_json()["status"], "ok")
 
     def test_uci_score_as_white_matches_chess_white_perspective(self) -> None:
-        # Same mapping chess uses: eval_cp is always White-minus-Black style.
-        self.assertEqual(analyzer.uci_score_as_white(120, XIANGQI_START), 120)
+        from fs_engine import uci_score_as_white
+
+        # same mapping chess uses: eval_cp is always white-minus-black style
+        self.assertEqual(uci_score_as_white(120, XIANGQI_START), 120)
         black_to_move = XIANGQI_START.replace(" w ", " b ", 1)
-        self.assertEqual(analyzer.uci_score_as_white(120, black_to_move), -120)
+        self.assertEqual(uci_score_as_white(120, black_to_move), -120)
 
     def test_win_chance_uses_shared_cp_mapping(self) -> None:
         # Chess and variants must share cp_to_win_chance (not a separate formula).

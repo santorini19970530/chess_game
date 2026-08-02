@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# teacher_prompt.py - TeacherPrompt: terms/tone assembly and quick coach lines
+# teacher_prompt.py - terms/tone assembly and quick coach lines
 
 from __future__ import annotations
 

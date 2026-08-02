@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# llm_providers.py - LLMProvider Strategy (Ollama / Heuristic)
+# llm_providers.py - llm provider strategy (ollama / heuristic)
 
 from __future__ import annotations
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# explain_finalize.py - ExplainFinalizer helpers for coach text (beside LLMProvider)
+# explain_finalize.py - explain finalizer helpers for coach text (beside llm provider)
 
 from __future__ import annotations
 

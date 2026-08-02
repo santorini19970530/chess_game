@@ -1,253 +1,18 @@
 #!/usr/bin/env python3
-"""
-Standalone chess analyzer.
-
-Input:
-  - FEN string
-  - player color ("white" or "black")
-Output:
-  - top suggested moves with simple heuristic scores
-
-No backend/frontend integration is required to use this file.
-"""
+# analyzer.py - facade: board facts, analyze payloads, and coach ground-truth helpers
 
 from __future__ import annotations
 
 import argparse
 import json
 import math
-import os
-import random
 import re
-import subprocess
-import threading
 import time
 import uuid
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 import chess
-import chess.engine
-
-
-# Fairy-Stockfish binary path (override via environment variable)
-FS_BINARY_PATH: str = os.environ.get(
-    "FAIRY_STOCKFISH_PATH",
-    os.path.join(os.path.dirname(__file__), "Fairy-Stockfish-fairy_sf_14", "src", "stockfish"),
-)
-
-# Session game_type → Fairy-Stockfish UCI_Variant name.
-_GAME_TYPE_TO_UCI_VARIANT = {
-    "chess": "chess",
-    "xianqi": "xiangqi",
-    "shogi": "shogi",
-}
-
-_engine: Optional[chess.engine.SimpleEngine] = None
-_raw_uci_lock = threading.Lock()
-_raw_uci_proc: Optional[subprocess.Popen] = None
-_raw_uci_variant: Optional[str] = None
-
-
-def _get_engine() -> chess.engine.SimpleEngine:
-    """Return a singleton Fairy-Stockfish engine instance (opened once)."""
-    global _engine
-    if _engine is None:
-        if not os.path.exists(FS_BINARY_PATH):
-            raise FileNotFoundError(
-                f"Fairy-Stockfish binary not found at {FS_BINARY_PATH}. "
-                "Set FAIRY_STOCKFISH_PATH environment variable to the correct path."
-            )
-        _engine = chess.engine.SimpleEngine.popen_uci(FS_BINARY_PATH)
-    return _engine
-
-
-def uci_variant_name(game_type: str) -> str:
-    key = (game_type or "chess").strip().lower()
-    return _GAME_TYPE_TO_UCI_VARIANT.get(key, key)
-
-
-def _raw_uci_ensure(variant: str) -> subprocess.Popen:
-    """Singleton raw UCI process for variant FENs (python-chess Board is chess-only)."""
-    global _raw_uci_proc, _raw_uci_variant
-    if _raw_uci_proc is not None and _raw_uci_proc.poll() is None:
-        if _raw_uci_variant != variant:
-            _raw_uci_write(_raw_uci_proc, f"setoption name UCI_Variant value {variant}")
-            _raw_uci_write(_raw_uci_proc, "isready")
-            _raw_uci_wait_for(_raw_uci_proc, "readyok", timeout=5.0)
-            _raw_uci_variant = variant
-        return _raw_uci_proc
-
-    if not os.path.exists(FS_BINARY_PATH):
-        raise FileNotFoundError(
-            f"Fairy-Stockfish binary not found at {FS_BINARY_PATH}. "
-            "Set FAIRY_STOCKFISH_PATH environment variable to the correct path."
-        )
-    proc = subprocess.Popen(
-        [FS_BINARY_PATH],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        text=True,
-        bufsize=1,
-    )
-    _raw_uci_write(proc, "uci")
-    _raw_uci_wait_for(proc, "uciok", timeout=5.0)
-    _raw_uci_write(proc, f"setoption name UCI_Variant value {variant}")
-    _raw_uci_write(proc, "isready")
-    _raw_uci_wait_for(proc, "readyok", timeout=5.0)
-    _raw_uci_proc = proc
-    _raw_uci_variant = variant
-    return proc
-
-
-def _raw_uci_write(proc: subprocess.Popen, line: str) -> None:
-    assert proc.stdin is not None
-    proc.stdin.write(line + "\n")
-    proc.stdin.flush()
-
-
-def _raw_uci_wait_for(proc: subprocess.Popen, token: str, timeout: float) -> None:
-    assert proc.stdout is not None
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        line = proc.stdout.readline()
-        if not line:
-            raise RuntimeError("Fairy-Stockfish exited while waiting for " + token)
-        if token in line:
-            return
-    raise TimeoutError(f"timeout waiting for {token}")
-
-
-def _parse_info_score_cp(fields: List[str]) -> Optional[int]:
-    for i, f in enumerate(fields):
-        if f == "score" and i + 2 < len(fields):
-            if fields[i + 1] == "cp":
-                try:
-                    return int(fields[i + 2])
-                except ValueError:
-                    return None
-            if fields[i + 1] == "mate":
-                try:
-                    mate = int(fields[i + 2])
-                except ValueError:
-                    return None
-                return 100_000 if mate > 0 else -100_000
-    return None
-
-
-def _parse_info_multipv_pv(fields: List[str]) -> Tuple[int, Optional[str]]:
-    multipv = 1
-    move: Optional[str] = None
-    for i, f in enumerate(fields):
-        if f == "multipv" and i + 1 < len(fields):
-            try:
-                multipv = int(fields[i + 1])
-            except ValueError:
-                multipv = 1
-        if f == "pv" and i + 1 < len(fields):
-            move = fields[i + 1]
-    return multipv, move
-
-
-def uci_score_as_white(score_cp: int, fen: str) -> int:
-    """UCI info scores are from the side to move; chess analyze uses White POV."""
-    parts = fen.split()
-    if len(parts) >= 2 and parts[1].lower() == "b":
-        return -int(score_cp)
-    return int(score_cp)
-
-
-# _fs_variant_suggest_impl - runs raw-UCI MultiPV for xianqi/shogi and returns white-pov eval
-def _fs_variant_suggest_impl(
-    fen: str,
-    game_type: str,
-    top_k: int = 5,
-    profile: str = "intermediate",
-) -> Tuple[List[MoveSuggestion], Optional[int]]:
-    variant = uci_variant_name(game_type)
-    # match chess analyze stability: true eval, not profile-handicapped search
-    _ = profile  # kept for API compatibility with callers
-    skill = 20
-    limit = chess.engine.Limit(depth=10, time=0.5)
-    multipv = max(1, min(top_k, 10))
-    go_parts = []
-    if limit.time is not None:
-        go_parts.append(f"movetime {int(limit.time * 1000)}")
-    if limit.depth is not None:
-        go_parts.append(f"depth {int(limit.depth)}")
-    go_cmd = "go " + " ".join(go_parts) if go_parts else "go depth 10"
-
-    with _raw_uci_lock:
-        proc = _raw_uci_ensure(variant)
-        _raw_uci_write(proc, f"setoption name Skill Level value {skill}")
-        _raw_uci_write(proc, f"setoption name MultiPV value {multipv}")
-        _raw_uci_write(proc, f"position fen {fen}")
-        _raw_uci_write(proc, go_cmd)
-
-        assert proc.stdout is not None
-        seen: Dict[int, MoveSuggestion] = {}
-        eval_cp_white: Optional[int] = None
-        deadline = time.monotonic() + 12.0
-        while time.monotonic() < deadline:
-            line = proc.stdout.readline()
-            if not line:
-                break
-            line = line.strip()
-            if line.startswith("bestmove"):
-                break
-            if not line.startswith("info"):
-                continue
-            fields = line.split()
-            idx, move = _parse_info_multipv_pv(fields)
-            score = _parse_info_score_cp(fields)
-            if move is None:
-                continue
-            if score is not None and idx == 1:
-                eval_cp_white = uci_score_as_white(score, fen)
-            if 1 <= idx <= multipv:
-                seen[idx] = MoveSuggestion(
-                    rank=idx, uci=move, san=move, score=score if score is not None else 0
-                )
-
-        suggestions = [seen[i] for i in range(1, multipv + 1) if i in seen]
-        return suggestions[:top_k], eval_cp_white
-
-
-# suggest_moves_fs_variant - wraps FairyStockfishVariantSuggest for existing callers
-def suggest_moves_fs_variant(
-    fen: str,
-    game_type: str,
-    top_k: int = 5,
-    profile: str = "intermediate",
-) -> Tuple[List[MoveSuggestion], Optional[int]]:
-    from move_suggest import FairyStockfishVariantSuggest, MoveSuggestContext
-
-    return FairyStockfishVariantSuggest().suggest_with_eval(
-        MoveSuggestContext(
-            fen=fen,
-            color="white",
-            top_k=top_k,
-            profile=profile,
-            game_type=game_type,
-        )
-    )
-
-
-def _profile_to_uci_options(profile: str) -> tuple[dict, chess.engine.Limit]:
-    """Map strength profile to Fairy-Stockfish UCI options and search limits."""
-    p = (profile or "intermediate").lower()
-    if p == "beginner":
-        return {"Skill Level": 0}, chess.engine.Limit(depth=5, time=0.2)
-    if p == "intermediate":
-        return {"Skill Level": 5}, chess.engine.Limit(depth=8, time=0.4)
-    if p == "advanced":
-        return {"Skill Level": 15}, chess.engine.Limit(depth=12, time=0.8)
-    if p == "master":
-        return {"Skill Level": 20}, chess.engine.Limit(depth=18, time=1.5)
-    # default
-    return {"Skill Level": 5}, chess.engine.Limit(depth=8, time=0.4)
-
 
 PIECE_VALUES = {
     chess.PAWN: 100,
@@ -259,6 +24,7 @@ PIECE_VALUES = {
 }
 
 
+# MoveSuggestion - one ranked move suggestion with uci, san, and score
 @dataclass(frozen=True)
 class MoveSuggestion:
     rank: int
@@ -267,6 +33,7 @@ class MoveSuggestion:
     score: int
 
 
+# parse_color - maps a color string to chess.WHITE or chess.BLACK
 def parse_color(color: str) -> chess.Color:
     normalized = color.strip().lower()
     if normalized in {"white", "w"}:
@@ -276,6 +43,7 @@ def parse_color(color: str) -> chess.Color:
     raise ValueError('color must be "white" or "black"')
 
 
+# material_score - returns material balance from the given side's perspective
 def material_score(board: chess.Board, perspective: chess.Color) -> int:
     white_total = 0
     black_total = 0
@@ -285,6 +53,7 @@ def material_score(board: chess.Board, perspective: chess.Color) -> int:
     return white_total - black_total if perspective == chess.WHITE else black_total - white_total
 
 
+# material_totals - returns white and black material totals in centipawn-like units
 def material_totals(board: chess.Board) -> Dict[str, int]:
     white_total = 0
     black_total = 0
@@ -294,20 +63,21 @@ def material_totals(board: chess.Board) -> Dict[str, int]:
     return {"white": white_total, "black": black_total}
 
 
+# evaluate_position - scores a chess position from the given side's perspective
 def evaluate_position(board: chess.Board, perspective: chess.Color) -> int:
     if board.is_checkmate():
-        # Side to move in checkmate loses.
+        # side to move in checkmate loses
         return -100_000 if board.turn == perspective else 100_000
     if board.is_stalemate() or board.is_insufficient_material():
         return 0
 
     score = material_score(board, perspective)
 
-    # Small tactical/initiative bonuses.
+    # small tactical/initiative bonuses
     if board.is_check():
         score += 35 if board.turn != perspective else -35
 
-    # Mobility bonus for perspective side.
+    # mobility bonus for perspective side
     current_turn = board.turn
     board.turn = perspective
     perspective_mobility = board.legal_moves.count()
@@ -319,115 +89,12 @@ def evaluate_position(board: chess.Board, perspective: chess.Color) -> int:
     return score
 
 
-# _heuristic_suggest_impl - ranks chess legal moves with the heuristic evaluator
-def _heuristic_suggest_impl(fen: str, color: str, top_k: int = 5) -> List[MoveSuggestion]:
-    board = chess.Board(fen)
-    target_color = parse_color(color)
-
-    # analyze from requested player's perspective even if FEN turn differs
-    analysis_board = board.copy(stack=False)
-    analysis_board.turn = target_color
-
-    if analysis_board.is_game_over():
-        return []
-
-    scored: List[MoveSuggestion] = []
-    for move in analysis_board.legal_moves:
-        san = analysis_board.san(move)
-        analysis_board.push(move)
-        score = evaluate_position(analysis_board, target_color)
-        analysis_board.pop()
-        scored.append(MoveSuggestion(rank=0, uci=move.uci(), san=san, score=score))
-
-    scored.sort(key=lambda item: item.score, reverse=True)
-    top = scored[: max(1, top_k)]
-    ranked: List[MoveSuggestion] = []
-    for idx, item in enumerate(top, start=1):
-        ranked.append(
-            MoveSuggestion(rank=idx, uci=item.uci, san=item.san, score=item.score)
-        )
-    return ranked
-
-
-# _fs_suggest_impl - runs Fairy-Stockfish MultiPV for chess; raises on engine failure
-def _fs_suggest_impl(
-    fen: str,
-    color: str,
-    top_k: int = 5,
-    profile: str = "intermediate",
-) -> List[MoveSuggestion]:
-    board = chess.Board(fen)
-    target_color = parse_color(color)
-    board.turn = target_color
-
-    if board.is_game_over():
-        return []
-
-    engine = _get_engine()
-    options, limit = _profile_to_uci_options(profile)
-    engine.configure(options)
-
-    multipv = max(1, min(top_k, 10))
-    analysis = engine.analyse(board, limit, multipv=multipv)
-
-    suggestions: List[MoveSuggestion] = []
-    for idx, info in enumerate(analysis, start=1):
-        move = info.get("pv", [None])[0]
-        if move is None:
-            continue
-        score = info.get("score")
-        cp = score.white().score(mate_score=100000) if score else 0
-        san = board.san(move)
-        suggestions.append(
-            MoveSuggestion(rank=idx, uci=move.uci(), san=san, score=cp)
-        )
-
-    # pad with legal moves when MultiPV returns fewer than top_k (still FS path)
-    if len(suggestions) < top_k:
-        for move in list(board.legal_moves)[len(suggestions) : top_k]:
-            san = board.san(move)
-            suggestions.append(
-                MoveSuggestion(rank=len(suggestions) + 1, uci=move.uci(), san=san, score=0)
-            )
-
-    return suggestions[:top_k]
-
-
-# suggest_moves - wraps HeuristicSuggest for existing callers
-def suggest_moves(fen: str, color: str, top_k: int = 5) -> List[MoveSuggestion]:
-    from move_suggest import HeuristicSuggest, MoveSuggestContext
-
-    return HeuristicSuggest().suggest(
-        MoveSuggestContext(fen=fen, color=color, top_k=top_k, game_type="chess")
-    )
-
-
-# suggest_moves_fs - wraps select_suggestions (FS then Heuristic) for existing callers
-def suggest_moves_fs(
-    fen: str,
-    color: str,
-    top_k: int = 5,
-    profile: str = "intermediate",
-) -> List[MoveSuggestion]:
-    from move_suggest import MoveSuggestContext, select_suggestions
-
-    suggestions, _name = select_suggestions(
-        MoveSuggestContext(
-            fen=fen,
-            color=color,
-            top_k=top_k,
-            profile=profile,
-            game_type="chess",
-        )
-    )
-    return suggestions
-
-
+# cp_to_win_chance - maps a centipawn-like score to a win probability
 def cp_to_win_chance(cp_score: int) -> float:
-    # Logistic mapping from centipawn-like score to probability.
     return 1.0 / (1.0 + math.exp(-cp_score / 300.0))
 
 
+# build_health_summary - builds material and check fields for an analyze payload
 def build_health_summary(board: chess.Board) -> Dict[str, object]:
     totals = material_totals(board)
     side_to_move = "white" if board.turn == chess.WHITE else "black"
@@ -442,6 +109,7 @@ def build_health_summary(board: chess.Board) -> Dict[str, object]:
     }
 
 
+# build_threat_summary - returns a short threat/initiative note for the position
 def build_threat_summary(board: chess.Board, eval_cp_white: int) -> str:
     if board.is_checkmate():
         winner = "black" if board.turn == chess.WHITE else "white"
@@ -468,8 +136,8 @@ _PIECE_NAMES = {
 }
 
 
+# normalize_history_uci - strips session labels like 'White: e2e4' down to bare uci
 def normalize_history_uci(raw: str) -> str:
-    """Strip session labels like 'White: e2e4' / 'Black: e7e5' → bare UCI."""
     s = str(raw or "").strip()
     if ":" in s:
         s = s.split(":", 1)[1].strip()
@@ -506,8 +174,8 @@ _XIANGQI_KIND = {
 }
 
 
+# _variant_board_grid - maps (file, rank) to piece kind from fen placement
 def _variant_board_grid(fen: str, *, files: int, ranks: int) -> Dict[Tuple[int, int], str]:
-    """Map (file, rank) → piece kind from SFEN/FEN placement (post-move board)."""
     placement = (fen or "").split()[0] if fen else ""
     if "[" in placement:
         placement = placement.split("[", 1)[0]
@@ -548,8 +216,8 @@ def _variant_board_grid(fen: str, *, files: int, ranks: int) -> Dict[Tuple[int, 
     return out
 
 
+# _variant_move_label - builds a human label for xianqi/shogi uci from the post-move fen
 def _variant_move_label(fen: str, target: str, gt: str) -> str:
-    """Human label for xianqi/shogi UCI using post-move FEN (piece on destination)."""
     key = "shogi" if gt == "shogi" else "xianqi"
     drop = re.match(r"^([plnsgbr])[*@]([a-i])([1-9])$", target)
     if drop and key == "shogi":
@@ -568,16 +236,13 @@ def _variant_move_label(fen: str, target: str, gt: str) -> str:
     return f"{kind} {ff}{fr}→{tf}{tr}{suffix}"
 
 
+# build_move_ground_truth - builds deterministic facts about the move just played; never raises
 def build_move_ground_truth(
     fen: str,
     move_uci: str,
     move_history: Optional[List[str]] = None,
     game_type: str = "chess",
 ) -> Dict[str, str]:
-    """Deterministic facts about the move just played (chess via python-chess).
-
-    Returns at least ``summary``; may include ``san`` / ``uci``. Never raises.
-    """
     gt = (game_type or "chess").strip().lower()
     target = normalize_history_uci(move_uci)
     hist = [normalize_history_uci(m) for m in (move_history or []) if str(m).strip()]
@@ -609,7 +274,7 @@ def build_move_ground_truth(
                     break
                 board.push_uci(u)
         elif hist:
-            # History present but target not in it — replay all then fail closed.
+            # history present but target not in it — replay all then fail closed
             for u in hist:
                 board.push_uci(u)
             return {
@@ -726,7 +391,7 @@ def build_concept_hints(
     if labels:
         hints.append("Engine suggested replies (side to move): " + ", ".join(labels) + ".")
 
-    # Dedupe while preserving order (threat can repeat material idea).
+    # dedupe while preserving order (threat can repeat material idea)
     seen: set[str] = set()
     unique: List[str] = []
     for h in hints:
@@ -740,6 +405,7 @@ def build_concept_hints(
     return unique
 
 
+# build_explanation_fallback - builds offline coach text when the llm path is unavailable
 def build_explanation_fallback(
     fen: str,
     color: str,
@@ -770,6 +436,7 @@ def build_explanation_fallback(
     )
 
 
+# _analyze_position_variant - analyzes xianqi/shogi via fairy-stockfish uci; never chess.Board(fen)
 def _analyze_position_variant(
     fen: str,
     color: str,
@@ -778,22 +445,30 @@ def _analyze_position_variant(
     game_type: str,
     profile: str = "intermediate",
 ) -> Dict[str, object]:
-    """Analyze xianqi/shogi via Fairy-Stockfish UCI — never chess.Board(fen)."""
     started_at = time.perf_counter()
     requested_color = parse_color(color)
     eval_cp_white = 0
     suggestions: List[MoveSuggestion] = []
     source = "fairy-stockfish"
-    # Empty on success — a stub like "Position evaluated with Fairy-Stockfish."
-    # sat between suggestions and coach and looked like FS endorsed the LLM.
+    # leave empty on success — a stub threat line looked like fs endorsed the llm
     threat = ""
 
     try:
-        suggestions, score = suggest_moves_fs_variant(fen, game_type, top_k, profile)
+        from move_suggest import FairyStockfishVariantSuggest, MoveSuggestContext
+
+        suggestions, score = FairyStockfishVariantSuggest().suggest_with_eval(
+            MoveSuggestContext(
+                fen=fen,
+                color="white",
+                top_k=top_k,
+                profile=profile,
+                game_type=game_type,
+            )
+        )
         if score is not None:
             eval_cp_white = score
     except Exception:
-        # FS down / timeout: keep service up with empty suggestions.
+        # fs down / timeout: keep service up with empty suggestions
         source = "fallback"
         threat = "Fairy-Stockfish unavailable; variant analysis fallback."
         suggestions = []
@@ -835,6 +510,7 @@ def _analyze_position_variant(
     }
 
 
+# analyze_position - builds the shared analyze payload for chess or variant game types
 def analyze_position(
     fen: str,
     color: str,
@@ -849,10 +525,14 @@ def analyze_position(
             fen, color, top_k, request_id, gt, profile=profile
         )
 
+    from move_suggest import HeuristicSuggest, MoveSuggestContext
+
     started_at = time.perf_counter()
     board = chess.Board(fen)
     requested_color = parse_color(color)
-    suggestions = suggest_moves(fen, color, top_k)
+    suggestions = HeuristicSuggest().suggest(
+        MoveSuggestContext(fen=fen, color=color, top_k=top_k, game_type="chess")
+    )
 
     eval_cp_white = evaluate_position(board, chess.WHITE)
     win_chance_white = cp_to_win_chance(eval_cp_white)
@@ -881,199 +561,7 @@ def analyze_position(
     }
 
 
-def _phase_from_board(board: chess.Board) -> str:
-    non_pawn_material = 0
-    for piece_type in (chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.QUEEN):
-        non_pawn_material += len(board.pieces(piece_type, chess.WHITE))
-        non_pawn_material += len(board.pieces(piece_type, chess.BLACK))
-
-    if board.fullmove_number <= 10:
-        return "opening"
-    if non_pawn_material <= 6:
-        return "endgame"
-    return "middlegame"
-
-
-# _history_agent_impl - builds history-agent features and tags for a chess position
-def _history_agent_impl(
-    fen: str,
-    color: str,
-    move_history: List[str] | None = None,
-    request_id: str | None = None,
-    profile: str = "intermediate",
-) -> Dict[str, object]:
-    started_at = time.perf_counter()
-    board = chess.Board(fen)
-    requested_color = parse_color(color)
-    move_history = move_history or []
-    _ = profile
-
-    perspective_eval = evaluate_position(board, requested_color)
-    features = {
-        "is_check": board.is_check(),
-        "is_checkmate": board.is_checkmate(),
-        "is_stalemate": board.is_stalemate(),
-        "material_delta_cp": perspective_eval,
-        "move_count": len(move_history),
-    }
-    tags: List[str] = []
-    if board.is_check():
-        tags.append("check_pressure")
-    if abs(perspective_eval) < 80:
-        tags.append("balanced")
-    elif perspective_eval > 0:
-        tags.append("advantage")
-    else:
-        tags.append("disadvantage")
-    if _phase_from_board(board) == "opening":
-        tags.append("book_like")
-
-    latency_ms = int((time.perf_counter() - started_at) * 1000)
-    return {
-        "request_id": request_id or str(uuid.uuid4()),
-        "status": "ok",
-        "source": "rule_based_v1",
-        "phase": _phase_from_board(board),
-        "features": features,
-        "tags": tags,
-        "latency_ms": latency_ms,
-    }
-
-
-# _policy_agent_impl - builds policy-agent candidates from FS→Heuristic suggestions
-def _policy_agent_impl(
-    fen: str,
-    color: str,
-    top_k: int = 5,
-    request_id: str | None = None,
-    profile: str = "intermediate",
-) -> Dict[str, object]:
-    started_at = time.perf_counter()
-
-    # profile controls Fairy-Stockfish UCI options inside select_suggestions
-    suggestions = suggest_moves_fs(fen, color, top_k, profile)
-
-    if not suggestions:
-        candidates = []
-    else:
-        max_score = max(item.score for item in suggestions)
-        exp_scores = [math.exp((item.score - max_score) / 100.0) for item in suggestions]
-        total = sum(exp_scores) or 1.0
-        candidates = []
-        for item, exp_val in zip(suggestions, exp_scores):
-            candidates.append(
-                {
-                    "rank": item.rank,
-                    "uci": item.uci,
-                    "san": item.san,
-                    "score_cp": item.score,
-                    "prob": round(exp_val / total, 6),
-                }
-            )
-
-    best_move_uci = candidates[0]["uci"] if candidates else None
-    latency_ms = int((time.perf_counter() - started_at) * 1000)
-    return {
-        "request_id": request_id or str(uuid.uuid4()),
-        "status": "ok",
-        "source": "fairy-stockfish",
-        "best_move_uci": best_move_uci,
-        "candidates": candidates,
-        "latency_ms": latency_ms,
-    }
-
-
-# _value_agent_impl - builds value-agent score and win-chance for a chess position
-def _value_agent_impl(
-    fen: str,
-    color: str,
-    request_id: str | None = None,
-    profile: str = "intermediate",
-) -> Dict[str, object]:
-    started_at = time.perf_counter()
-    board = chess.Board(fen)
-    _ = parse_color(color)  # validated for consistency with shared API contract
-    _ = profile
-    score_cp = evaluate_position(board, chess.WHITE)
-    value = math.tanh(score_cp / 400.0)
-    win_chance_white = cp_to_win_chance(score_cp)
-    win_chance_black = 1.0 - win_chance_white
-    latency_ms = int((time.perf_counter() - started_at) * 1000)
-
-    return {
-        "request_id": request_id or str(uuid.uuid4()),
-        "status": "ok",
-        "source": "heuristic",
-        "score_cp": int(score_cp),
-        "mate_in": 0,
-        "value": round(float(value), 6),
-        "win_chance_white": round(float(win_chance_white), 6),
-        "win_chance_black": round(float(win_chance_black), 6),
-        "latency_ms": latency_ms,
-    }
-
-
-# build_history_payload - wraps HistoryAgent for existing callers
-def build_history_payload(
-    fen: str,
-    color: str,
-    move_history: List[str] | None = None,
-    request_id: str | None = None,
-    profile: str = "intermediate",
-) -> Dict[str, object]:
-    from agents import AgentContext, HistoryAgent
-
-    return HistoryAgent().run(
-        AgentContext(
-            fen=fen,
-            color=color,
-            move_history=move_history,
-            request_id=request_id,
-            profile=profile,
-        )
-    )
-
-
-# build_policy_payload - wraps PolicyAgent for existing callers
-def build_policy_payload(
-    fen: str,
-    color: str,
-    top_k: int = 5,
-    request_id: str | None = None,
-    profile: str = "intermediate",
-) -> Dict[str, object]:
-    from agents import AgentContext, PolicyAgent
-
-    return PolicyAgent().run(
-        AgentContext(
-            fen=fen,
-            color=color,
-            top_k=top_k,
-            request_id=request_id,
-            profile=profile,
-        )
-    )
-
-
-# build_value_payload - wraps ValueAgent for existing callers
-def build_value_payload(
-    fen: str,
-    color: str,
-    request_id: str | None = None,
-    profile: str = "intermediate",
-) -> Dict[str, object]:
-    from agents import AgentContext, ValueAgent
-
-    return ValueAgent().run(
-        AgentContext(
-            fen=fen,
-            color=color,
-            request_id=request_id,
-            profile=profile,
-        )
-    )
-
-
+# _build_parser - builds the cli argument parser for standalone analyzer runs
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Suggest chess moves from FEN and player color.")
     parser.add_argument("--fen", required=True, help="FEN position string")
@@ -1088,6 +576,7 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+# main - runs the standalone analyzer cli and prints suggestions
 def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
