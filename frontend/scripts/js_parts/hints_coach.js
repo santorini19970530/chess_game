@@ -12,6 +12,7 @@ class HintsCoach {
   // bindHintHotkeys - shows top-move hints while shift is held
   bindHintHotkeys() {
     this.app.state.hintsVisible = false;
+    if (typeof document === "undefined") return;
     document.addEventListener("keydown", (e) => {
       if (e.key === "Shift" && !this.app.state.hintsVisible) {
         this.app.state.hintsVisible = true;
@@ -39,13 +40,15 @@ class HintsCoach {
     const raw = String(move || "")
       .trim()
       .toLowerCase();
-    const board = raw.match(/^([a-i])(\d{1,2})([a-i])(\d{1,2})(\+?)$/);
+    // chess promote suffix is q/r/b/n; shogi uses trailing +
+    const board = raw.match(/^([a-i])(\d{1,2})([a-i])(\d{1,2})([qrbn+]?)$/);
     if (board) {
+      const promo = board[5] || "";
       return {
         from: { file: board[1].charCodeAt(0) - 96, rank: Number(board[2]) },
         to: { file: board[3].charCodeAt(0) - 96, rank: Number(board[4]) },
         dropKind: null,
-        promote: board[5] === "+",
+        promote: promo === "+" || "qrbn".includes(promo),
       };
     }
     const drop = raw.match(/^([plnsgbr])[*@]([a-i])([1-9])$/);
@@ -75,9 +78,12 @@ class HintsCoach {
   }
 
   // formatHintLine - formats one suggested-move line for the notes box
-  formatHintLine(rank, parsed, scoreCp) {
+  formatHintLine(rank, parsed, scoreCp, rawMove = "") {
     const sc = typeof scoreCp === "number" ? ` (${scoreCp > 0 ? "+" : ""}${scoreCp})` : "";
-    if (!parsed) return `${rank}. ????${sc}`;
+    if (!parsed) {
+      const raw = String(rawMove || "").trim();
+      return `${rank}. ${raw || "????"}${sc}`;
+    }
     const toLab = `${String.fromCharCode(96 + parsed.to.file)}${parsed.to.rank}`;
     if (parsed.dropKind) {
       const kind = this.app.SHOGI_DROP_KIND_FROM_CHAR[parsed.dropKind.toLowerCase()] || parsed.dropKind;
@@ -87,6 +93,11 @@ class HintsCoach {
     const kind = this.pieceKindAt(parsed.from.file, parsed.from.rank);
     const promo = parsed.promote ? " (promote)" : "";
     return `${rank}. ${kind} ${fromLab} → ${toLab}${promo}${sc}`;
+  }
+
+  // suggestionMove - reads the uci string from a top-moves suggestion object
+  suggestionMove(sug) {
+    return String(sug?.move || sug?.uci || "").trim();
   }
 
   // clearSuggestedHighlights - removes suggested-move and hand-hint highlights
@@ -204,9 +215,9 @@ class HintsCoach {
 
     // Board move: amber origin + blue dest. Drop: highlight hand chip + dashed dest.
     top.forEach((sug, idx) => {
-      const parsed = this.parseUciMove(sug?.move || "");
+      const move = this.suggestionMove(sug);
+      const parsed = this.parseUciMove(move);
       if (!parsed) return;
-      const move = sug.move || "";
       const rankLabel = String(idx + 1);
 
       if (parsed.dropKind) {
@@ -242,7 +253,8 @@ class HintsCoach {
     const header = gt === "shogi" ? "Suggested moves (including drops from hand):\n" : "Suggested moves:\n";
     let text = header;
     top.forEach((sug, idx) => {
-      text += `${this.formatHintLine(idx + 1, this.parseUciMove(sug?.move || ""), sug.score_cp)}\n`;
+      const move = this.suggestionMove(sug);
+      text += `${this.formatHintLine(idx + 1, this.parseUciMove(move), sug.score_cp, move)}\n`;
     });
     this.app.state.lastSuggestionsText = text.trim();
     this.app.util.refreshNotesBox();
@@ -336,4 +348,20 @@ class HintsCoach {
   }
 }
 
-window.HintsCoach = HintsCoach;
+if (typeof window !== "undefined") {
+  window.HintsCoach = HintsCoach;
+} else {
+  // self-check: chess promotion uci (e7e8q) must parse; bare e2e4 and shogi + still work
+  const coach = new HintsCoach({ state: {}, el: {}, SHOGI_DROP_KIND_FROM_CHAR: {} });
+  const promo = coach.parseUciMove("e7e8q");
+  const quiet = coach.parseUciMove("e2e4");
+  const shogi = coach.parseUciMove("a2a1+");
+  if (!promo?.promote || promo.to.rank !== 8 || !quiet || !shogi?.promote) {
+    throw new Error("parseUciMove self-check failed");
+  }
+  const line = coach.formatHintLine(1, null, 3402, "e7e8q");
+  if (!line.includes("e7e8q") || line.includes("????")) {
+    throw new Error("formatHintLine raw fallback self-check failed");
+  }
+  console.log("hints coach self-check ok");
+}

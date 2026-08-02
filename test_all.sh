@@ -34,6 +34,9 @@ run_step "FE board geometry self-check" \
 run_step "FE move history self-check" \
   node "${ROOT_DIR}/frontend/scripts/js_parts/move_history.js"
 
+run_step "FE hints coach self-check" \
+  node "${ROOT_DIR}/frontend/scripts/js_parts/hints_coach.js"
+
 echo ""
 if [[ "${FAILED}" -ne 0 ]]; then
   echo "test_all: FAILED"

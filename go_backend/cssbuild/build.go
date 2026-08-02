@@ -31,7 +31,7 @@ func EnsureStyleCSS(inputPath, outputPath, tailwindPath string) error {
 	}
 
 	cmd := exec.Command(tailwindPath, "-i", inputPath, "-o", outputPath)
-	cmd.Dir = filepath.Dir(inputPath)
+	cmd.Dir = tailwindProjectRoot(inputPath)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		log.Printf("tailwind build failed: %v\n%s", err, out)
 		return err
@@ -39,6 +39,11 @@ func EnsureStyleCSS(inputPath, outputPath, tailwindPath string) error {
 
 	log.Printf("rebuilt %s from %s (+ css_parts)", filepath.Base(outputPath), filepath.Base(inputPath))
 	return nil
+}
+
+// tailwindProjectRoot - chess_game/ from styles/input.css (Tailwind v4 content scan cwd)
+func tailwindProjectRoot(inputPath string) string {
+	return filepath.Clean(filepath.Join(filepath.Dir(inputPath), "..", ".."))
 }
 
 // newestCSSSourceTime - performs newest css source time

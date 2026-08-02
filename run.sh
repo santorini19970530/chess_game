@@ -13,6 +13,8 @@ GO_PID=""
 
 # macOS may quarantine the standalone CLI after download; that hangs/blocks run.sh.
 xattr -d com.apple.quarantine "$TAILWIND" 2>/dev/null || true
+# cwd must be chess_game so Tailwind v4 sees frontend HTML/JS (not only styles/).
+cd "$ROOT_DIR"
 "$TAILWIND" -i "$INPUT_CSS" -o "$OUTPUT_CSS"
 
 if lsof -t -nP -iTCP:8080 -sTCP:LISTEN >/dev/null 2>&1; then
