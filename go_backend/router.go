@@ -101,6 +101,9 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 	mux.HandleFunc("/api/games", h.APIGames)
 	mux.HandleFunc("/api/games/", h.APIGameRoutes)
 
+	// on-demand diagram → fen proxy (python /fen_from_image); outside live /move path
+	mux.HandleFunc("/api/diagram/fen", h.postAPIDiagramFen)
+
 	// simulation endpoint
 	mux.HandleFunc("/api/simulate", h.APISimulate)
 }
