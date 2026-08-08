@@ -1,0 +1,23 @@
+.git
+.gitignore
+**/.DS_Store
+**/__pycache__/
+**/*.pyc
+**/.venv/
+**/node_modules/
+
+# local mac binaries / build artefacts
+frontend/styles/tailwindcss
+go_backend/go_backend
+go_backend/data/
+go_backend/handlers/data/
+py_analyser/data/explain_logs/
+py_analyser/test_logs/
+py_analyser/Chess_diagram_to_FEN/
+py_analyser/Fairy-Stockfish-fairy_sf_14/src/stockfish
+py_analyser/Fairy-Stockfish-fairy_sf_14/tests/
+py_analyser/tester/
+
+# not needed in lean demo images
+gameplay_capture/
+server.log
