@@ -87,6 +87,51 @@ curl -F "image=@gameplay_capture/chess/chess-08082026.webp" -F "game=chess" \
 
 **After Confirm load (UI):** Go `POST /api/games/{id}/load-fen` enqueues the existing `/analyze` + `/explain` pipe (no new coach API). Win% / threat notes update from analysis; coach text uses Ollama when available, else heuristic fallback (`LLM_PROVIDER=heuristic` / Ollama down).
 
+## Docker Compose (issue0042)
+
+Optional reproducibility / demo aid — **not** a production deployment claim. Prefer local `./run.sh` for day-to-day development.
+
+**Lean stack in Compose:** Go backend (`:8080`) + Python analyser (internal `:8001`) + Linux Fairy-Stockfish in both images. Default coach is heuristic (`LLM_PROVIDER=heuristic`). Ollama and the diagram vision vendor stay **out** of the images.
+
+```bash
+# from chess_game/
+docker compose up --build
+# open http://localhost:8080
+```
+
+| Env (optional) | Meaning |
+|----------------|---------|
+| `LLM_PROVIDER=ollama` | Use host Ollama via `host.docker.internal:11434` (model must already be pulled) |
+| `OLLAMA_MODEL` | default `llama3.2` |
+| `PY_ANALYSER_TIMEOUT_MS` | Go → analyser HTTP timeout |
+
+Only host port **8080** is published. Same Compose can later run on a Linux VPS for a public demo URL (Plan Phase 9); put a reverse proxy or Cloudflare Tunnel in front of `8080` only.
+
+### Optional VPS demo (Phase 9)
+
+Same lean Compose on a small Linux host for a permanent marker URL. Still **not** a production deployment claim (in-memory sessions, no auth, heuristic coach by default). Prefer **4 GB RAM**.
+
+**1. Transfer (git — preferred):**
+
+```bash
+# on your Mac, from chess_game/ after committing issue0042
+git push -u origin issue0042
+
+# on the VPS
+sudo apt update
+sudo apt install -y docker.io docker-compose-plugin git
+sudo usermod -aG docker "$USER"   # re-login after this
+git clone -b issue0042 https://github.com/santorini19970530/chess_game.git
+cd chess_game
+docker compose up -d --build
+```
+
+**Or scp** the `chess_game/` tree (including Dockerfiles) if you have not pushed yet.
+
+**2. Expose only `:8080`:** Cloudflare Tunnel (easiest HTTPS), or Caddy/nginx reverse proxy with WebSocket upgrade for `/ws/game`. Do **not** publish analyser `:8001`.
+
+**3. Smoke on the public URL:** open the site → Human vs AI → one finished game (same check as local issue0042 smoke).
+
 ## Main Phases
 
 ### Phase 1: Literature and evaluation design

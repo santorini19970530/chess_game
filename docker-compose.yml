@@ -1,0 +1,38 @@
+# issue0042 — local reproducibility / demo aid (not a production deployment claim)
+# usage: docker compose up --build
+# only host port 8080 is published; analyser stays on the compose network.
+services:
+  analyser:
+    build:
+      context: .
+      dockerfile: Dockerfile.analyser
+    environment:
+      PY_ANALYSER_HOST: "0.0.0.0"
+      PY_ANALYSER_PORT: "8001"
+      LLM_PROVIDER: "${LLM_PROVIDER:-heuristic}"
+      FAIRY_STOCKFISH_PATH: /usr/local/bin/stockfish
+      OLLAMA_URL: "${OLLAMA_URL:-http://host.docker.internal:11434}"
+      OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3.2}"
+      EXPLAIN_LOG: "0"
+    # do not publish 8001 — go reaches analyser via service DNS
+    expose:
+      - "8001"
+    # lets optional host Ollama work on Docker Desktop and Linux engine
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.go
+    ports:
+      - "8080:8080"
+    environment:
+      USE_FAIRY_STOCKFISH: "true"
+      FAIRY_STOCKFISH_PATH: /usr/local/bin/stockfish
+      PY_ANALYSER_URL: http://analyser:8001
+      PY_ANALYSER_TIMEOUT_MS: "${PY_ANALYSER_TIMEOUT_MS:-15000}"
+    depends_on:
+      - analyser
+    restart: unless-stopped
