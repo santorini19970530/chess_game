@@ -44,6 +44,14 @@ class DomState {
     el.reviewMovesPrev = document.getElementById("review_moves_prev");
     el.reviewMovesNext = document.getElementById("review_moves_next");
     el.reviewMovesPlyLabel = document.getElementById("review_moves_ply");
+    el.diagramImportFile = document.getElementById("diagram_import_file");
+    el.diagramImportRecognize = document.getElementById("diagram_import_recognize");
+    el.diagramImportConfirm = document.getElementById("diagram_import_confirm");
+    el.diagramImportFen = document.getElementById("diagram_import_fen");
+    el.diagramImportPreview = document.getElementById("diagram_import_preview");
+    el.diagramImportNote = document.getElementById("diagram_import_note");
+    el.diagramImportConfirmBtn = document.getElementById("diagram_import_confirm_btn");
+    el.diagramImportCancelBtn = document.getElementById("diagram_import_cancel_btn");
     el.gameTypeSelect = document.getElementById("game_type");
     el.gameModeSelect = document.getElementById("game_mode");
     el.humanSideSelect = document.getElementById("human_side");

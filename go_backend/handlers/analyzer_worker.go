@@ -160,6 +160,10 @@ func enqueueCurrentPositionAnalysis(gameID, command string) {
 		return
 	}
 	moveNumber := len(history)
+	// diagram / position-only loads have no plies; use 1 so FE polling (target > 0) can wait
+	if moveNumber == 0 && command == "diagram" {
+		moveNumber = 1
+	}
 	fen, err := sessionpkg.CurrentFENByID(gameID)
 	if err != nil {
 		log.Printf("warning: enqueue analysis failed %s: %v", gameIDLabel(gameID), err)

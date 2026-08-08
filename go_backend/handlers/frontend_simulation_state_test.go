@@ -35,6 +35,7 @@ func loadChessCommandSource(t *testing.T) string {
 		"setup_command.js",
 		"session_actions.js",
 		"review.js",
+		"diagram_import.js",
 		"simulation.js",
 	}
 	for _, root := range roots {
@@ -247,6 +248,23 @@ func TestFrontendLoadMoves_ReviewMarkers(t *testing.T) {
 	requireSnippet(t, jsSrc, "review_moves_load")
 	requireSnippet(t, jsSrc, "seekReviewPlayback")
 	requireSnippet(t, jsSrc, "reviewPlaybackMoves")
+}
+
+// TestFrontendDiagramImport_Markers - checks diagram import confirm-load ui markers
+func TestFrontendDiagramImport_Markers(t *testing.T) {
+	indexSrc := loadIndexHandlerSource(t)
+	requireSnippet(t, indexSrc, `id="diagram_import_file"`)
+	requireSnippet(t, indexSrc, `id="diagram_import_recognize"`)
+	requireSnippet(t, indexSrc, `id="diagram_import_confirm"`)
+	requireSnippet(t, indexSrc, `id="diagram_import_confirm_btn"`)
+	requireSnippet(t, indexSrc, `id="diagram_import_cancel_btn"`)
+
+	jsSrc := loadChessCommandSource(t)
+	requireSnippet(t, jsSrc, "/api/diagram/fen")
+	requireSnippet(t, jsSrc, "/load-fen")
+	requireSnippet(t, jsSrc, "DiagramImport")
+	requireSnippet(t, jsSrc, "confirmLoad")
+	requireSnippet(t, jsSrc, "analysisMoveNumber")
 }
 
 // TestFrontendSimulationDownload_Step2StyleMarkers - checks frontend simulation download step2 style markers

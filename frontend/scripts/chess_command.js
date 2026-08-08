@@ -18,6 +18,7 @@
   app.setup = new SetupCommand(app);
   app.session = new SessionActions(app);
   app.review = new ReviewPlayback(app);
+  app.diagram = new DiagramImport(app);
   app.simulation = new SimulationPanel(app);
   window.gameApp = app;
 

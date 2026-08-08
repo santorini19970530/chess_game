@@ -120,6 +120,11 @@ func (e *diagramProxyError) Error() string {
 	return e.Message
 }
 
+// APIDiagramFen - exported route entry for /api/diagram/fen
+func (h *Handler) APIDiagramFen(w http.ResponseWriter, r *http.Request) {
+	h.postAPIDiagramFen(w, r)
+}
+
 // postAPIDiagramFen - accepts a board image and returns fen from the python vision model
 func (h *Handler) postAPIDiagramFen(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {

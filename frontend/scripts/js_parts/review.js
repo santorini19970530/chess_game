@@ -153,11 +153,13 @@ class ReviewPlayback {
     const historyArray = Array.isArray(result.history) ? result.history : [];
     const detailedArray = Array.isArray(result.historyDetailed) ? result.historyDetailed : [];
     const targetMoveNumber = Math.max(historyArray.length, detailedArray.length);
-    if (targetMoveNumber > 0) {
+    const pollTarget =
+      opts.analysisMoveNumber != null ? Number(opts.analysisMoveNumber) || 0 : targetMoveNumber;
+    if (pollTarget > 0) {
       this.app.state.lastExplanationText = "[coach] Thinking…";
       this.app.util.refreshNotesBox();
       void this.app.coach.refreshSuggestedMoves();
-      this.app.coach.startAnalysisPolling(targetMoveNumber, result.captured);
+      this.app.coach.startAnalysisPolling(pollTarget, result.captured);
     } else {
       this.app.util.clearCoachNotesState();
       this.app.util.refreshNotesBox();
