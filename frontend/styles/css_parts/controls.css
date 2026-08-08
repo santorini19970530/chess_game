@@ -239,9 +239,17 @@
   background: #1a1a1a;
 }
 
+.diagram_preview_board[data-files="9"] {
+  max-width: 260px;
+}
+
 .diagram_preview_rank {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
+}
+
+.diagram_preview_board[data-files="9"] .diagram_preview_rank {
+  grid-template-columns: repeat(9, 1fr);
 }
 
 .diagram_preview_sq {
@@ -257,11 +265,203 @@
   background: #6b5238;
 }
 
+/* shogi confirm preview — uniform wood + grid lines (not a chess checkerboard) */
+.diagram_preview_board[data-game="shogi"] {
+  max-width: 260px;
+  aspect-ratio: 1 / 1;
+  border: 3px solid #3d2a1a;
+  background: #e0c9a0;
+}
+
+.diagram_preview_board[data-game="shogi"] .diagram_preview_rank {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.diagram_preview_board[data-game="shogi"] .diagram_preview_sq {
+  aspect-ratio: unset;
+  height: 100%;
+  border: 1px solid #3d2a1a;
+  background: #e0c9a0;
+}
+
+.diagram_preview_board[data-game="shogi"] .diagram_preview_rank:nth-child(even) .diagram_preview_sq:nth-child(odd),
+.diagram_preview_board[data-game="shogi"] .diagram_preview_rank:nth-child(odd) .diagram_preview_sq:nth-child(even) {
+  background: #e0c9a0;
+}
+
+.diagram_preview_board[data-game="shogi"] .diagram_preview_piece {
+  width: 88%;
+  height: 88%;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+}
+
+/* xiangqi confirm preview — point board (matches main UI, not a square checkerboard) */
+.diagram_preview_xq {
+  width: 100%;
+  max-width: 260px;
+}
+
+.diagram_preview_xq_field {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 8 / 9;
+  box-sizing: border-box;
+  border: 2px solid #2b1a0e;
+  background: #efd8a0;
+}
+
+.diagram_preview_xq_art {
+  position: absolute;
+  inset: 7%;
+  pointer-events: none;
+}
+
+.diagram_preview_xq_h {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  margin-top: -0.5px;
+  background: #2b1a0e;
+}
+
+.diagram_preview_xq_v {
+  position: absolute;
+  width: 1px;
+  margin-left: -0.5px;
+}
+
+.diagram_preview_xq_v_outer {
+  top: 0;
+  bottom: 0;
+  background: #2b1a0e;
+}
+
+.diagram_preview_xq_v_inner {
+  top: 0;
+  bottom: 0;
+  background: transparent;
+}
+
+.diagram_preview_xq_v_inner::before,
+.diagram_preview_xq_v_inner::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 1px;
+  background: #2b1a0e;
+}
+
+.diagram_preview_xq_v_inner::before {
+  top: 0;
+  height: calc(100% * 4 / 9);
+}
+
+.diagram_preview_xq_v_inner::after {
+  top: calc(100% * 5 / 9);
+  height: calc(100% * 4 / 9);
+}
+
+.diagram_preview_xq_palace {
+  position: absolute;
+  width: calc(100% * 2 / 8);
+  height: calc(100% * 2 / 9);
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to top left,
+      transparent calc(50% - 0.5px),
+      #2b1a0e calc(50% - 0.5px),
+      #2b1a0e calc(50% + 0.5px),
+      transparent calc(50% + 0.5px)
+    ),
+    linear-gradient(
+      to top right,
+      transparent calc(50% - 0.5px),
+      #2b1a0e calc(50% - 0.5px),
+      #2b1a0e calc(50% + 0.5px),
+      transparent calc(50% + 0.5px)
+    );
+}
+
+.diagram_preview_xq_palace_top {
+  left: calc(100% * 3 / 8);
+  top: 0;
+}
+
+.diagram_preview_xq_palace_bottom {
+  left: calc(100% * 3 / 8);
+  top: calc(100% * 7 / 9);
+}
+
+.diagram_preview_xq_points {
+  position: absolute;
+  inset: 7%;
+}
+
+.diagram_preview_xq_point {
+  position: absolute;
+  width: calc(100% / 8);
+  height: calc(100% / 9);
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.diagram_preview_xq_piece {
+  width: 95%;
+  height: 95%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
 .diagram_preview_piece {
   width: 85%;
   height: 85%;
   object-fit: contain;
   pointer-events: none;
+}
+
+.diagram_preview_board[data-game="shogi"] .diagram_preview_piece[data-color="black"] {
+  transform: rotate(180deg);
+}
+
+.diagram_preview_hands {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  max-width: 260px;
+}
+
+.diagram_preview_hand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}
+
+.diagram_preview_hand_label {
+  min-width: 3.2em;
+  font-size: 0.75rem;
+  color: #cfcfcf;
+}
+
+.diagram_preview_hand_empty {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.diagram_preview_hand_piece {
+  width: 1.25rem;
+  height: 1.25rem;
+  object-fit: contain;
+}
+
+.diagram_preview_hand_piece[data-color="black"] {
+  transform: rotate(180deg);
 }
 
 .diagram_import_fen_fallback {
