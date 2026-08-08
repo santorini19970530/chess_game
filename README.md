@@ -40,7 +40,7 @@ On-demand image model ([tsoj/Chess_diagram_to_FEN](https://github.com/tsoj/Chess
 |------|----------------|
 | **Chess** | Primary path — full recognize → confirm → load → coach. |
 | **Xiangqi** | Supported end-to-end, but recognition is less reliable than Chess; always confirm the board before load. Formal image fixture smoke → `issue0064`. |
-| **Shogi** | Board placement only — **pieces in hand are not recovered** from the image model (empty hand `[]` after load). Weaker recognition; confirm carefully. |
+| **Shogi** | Board from the image model; **hands inferred** from starting inventory minus pieces on the board (heuristic split by side — may differ from diagram komadai). Weaker recognition; confirm carefully. |
 
 **Vendor (not in git — large weights/venv):** keep a local clone next to `chess_game`:
 

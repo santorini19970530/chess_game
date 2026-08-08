@@ -116,7 +116,9 @@ class DiagramImport {
       const notes = [];
       if (pending.limitsNote) notes.push(pending.limitsNote);
       if (pending.game === "shogi") {
-        notes.push("Shogi: pieces in hand are not recovered from the image model.");
+        notes.push(
+          "Shogi: hands are inferred from board inventory (heuristic; may differ from diagram komadai)."
+        );
       }
       if (pending.game === "xianqi") {
         notes.push("Xiangqi: confirm the board carefully; recognition is less reliable than chess.");
