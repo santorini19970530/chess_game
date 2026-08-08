@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_legal.go - xiangqi legal move enumeration for the session
+
 package session
 
 import (
@@ -7,7 +10,7 @@ import (
 	pieces "go_backend/game/piece"
 )
 
-// xiangqiLegalDestinationsForSquare uses Go Xiangqi strategies (not Fairy-Stockfish).
+// xiangqiLegalDestinationsForSquare - uses Go Xiangqi strategies (not Fairy-Stockfish)
 func xiangqiLegalDestinationsForSquare(file, rank int) ([]LegalDestination, error) {
 	sourcePiece, found := getPieceAt(file, rank)
 	if !found {
@@ -32,7 +35,7 @@ func xiangqiLegalDestinationsForSquare(file, rank int) ([]LegalDestination, erro
 	return out, nil
 }
 
-// xiangqiAllLegalUCIMoves lists legal UCI moves for the side to move via Go rules.
+// xiangqiAllLegalUCIMoves - lists legal UCI moves for the side to move via Go rules
 func xiangqiAllLegalUCIMoves() ([]string, error) {
 	side := CurrentTurnColor()
 	out := make([]string, 0, 64)
@@ -51,6 +54,7 @@ func xiangqiAllLegalUCIMoves() ([]string, error) {
 	return out, nil
 }
 
+// formatXiangqiUCI - formats xiangqi uci
 func formatXiangqiUCI(fromFile, fromRank, toFile, toRank int) string {
 	return fmt.Sprintf("%c%d%c%d", byte('a'+fromFile-1), fromRank, byte('a'+toFile-1), toRank)
 }

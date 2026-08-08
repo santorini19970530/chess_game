@@ -1,10 +1,15 @@
+// CM3070 FP code
+// xiangqi_chariot.go - implements the xiangqi chariot movement strategy
+
 package movement
 
-// XiangqiChariotStrategy — rook-like on 9×10.
+// xiangqiChariotStrategy - rook-like on 9×10
 type XiangqiChariotStrategy struct{}
 
+// Name - returns the piece strategy name
 func (XiangqiChariotStrategy) Name() string { return "XiangqiChariot" }
 
+// LegalMoves - returns legal destinations for this piece from the square
 func (XiangqiChariotStrategy) LegalMoves(board any, from any) []any {
 	ctx, ok := board.(MovementBoard)
 	if !ok {

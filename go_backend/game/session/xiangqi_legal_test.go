@@ -1,9 +1,13 @@
+// CM3070 FP code
+// xiangqi_legal_test.go - tests for xiangqi legal
+
 package session
 
 import (
 	"testing"
 )
 
+// TestXiangqiLegalMoves_AllAndPerSquare - checks xiangqi legal moves all and per square
 func TestXiangqiLegalMoves_AllAndPerSquare(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()

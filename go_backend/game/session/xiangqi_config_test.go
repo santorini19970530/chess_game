@@ -1,7 +1,11 @@
+// CM3070 FP code
+// xiangqi_config_test.go - tests for xiangqi config
+
 package session
 
 import "testing"
 
+// TestCreateGame_AllowsXiangqiAndSetsDefaultStartFEN - checks create game allows xiangqi and sets default start fen
 func TestCreateGame_AllowsXiangqiAndSetsDefaultStartFEN(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -18,6 +22,7 @@ func TestCreateGame_AllowsXiangqiAndSetsDefaultStartFEN(t *testing.T) {
 	}
 }
 
+// TestCreateGame_RejectsChessFENForXiangqi - checks create game rejects chess fen for xiangqi
 func TestCreateGame_RejectsChessFENForXiangqi(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -29,6 +34,7 @@ func TestCreateGame_RejectsChessFENForXiangqi(t *testing.T) {
 	}
 }
 
+// TestUpdateGameConfigByID_AllowsXiangqi - checks update game config by id allows xiangqi
 func TestUpdateGameConfigByID_AllowsXiangqi(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()

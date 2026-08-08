@@ -1,7 +1,11 @@
+// CM3070 FP code
+// move_squares_test.go - tests for move squares
+
 package handlers
 
 import "testing"
 
+// TestParseVariantUCISquares - checks parse variant uci squares
 func TestParseVariantUCISquares(t *testing.T) {
 	ff, fr, tf, tr, err := parseVariantUCISquares("i4i5")
 	if err != nil || ff != "i" || fr != 4 || tf != "i" || tr != 5 {
@@ -17,6 +21,7 @@ func TestParseVariantUCISquares(t *testing.T) {
 	}
 }
 
+// TestParseVariantDropSquares - checks parse variant drop squares
 func TestParseVariantDropSquares(t *testing.T) {
 	tf, tr, ok := parseVariantDropSquares("P*e5")
 	if !ok || tf != "e" || tr != 5 {

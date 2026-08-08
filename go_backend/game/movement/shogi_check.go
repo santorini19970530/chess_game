@@ -1,13 +1,17 @@
+// CM3070 FP code
+// shogi_check.go - shogi check detection helpers
+
 package movement
 
 import pieces "go_backend/game/piece"
 
-// ShogiWouldLeaveKingInCheck reports whether applying from→to leaves the mover's king attacked.
+// ShogiWouldLeaveKingInCheck - reports whether applying from→to leaves the mover's king attacked
 func ShogiWouldLeaveKingInCheck(source pieces.ChessPiece, fromFile, fromRank, toFile, toRank int) bool {
 	after := simulateShogiMove(pieces.ChessPieces, fromFile, fromRank, toFile, toRank)
 	return shogiKingInCheckOnBoard(after, source.Color)
 }
 
+// simulateShogiMove - simulates shogi move
 func simulateShogiMove(board []pieces.ChessPiece, fromFile, fromRank, toFile, toRank int) []pieces.ChessPiece {
 	cloned := append([]pieces.ChessPiece(nil), board...)
 	srcIdx := -1
@@ -34,6 +38,7 @@ func simulateShogiMove(board []pieces.ChessPiece, fromFile, fromRank, toFile, to
 	return cloned
 }
 
+// shogiKingInCheckOnBoard - reports shogi king in check on board
 func shogiKingInCheckOnBoard(board []pieces.ChessPiece, color pieces.PieceColor) bool {
 	kf, kr, ok := findShogiKing(board, color)
 	if !ok {
@@ -46,6 +51,7 @@ func shogiKingInCheckOnBoard(board []pieces.ChessPiece, color pieces.PieceColor)
 	return shogiSquareAttackedOnBoard(board, kf, kr, attacker)
 }
 
+// findShogiKing - finds shogi king
 func findShogiKing(board []pieces.ChessPiece, color pieces.PieceColor) (int, int, bool) {
 	for _, p := range board {
 		if p.Kind == pieces.King && p.Color == color {
@@ -55,7 +61,7 @@ func findShogiKing(board []pieces.ChessPiece, color pieces.PieceColor) (int, int
 	return 0, 0, false
 }
 
-// ShogiCheckedColor returns the side in check under Shogi rules, if any.
+// ShogiCheckedColor - returns the side in check under Shogi rules, if any
 func ShogiCheckedColor() pieces.PieceColor {
 	if shogiKingInCheckOnBoard(pieces.ChessPieces, pieces.White) {
 		return pieces.White
@@ -66,6 +72,7 @@ func ShogiCheckedColor() pieces.PieceColor {
 	return ""
 }
 
+// shogiSquareAttackedOnBoard - reports shogi square attacked on board
 func shogiSquareAttackedOnBoard(board []pieces.ChessPiece, file, rank int, attacker pieces.PieceColor) bool {
 	saved := pieces.ChessPieces
 	pieces.ChessPieces = board
@@ -84,7 +91,7 @@ func shogiSquareAttackedOnBoard(board []pieces.ChessPiece, file, rank int, attac
 	return false
 }
 
-// ShogiWouldLeaveKingInCheckAfterDrop reports whether dropping kind at file/rank leaves mover in check.
+// ShogiWouldLeaveKingInCheckAfterDrop - reports whether dropping kind at file/rank leaves mover in check
 func ShogiWouldLeaveKingInCheckAfterDrop(kind pieces.PieceKind, color pieces.PieceColor, file, rank int) bool {
 	after := append([]pieces.ChessPiece(nil), pieces.ChessPieces...)
 	after = append(after, pieces.ChessPiece{Color: color, Kind: kind, File: file, Rank: rank})

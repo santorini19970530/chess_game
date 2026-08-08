@@ -13,6 +13,7 @@ import (
 	"runtime"
 )
 
+// frontendPath - resolves a path under the frontend directory
 func frontendPath(parts ...string) string {
 	_, thisFile, _, ok := runtime.Caller(0)
 	baseDir := "."
@@ -24,12 +25,12 @@ func frontendPath(parts ...string) string {
 	return filepath.Clean(filepath.Join(pathParts...))
 }
 
-// registerRoutes registers all routes for the web app
+// registerRoutes - registers all routes for the web app
 func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 	styleCSSPath := frontendPath("styles", "style.css")
 	inputCSSPath := frontendPath("styles", "input.css")
 	tailwindPath := frontendPath("styles", "tailwindcss")
-	commandScriptPath := frontendPath("scripts", "chess_command.js")
+	scriptsDir := frontendPath("scripts")
 	iconPath := frontendPath("pic", "icon.png")
 	picDir := frontendPath("pic/")
 	soundDir := frontendPath("sounds")
@@ -50,7 +51,12 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 		serveNoCache(styleCSSPath)(w, r)
 	})
 	mux.HandleFunc("/styles/input.css", serveNoCache(inputCSSPath))
-	mux.HandleFunc("/scripts/chess_command.js", serveNoCache(commandScriptPath))
+	scriptFileServer := http.StripPrefix("/scripts/", http.FileServer(http.Dir(scriptsDir)))
+	mux.Handle("/scripts/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Pragma", "no-cache")
+		scriptFileServer.ServeHTTP(w, r)
+	}))
 
 	// favicon and icon routes
 	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
@@ -83,7 +89,7 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 	// page routes
 	mux.HandleFunc("/", h.Index) // index
 	mux.HandleFunc("/ws/game", h.GameSocket)
-	// Legacy compatibility endpoints (deprecated): kept temporarily while clients migrate.
+	// legacy form endpoints still used by older clients; prefer /api/games*
 	mux.HandleFunc("/command", h.SubmitChessCommand)
 	mux.HandleFunc("/game/new", h.NewGame)
 	mux.HandleFunc("/game/flag", h.FlagGame)
@@ -91,10 +97,10 @@ func registerRoutes(mux *http.ServeMux, h *handlers.Handler) {
 	mux.HandleFunc("/game/legal-moves", h.GetLegalMoves)
 	mux.HandleFunc("/game/analysis/latest", h.GetLatestAnalysis)
 
-	// Primary REST API endpoints for game lifecycle and moves.
+	// primary REST API endpoints for game lifecycle and moves.
 	mux.HandleFunc("/api/games", h.APIGames)
 	mux.HandleFunc("/api/games/", h.APIGameRoutes)
 
-	// Simulation endpoint
+	// simulation endpoint
 	mux.HandleFunc("/api/simulate", h.APISimulate)
 }

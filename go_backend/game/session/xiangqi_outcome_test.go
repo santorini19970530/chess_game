@@ -1,7 +1,11 @@
+// CM3070 FP code
+// xiangqi_outcome_test.go - tests for xiangqi outcome
+
 package session
 
 import "testing"
 
+// TestXiangqiOutcome_Checkmate - checks xiangqi outcome checkmate
 func TestXiangqiOutcome_Checkmate(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -20,6 +24,7 @@ func TestXiangqiOutcome_Checkmate(t *testing.T) {
 	}
 }
 
+// TestXiangqiOutcome_StalemateIsLoss - checks xiangqi outcome stalemate is loss
 func TestXiangqiOutcome_StalemateIsLoss(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -41,6 +46,7 @@ func TestXiangqiOutcome_StalemateIsLoss(t *testing.T) {
 	}
 }
 
+// TestXiangqiOutcome_Flag - checks xiangqi outcome flag
 func TestXiangqiOutcome_Flag(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()

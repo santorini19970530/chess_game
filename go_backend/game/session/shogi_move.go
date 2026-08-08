@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_move.go - applies shogi uci moves to the session
+
 package session
 
 import (
@@ -10,12 +13,13 @@ import (
 	pieces "go_backend/game/piece"
 )
 
-// Board: a1a2, a8a9+ (optional promote). Drop: P*e5 (piece in hand → empty square).
+// board: a1a2, a8a9+ (optional promote). drop: P*e5 (piece in hand → empty square).
 var (
 	shogiBoardMovePattern = regexp.MustCompile(`^[a-i][1-9][a-i][1-9]\+?$`)
 	shogiDropMovePattern  = regexp.MustCompile(`^[plnsgbrPLNSGBR][*@][a-iA-I][1-9]$`)
 )
 
+// applyShogiUCIMove - applies shogi uci move
 func applyShogiUCIMove(commandText string) (string, error) {
 	raw := strings.TrimSpace(commandText)
 	if shogiDropMovePattern.MatchString(raw) {
@@ -28,6 +32,7 @@ func applyShogiUCIMove(commandText string) (string, error) {
 	return applyShogiBoardMove(move)
 }
 
+// applyShogiBoardMove - applies shogi board move
 func applyShogiBoardMove(move string) (string, error) {
 	promote := strings.HasSuffix(move, "+")
 	core := strings.TrimSuffix(move, "+")
@@ -94,6 +99,7 @@ func applyShogiBoardMove(move string) (string, error) {
 	return move, nil
 }
 
+// applyShogiDrop - applies shogi drop
 func applyShogiDrop(raw string) (string, error) {
 	piece := strings.ToUpper(raw[:1])
 	sq := strings.ToLower(raw[2:])
@@ -128,6 +134,7 @@ func applyShogiDrop(raw string) (string, error) {
 	return move, nil
 }
 
+// validateShogiDrop - validates shogi drop
 func validateShogiDrop(kind pieces.PieceKind, color pieces.PieceColor, file, rank int) error {
 	if kind == pieces.King {
 		return fmt.Errorf("cannot drop king")
@@ -142,13 +149,14 @@ func validateShogiDrop(kind pieces.PieceKind, color pieces.PieceColor, file, ran
 	if kind == pieces.Pawn && shogiHasUnpromotedPawnOnFile(color, file) {
 		return fmt.Errorf("nifu: two unpromoted pawns on the same file")
 	}
-	// MVP: uchifuzume (pawn-drop mate) not enforced yet.
+	// mVP: uchifuzume (pawn-drop mate) not enforced yet.
 	if movement.ShogiWouldLeaveKingInCheckAfterDrop(kind, color, file, rank) {
 		return fmt.Errorf("illegal drop: king would be in check")
 	}
 	return nil
 }
 
+// shogiPromotePieceAt - returns shogi promote piece at
 func shogiPromotePieceAt(file, rank int) error {
 	for i := range pieces.ChessPieces {
 		p := &pieces.ChessPieces[i]
@@ -165,6 +173,7 @@ func shogiPromotePieceAt(file, rank int) error {
 	return fmt.Errorf("piece to promote not found")
 }
 
+// shogiDropKindFromChar - performs shogi drop kind from char
 func shogiDropKindFromChar(ch rune) (pieces.PieceKind, bool) {
 	switch ch {
 	case 'P':
@@ -186,6 +195,7 @@ func shogiDropKindFromChar(ch rune) (pieces.PieceKind, bool) {
 	}
 }
 
+// shogiDropChar - performs shogi drop char
 func shogiDropChar(kind pieces.PieceKind) (byte, bool) {
 	switch kind {
 	case pieces.Pawn:

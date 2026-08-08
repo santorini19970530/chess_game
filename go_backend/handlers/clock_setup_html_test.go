@@ -1,3 +1,6 @@
+// CM3070 FP code
+// clock_setup_html_test.go - tests for clock setup html
+
 package handlers
 
 import (
@@ -7,12 +10,26 @@ import (
 	"testing"
 )
 
+// TestIndexHTML_IncludesClockSetupControls - checks game_config puzzle includes clock setup controls
 func TestIndexHTML_IncludesClockSetupControls(t *testing.T) {
-	source, err := os.ReadFile(filepath.Join("index.go"))
-	if err != nil {
-		t.Fatalf("read index.go: %v", err)
+	candidates := []string{
+		filepath.Join("..", "..", "frontend", "html_puzzles", "game_config.html"),
+		filepath.Join("..", "frontend", "html_puzzles", "game_config.html"),
+		filepath.Join("frontend", "html_puzzles", "game_config.html"),
 	}
-	text := string(source)
+	var text string
+	var lastErr error
+	for _, candidate := range candidates {
+		data, err := os.ReadFile(candidate)
+		if err == nil {
+			text = string(data)
+			break
+		}
+		lastErr = err
+	}
+	if text == "" {
+		t.Fatalf("read game_config.html: %v", lastErr)
+	}
 	for _, snippet := range []string{
 		`class="config_clock_enable"`,
 		`id="clock_enabled"`,

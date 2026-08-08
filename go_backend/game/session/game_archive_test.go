@@ -1,6 +1,10 @@
+// CM3070 FP code
+// game_archive_test.go - tests for game archive
+
 package session
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,14 +13,57 @@ import (
 	pieces "go_backend/game/piece"
 )
 
+// testJSONArchive - test-only file store (avoids session↔gamearchive import cycle)
+type testJSONArchive struct {
+	path string
+}
+
+// LoadArchivedGames - reads archived games from the test temp file
+func (s *testJSONArchive) LoadArchivedGames() ([]ArchivedGame, error) {
+	bytes, err := os.ReadFile(s.path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []ArchivedGame{}, nil
+		}
+		return nil, err
+	}
+	if len(bytes) == 0 {
+		return []ArchivedGame{}, nil
+	}
+	var records []ArchivedGame
+	if err := json.Unmarshal(bytes, &records); err != nil {
+		return nil, err
+	}
+	return records, nil
+}
+
+// SaveArchivedGames - writes archived games to the test temp file
+func (s *testJSONArchive) SaveArchivedGames(records []ArchivedGame) error {
+	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
+		return err
+	}
+	bytes, err := json.MarshalIndent(records, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(s.path, bytes, 0o644)
+}
+
+// useTempArchiveStore - wires a temp json file archive for the test
+func useTempArchiveStore(t *testing.T) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "game_history.json")
+	SetArchiveStore(&testJSONArchive{path: path})
+	t.Cleanup(func() { SetArchiveStore(nil) })
+	return path
+}
+
+// TestArchiveActiveGameIfNeeded_WritesJSONSnapshot - checks archive active game if needed writes json snapshot
 func TestArchiveActiveGameIfNeeded_WritesJSONSnapshot(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
 
-	tempDir := t.TempDir()
-	previousArchivePath := archivePath
-	archivePath = filepath.Join(tempDir, "game_history.json")
-	t.Cleanup(func() { archivePath = previousArchivePath })
+	archivePath := useTempArchiveStore(t)
 
 	if _, err := ApplyMoveByCommand("e2e4"); err != nil {
 		t.Fatalf("expected setup move to succeed: %v", err)
@@ -78,14 +125,12 @@ func TestArchiveActiveGameIfNeeded_WritesJSONSnapshot(t *testing.T) {
 	}
 }
 
+// TestArchiveActiveGameIfNeeded_IncludesFlaggedByInHistory - checks archive active game if needed includes flagged by in history
 func TestArchiveActiveGameIfNeeded_IncludesFlaggedByInHistory(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
 
-	tempDir := t.TempDir()
-	previousArchivePath := archivePath
-	archivePath = filepath.Join(tempDir, "game_history.json")
-	t.Cleanup(func() { archivePath = previousArchivePath })
+	_ = useTempArchiveStore(t)
 
 	FlagCurrentTurn() // White flags at game start.
 	if err := ArchiveActiveGameIfNeeded(); err != nil {
@@ -111,8 +156,7 @@ func TestArchiveActiveGameIfNeeded_IncludesFlaggedByInHistory(t *testing.T) {
 	}
 }
 
-// TestNewUniqueGameID_RapidCreationYieldsDistinctIDs verifies that many games created
-// in quick succession all receive distinct IDs (covers the strengthened ID generator).
+// TestNewUniqueGameID_RapidCreationYieldsDistinctIDs - verifies that many games created in quick succession all receive distinct IDs (covers the strengthened ID generator)
 func TestNewUniqueGameID_RapidCreationYieldsDistinctIDs(t *testing.T) {
 	resetGameSessionForTest()
 	ids := make(map[string]bool)
@@ -132,16 +176,12 @@ func TestNewUniqueGameID_RapidCreationYieldsDistinctIDs(t *testing.T) {
 	}
 }
 
-// TestArchiveActiveGameIfNeeded_DoesNotDuplicateOnSecondCall ensures the archive
-// logic (guarded by the Archived flag) never writes the same game ID twice.
+// TestArchiveActiveGameIfNeeded_DoesNotDuplicateOnSecondCall - ensures the archive logic (guarded by the Archived flag) never writes the same game ID twice
 func TestArchiveActiveGameIfNeeded_DoesNotDuplicateOnSecondCall(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
 
-	tempDir := t.TempDir()
-	previousArchivePath := archivePath
-	archivePath = filepath.Join(tempDir, "game_history.json")
-	t.Cleanup(func() { archivePath = previousArchivePath })
+	_ = useTempArchiveStore(t)
 
 	// Make a move so it qualifies for archiving
 	if _, err := ApplyMoveByCommand("e2e4"); err != nil {

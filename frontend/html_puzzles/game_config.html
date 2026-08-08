@@ -1,0 +1,80 @@
+<!-- CM3070 FP code -->
+<!-- game_config.html - setup new game controls + load moves (left column) -->
+
+{{define "game_config"}}
+<div class="game_panel_config">
+  <div id="game_config_panel" class="game_config_panel">
+    <div class="config_panel_title">Setup new game</div>
+    <label for="game_type">Game</label>
+    <select id="game_type">
+      <option value="chess">Chess</option>
+      <option value="xianqi">Xiangqi</option>
+      <option value="shogi">Shogi</option>
+    </select>
+    <label for="game_mode">Mode</label>
+    <select id="game_mode">
+      <option value="human_vs_human">Human vs Human</option>
+      <option value="human_vs_ai">Human vs AI</option>
+      <option value="ai_vs_ai">AI vs AI</option>
+    </select>
+    <label for="human_side">Human's side</label>
+    <select id="human_side">
+      <option value="white">White</option>
+      <option value="black">Black</option>
+    </select>
+    <label for="ai_game_count">AI game count</label>
+    <input id="ai_game_count" type="number" min="1" value="1" />
+    <label for="ai_strength">AI strength</label>
+    <select id="ai_strength">
+      <option value="beginner">Beginner</option>
+      <option value="intermediate" selected>Intermediate</option>
+      <option value="advanced">Advanced</option>
+      <option value="master">Master</option>
+    </select>
+    <label for="coach_level">Coach level</label>
+    <select id="coach_level" title="Explanation skill level (independent of AI strength)">
+      <option value="beginner">Beginner</option>
+      <option value="intermediate" selected>Intermediate</option>
+      <option value="advanced">Advanced</option>
+    </select>
+    <label for="fen_input">Starting FEN (optional)</label>
+    <textarea id="fen_input" rows="3" placeholder="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"></textarea>
+    <div class="config_clock_enable">
+      <label for="clock_enabled">Clock</label>
+      <input id="clock_enabled" type="checkbox" title="Off = unlimited time" />
+    </div>
+    <label for="clock_preset">Time control</label>
+    <select id="clock_preset" title="Presets are base|increment (minutes|seconds per move)">
+      <option value="5|0">5|0</option>
+      <option value="10|0">10|0</option>
+      <option value="15|10">15|10</option>
+      <option value="5|30" selected>5|30</option>
+      <option value="custom">Custom</option>
+    </select>
+    <label for="clock_base_sec">Base (seconds / side)</label>
+    <input id="clock_base_sec" type="number" min="0" step="1" value="300" />
+    <label for="clock_increment_sec">Increment (seconds / move)</label>
+    <input id="clock_increment_sec" type="number" min="0" step="1" value="30" />
+    <div id="clock_hvai_fields">
+      <label for="clock_human_base_sec">Human base (seconds)</label>
+      <input id="clock_human_base_sec" type="number" min="0" step="1" value="300" />
+      <label for="clock_ai_base_sec">AI base (seconds)</label>
+      <input id="clock_ai_base_sec" type="number" min="0" step="1" value="60" />
+    </div>
+    <button id="game_config_apply" type="button">Apply Setup</button>
+    <div class="review_moves_block">
+      <label for="review_moves_input">Load moves / play JSON</label>
+      <textarea id="review_moves_input" rows="3" placeholder="e2e4 e7e5 … or paste game-*.json"></textarea>
+      <div class="command_row review_moves_row">
+        <input id="review_moves_file" type="file" accept="application/json,.json,text/plain" />
+        <button id="review_moves_load" type="button">Load moves</button>
+      </div>
+      <div class="command_row review_playback_row">
+        <button id="review_moves_prev" type="button" disabled>◀ Back</button>
+        <button id="review_moves_next" type="button" disabled>Forward ▶</button>
+        <span id="review_moves_ply" class="review_moves_ply" aria-live="polite">Ply 0 / 0</span>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}

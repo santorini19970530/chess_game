@@ -4,6 +4,7 @@
 
 package pieces
 
+// chess pieces for the game
 var ChessPieces = []ChessPiece{
 	{Color: White, Kind: Rook, ImgFile: "pic/chess_pic/rook_light.png", File: 1, Rank: 1},
 	{Color: White, Kind: Knight, ImgFile: "pic/chess_pic/knight_light.png", File: 2, Rank: 1},

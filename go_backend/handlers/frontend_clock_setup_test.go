@@ -1,3 +1,6 @@
+// CM3070 FP code
+// frontend_clock_setup_test.go - tests for frontend clock setup
+
 package handlers
 
 import (
@@ -5,27 +8,30 @@ import (
 	"testing"
 )
 
+// TestFrontendClockSetup_FormAndDisplayMarkers - checks frontend clock setup form and display markers
 func TestFrontendClockSetup_FormAndDisplayMarkers(t *testing.T) {
 	source := loadChessCommandSource(t)
 	for _, snippet := range []string{
 		`getElementById("clock_enabled")`,
 		`getElementById("game_info_time_white")`,
 		`getElementById("game_info_time_black")`,
-		"const appendClockFields = ",
-		"const renderClocks = ",
-		"const applyServerClock = ",
-		"const startClockTick = ",
-		"const stopClockTick = ",
-		"const flagOnLocalTimeout = ",
-		"const syncClockControlsFromGame = ",
+		"class ClockController",
+		"appendClockFields(params)",
+		"renderClocks(game)",
+		"applyServerClock(clk, remaining)",
+		"startClockTick()",
+		"stopClockTick()",
+		"flagOnLocalTimeout()",
+		"syncClockControlsFromGame(game)",
 		`params.set("clockEnabled"`,
 		`"humanInitialMs"`,
 		`params.set("whiteInitialMs"`,
-		"return appendClockFields(params);",
-		"renderClocks(result.game);",
+		"return this.app.clocks.appendClockFields(params);",
+		"this.clocks.renderClocks(result.game);",
+		"applyGameSnapshot(result, opts = {})",
 		"syncClockControlsFromGame(game)",
 		"syncClockSetup",
-		"void refreshGameSnapshotFromAPI(targetGameId);",
+		"void this.refreshGameSnapshotFromAPI(targetGameId);",
 		"/flag`",
 		"flagOnLocalTimeout",
 	} {
@@ -33,7 +39,8 @@ func TestFrontendClockSetup_FormAndDisplayMarkers(t *testing.T) {
 			t.Fatalf("chess_command.js missing %q", snippet)
 		}
 	}
-	if strings.Count(source, "renderClocks(result.game);") < 4 {
-		t.Fatalf("expected renderClocks on create/move/refresh/new (or flag) paths")
+	// create/move/flag/new/refresh/review all paint clocks through applyGameSnapshot
+	if strings.Count(source, "applyGameSnapshot(") < 4 {
+		t.Fatalf("expected applyGameSnapshot on create/move/refresh/new (or flag) paths")
 	}
 }

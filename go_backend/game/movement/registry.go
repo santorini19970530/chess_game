@@ -6,7 +6,7 @@ package movement
 import "fmt"
 import pieces "go_backend/game/piece"
 
-// getStrategy returns the appropriate PieceMovementStrategy for a given piece kind
+// getStrategy - returns the appropriate PieceMovementStrategy for a given piece kind
 func getStrategy(kind pieces.PieceKind) PieceMovementStrategy {
 	switch kind {
 	case pieces.Pawn:
@@ -26,7 +26,7 @@ func getStrategy(kind pieces.PieceKind) PieceMovementStrategy {
 	}
 }
 
-// getXiangqiStrategy returns Xiangqi piece movement strategies (9×10 board rules).
+// getXiangqiStrategy - returns Xiangqi piece movement strategies (9×10 board rules)
 func getXiangqiStrategy(kind pieces.PieceKind) PieceMovementStrategy {
 	switch kind {
 	case pieces.Rook:
@@ -48,7 +48,7 @@ func getXiangqiStrategy(kind pieces.PieceKind) PieceMovementStrategy {
 	}
 }
 
-// getShogiStrategy returns Shogi piece movement strategies (9×9 board rules).
+// getShogiStrategy - returns Shogi piece movement strategies (9×9 board rules)
 func getShogiStrategy(kind pieces.PieceKind) PieceMovementStrategy {
 	switch kind {
 	case pieces.Pawn:
@@ -76,11 +76,11 @@ func getShogiStrategy(kind pieces.PieceKind) PieceMovementStrategy {
 	}
 }
 
-// ValidateMoveByStrategy validates movement by PieceMovementStrategy
+// ValidateMoveByStrategy - validates movement by PieceMovementStrategy
 func ValidateMoveByStrategy(kind pieces.PieceKind, fromFile, fromRank, toFile, toRank int, color pieces.PieceColor) error {
 	strategy := getStrategy(kind)
 	if strategy == nil {
-		// Other piece strategies are pending; keep permissive for now
+		// other piece strategies are pending; keep permissive for now
 		return nil
 	}
 
@@ -100,7 +100,7 @@ func ValidateMoveByStrategy(kind pieces.PieceKind, fromFile, fromRank, toFile, t
 	return fmt.Errorf("Invalid %s movement", strategy.Name())
 }
 
-// ValidateXiangqiMoveByStrategy validates a Xiangqi geometry move (no check filter).
+// ValidateXiangqiMoveByStrategy - validates a Xiangqi geometry move (no check filter)
 func ValidateXiangqiMoveByStrategy(kind pieces.PieceKind, fromFile, fromRank, toFile, toRank int, color pieces.PieceColor) error {
 	strategy := getXiangqiStrategy(kind)
 	if strategy == nil {
@@ -122,7 +122,7 @@ func ValidateXiangqiMoveByStrategy(kind pieces.PieceKind, fromFile, fromRank, to
 	return fmt.Errorf("Invalid %s movement", strategy.Name())
 }
 
-// XiangqiLegalSquares returns pseudo-legal destinations for a Xiangqi piece on the current board.
+// XiangqiLegalSquares - returns pseudo-legal destinations for a Xiangqi piece on the current board
 func XiangqiLegalSquares(kind pieces.PieceKind, color pieces.PieceColor, fromFile, fromRank int) []Square {
 	strategy := getXiangqiStrategy(kind)
 	if strategy == nil {
@@ -141,7 +141,7 @@ func XiangqiLegalSquares(kind pieces.PieceKind, color pieces.PieceColor, fromFil
 	return out
 }
 
-// ValidateShogiMoveByStrategy validates a Shogi geometry move (no check filter).
+// ValidateShogiMoveByStrategy - validates a Shogi geometry move (no check filter)
 func ValidateShogiMoveByStrategy(kind pieces.PieceKind, fromFile, fromRank, toFile, toRank int, color pieces.PieceColor) error {
 	strategy := getShogiStrategy(kind)
 	if strategy == nil {
@@ -163,7 +163,7 @@ func ValidateShogiMoveByStrategy(kind pieces.PieceKind, fromFile, fromRank, toFi
 	return fmt.Errorf("Invalid %s movement", strategy.Name())
 }
 
-// ShogiLegalSquares returns pseudo-legal destinations for a Shogi piece on the current board.
+// ShogiLegalSquares - returns pseudo-legal destinations for a Shogi piece on the current board
 func ShogiLegalSquares(kind pieces.PieceKind, color pieces.PieceColor, fromFile, fromRank int) []Square {
 	strategy := getShogiStrategy(kind)
 	if strategy == nil {

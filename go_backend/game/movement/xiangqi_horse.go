@@ -1,10 +1,15 @@
+// CM3070 FP code
+// xiangqi_horse.go - implements the xiangqi horse movement strategy
+
 package movement
 
-// XiangqiHorseStrategy — knight L-move blocked by adjacent “hump” square.
+// xiangqiHorseStrategy - knight L-move blocked by adjacent “hump” square
 type XiangqiHorseStrategy struct{}
 
+// Name - returns the piece strategy name
 func (XiangqiHorseStrategy) Name() string { return "XiangqiHorse" }
 
+// LegalMoves - returns legal destinations for this piece from the square
 func (XiangqiHorseStrategy) LegalMoves(board any, from any) []any {
 	ctx, ok := board.(MovementBoard)
 	if !ok {

@@ -3,12 +3,12 @@
 
 package movement
 
-// isInsideBoard checks whether a square is inside the board.
+// isInsideBoard - checks whether a square is inside the board
 func isInsideBoard(file, rank int) bool {
 	return file >= 1 && file <= 8 && rank >= 1 && rank <= 8
 }
 
-// collectSlidingMoves walks rays for sliding pieces (rook/bishop/queen).
+// collectSlidingMoves - walks rays for sliding pieces (rook/bishop/queen)
 func collectSlidingMoves(ctx MovementBoard, src Square, directions [][2]int, capacity int) []any {
 	legal := make([]any, 0, capacity)
 
@@ -20,7 +20,7 @@ func collectSlidingMoves(ctx MovementBoard, src Square, directions [][2]int, cap
 			if !occupied {
 				legal = append(legal, Square{File: file, Rank: rank})
 			} else {
-				// Can capture opponent piece, but cannot move through any piece.
+				// can capture opponent piece, but cannot move through any piece.
 				if targetPiece.Color != ctx.Color {
 					legal = append(legal, Square{File: file, Rank: rank})
 				}

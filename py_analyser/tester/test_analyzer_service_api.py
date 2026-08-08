@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""API verification tests for the Python analyzer service."""
+# test_analyzer_service_api.py - api checks for the python analyzer service
 
 from __future__ import annotations
 

@@ -1,3 +1,6 @@
+// CM3070 FP code
+// store_test.go - tests for store
+
 package session
 
 import (
@@ -7,6 +10,7 @@ import (
 	"testing"
 )
 
+// TestCreateGame_ReturnsUniqueIDsAndIsolatedState - checks create game returns unique i ds and isolated state
 func TestCreateGame_ReturnsUniqueIDsAndIsolatedState(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -42,6 +46,7 @@ func TestCreateGame_ReturnsUniqueIDsAndIsolatedState(t *testing.T) {
 	}
 }
 
+// TestSessionStore_GetExistingAndNonExisting - checks session store get existing and non existing
 func TestSessionStore_GetExistingAndNonExisting(t *testing.T) {
 	store := NewSessionStore()
 	game := store.Create(GameSession{ID: "game-a"})
@@ -59,6 +64,7 @@ func TestSessionStore_GetExistingAndNonExisting(t *testing.T) {
 	}
 }
 
+// TestSessionStore_UpdateOnlyTargetGame - checks session store update only target game
 func TestSessionStore_UpdateOnlyTargetGame(t *testing.T) {
 	store := NewSessionStore()
 	store.Create(GameSession{ID: "game-a"})
@@ -94,6 +100,7 @@ func TestSessionStore_UpdateOnlyTargetGame(t *testing.T) {
 	}
 }
 
+// TestSessionStore_DeleteRemovesTarget - checks session store delete removes target
 func TestSessionStore_DeleteRemovesTarget(t *testing.T) {
 	store := NewSessionStore()
 	store.Create(GameSession{ID: "game-a"})
@@ -113,6 +120,7 @@ func TestSessionStore_DeleteRemovesTarget(t *testing.T) {
 	}
 }
 
+// TestSessionStore_ParallelUpdatesAcrossTwoGamesAreIsolated - checks session store parallel updates across two games are isolated
 func TestSessionStore_ParallelUpdatesAcrossTwoGamesAreIsolated(t *testing.T) {
 	store := NewSessionStore()
 	store.Create(GameSession{ID: "game-a"})

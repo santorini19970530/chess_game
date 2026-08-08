@@ -6,36 +6,39 @@ package session
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 )
 
+// game mode for the game
 type GameMode string
 
+// game modes for the game
 const (
 	GameModeHumanVsHuman GameMode = "human_vs_human"
 	GameModeHumanVsAI    GameMode = "human_vs_ai"
 	GameModeAIVsAI       GameMode = "ai_vs_ai"
 )
 
+// game type for the game
 type GameType string
 
+// game types for the game
 const (
 	GameTypeChess   GameType = "chess"
 	GameTypeXiangqi GameType = "xianqi"
 	GameTypeShogi   GameType = "shogi"
 )
 
-// DefaultXiangqiStartFEN is the standard Xiangqi start position (FS-compatible FEN text).
+// DefaultXiangqiStartFEN - standard xiangqi start position (fs-compatible fen text)
 const DefaultXiangqiStartFEN = "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1"
 
+// game result for the game
 type GameResult string
 
+// game results for the game
 const (
 	GameResultInProgress GameResult = "in_progress"
 	GameResultWhiteWin   GameResult = "white_win"
@@ -43,6 +46,7 @@ const (
 	GameResultDraw       GameResult = "draw"
 )
 
+// game session for the game
 type GameSession struct {
 	ID        string      `json:"id"`
 	Mode      GameMode    `json:"mode"`
@@ -56,6 +60,7 @@ type GameSession struct {
 	Archived  bool        `json:"-"`
 }
 
+// game config for the game
 type GameConfig struct {
 	HumanColor     string `json:"humanColor"`
 	AIGameCount    int    `json:"aiGameCount"`
@@ -63,11 +68,12 @@ type GameConfig struct {
 	AIProfile      string `json:"aiProfile"`
 	WhiteAIProfile string `json:"whiteAIProfile,omitempty"`
 	BlackAIProfile string `json:"blackAIProfile,omitempty"`
-	// SkillLevel is coach/explain register: beginner|intermediate|advanced.
-	// Independent of AIProfile (master AI still maps to advanced when unset).
+	// skillLevel is coach/explain register: beginner|intermediate|advanced.
+	// independent of AIProfile (master AI still maps to advanced when unset).
 	SkillLevel string `json:"skillLevel,omitempty"`
 }
 
+// archived session for the game
 type ArchivedSession struct {
 	ID        string     `json:"id"`
 	Mode      GameMode   `json:"mode"`
@@ -78,6 +84,7 @@ type ArchivedSession struct {
 	UpdatedAt string     `json:"updatedAt"`
 }
 
+// archived piece state for the game
 type ArchivedPieceState struct {
 	Color string `json:"color"`
 	Kind  string `json:"kind"`
@@ -85,6 +92,7 @@ type ArchivedPieceState struct {
 	Rank  int    `json:"rank"`
 }
 
+// archived game for the game
 type ArchivedGame struct {
 	Game       ArchivedSession      `json:"game"`
 	History    []string             `json:"history"`
@@ -93,40 +101,20 @@ type ArchivedGame struct {
 	ArchivedAt string               `json:"archivedAt"`
 }
 
+// global variables for the game
 var (
-	gameSessionMu sync.RWMutex
+	gameSessionMu  sync.RWMutex
 	runtimeStateMu sync.Mutex
-	sessionStore  = NewSessionStore()
-	activeGameID  string
-	archivePath   string // resolved at init time to an absolute path under the executable dir (or fallback)
+	sessionStore   = NewSessionStore()
+	activeGameID   string
 )
 
+// init - runs package initialization
 func init() {
 	initializeSessionStore()
-	archivePath = resolveArchivePath()
 }
 
-func resolveArchivePath() string {
-	// Prefer directory next to the running binary so "go run ." and built binary behave the same.
-	if execPath, err := os.Executable(); err == nil {
-		if execPath != "" && execPath != "." {
-			base := filepath.Dir(execPath)
-			return filepath.Join(base, "data", "game_history.json")
-		}
-	}
-	// Fallback: user cache dir (cross-platform, no cwd pollution).
-	if cacheDir, err := os.UserCacheDir(); err == nil {
-		return filepath.Join(cacheDir, "chess_game", "data", "game_history.json")
-	}
-	// Last resort: cwd/data (still better than letting handlers/ subdir appear).
-	if cwd, err := os.Getwd(); err == nil {
-		return filepath.Join(cwd, "data", "game_history.json")
-	}
-	return filepath.Join("data", "game_history.json")
-}
-
-// newUniqueGameID produces a unique ID with nanosecond timestamp + 4 random hex bytes.
-// Prevents collisions even if multiple games are created in the same nanosecond.
+// newUniqueGameID - builds a unique game id from nanosecond time plus random hex
 func newUniqueGameID() string {
 	b := make([]byte, 4)
 	if _, err := rand.Read(b); err != nil {
@@ -136,8 +124,7 @@ func newUniqueGameID() string {
 	return fmt.Sprintf("game-%d-%s", time.Now().UnixNano(), hex.EncodeToString(b))
 }
 
-// normalizeAIProfile returns a known profile or defaults to "intermediate".
-// Allowed values: beginner, intermediate, advanced, master.
+// normalizeAIProfile - returns a known profile or defaults to "intermediate"
 func normalizeAIProfile(p string) string {
 	if parsed, ok := ParseAIProfile(p); ok {
 		return parsed
@@ -145,7 +132,7 @@ func normalizeAIProfile(p string) string {
 	return "intermediate"
 }
 
-// ParseAIProfile accepts a known profile name. Empty is not ok (caller chooses default).
+// ParseAIProfile - accepts a known profile name
 func ParseAIProfile(p string) (string, bool) {
 	switch strings.ToLower(strings.TrimSpace(p)) {
 	case "beginner", "intermediate", "advanced", "master":
@@ -155,8 +142,7 @@ func ParseAIProfile(p string) (string, bool) {
 	}
 }
 
-// ProfileForSide returns the strength for the side to move.
-// Prefers WhiteAIProfile / BlackAIProfile, then AIProfile, then intermediate.
+// ProfileForSide - returns the strength for the side to move
 func ProfileForSide(cfg GameConfig, color string) string {
 	side := strings.ToLower(strings.TrimSpace(color))
 	switch side {
@@ -172,12 +158,13 @@ func ProfileForSide(cfg GameConfig, color string) string {
 	return normalizeAIProfile(cfg.AIProfile)
 }
 
+// profilesFromSingle - performs profiles from single
 func profilesFromSingle(aiProfile string) (profile, white, black string) {
 	profile = normalizeAIProfile(aiProfile)
 	return profile, profile, profile
 }
 
-// NormalizeSkillLevel accepts beginner|intermediate|advanced.
+// NormalizeSkillLevel - accepts beginner|intermediate|advanced
 func NormalizeSkillLevel(level string) (string, bool) {
 	switch strings.ToLower(strings.TrimSpace(level)) {
 	case "beginner", "intermediate", "advanced":
@@ -187,7 +174,7 @@ func NormalizeSkillLevel(level string) (string, bool) {
 	}
 }
 
-// SkillLevelFromAIProfile maps AI strength (4) → explain skill (3). master → advanced.
+// SkillLevelFromAIProfile - maps AI strength (4) → explain skill (3). master → advanced
 func SkillLevelFromAIProfile(profile string) string {
 	switch normalizeAIProfile(profile) {
 	case "beginner", "intermediate", "advanced":
@@ -199,7 +186,7 @@ func SkillLevelFromAIProfile(profile string) string {
 	}
 }
 
-// ResolveSkillLevel prefers an explicit coach level; otherwise derives from AI profile.
+// ResolveSkillLevel - prefers an explicit coach level; otherwise derives from AI profile
 func ResolveSkillLevel(explicit, aiProfile string) string {
 	if level, ok := NormalizeSkillLevel(explicit); ok {
 		return level
@@ -207,6 +194,7 @@ func ResolveSkillLevel(explicit, aiProfile string) string {
 	return SkillLevelFromAIProfile(aiProfile)
 }
 
+// newGameSession - creates game session
 func newGameSession(mode GameMode, gameType GameType) GameSession {
 	now := time.Now().UTC().Format(time.RFC3339)
 	return GameSession{
@@ -231,6 +219,7 @@ func newGameSession(mode GameMode, gameType GameType) GameSession {
 	}
 }
 
+// GetGameSession - returns game session
 func GetGameSession() GameSession {
 	gameSessionMu.RLock()
 	activeID := activeGameID
@@ -242,6 +231,7 @@ func GetGameSession() GameSession {
 	return game.Session
 }
 
+// RefreshGameSessionOutcome - refreshes game session outcome
 func RefreshGameSessionOutcome() GameSession {
 	game, err := lockActiveRuntimeState()
 	if err != nil {
@@ -260,11 +250,13 @@ func RefreshGameSessionOutcome() GameSession {
 	return game.Session
 }
 
+// CanAcceptMoves - reports whether accept moves is allowed
 func CanAcceptMoves() bool {
 	game := RefreshGameSessionOutcome()
 	return game.Outcome.Status != "checkmate" && game.Outcome.Status != "stalemate"
 }
 
+// resetGameSessionForTest - resets game session for test
 func resetGameSessionForTest() {
 	gameSessionMu.Lock()
 	defer gameSessionMu.Unlock()
@@ -275,6 +267,7 @@ func resetGameSessionForTest() {
 	initial.syncFromGlobals()
 }
 
+// ArchiveActiveGameIfNeeded - returns archive active game if needed
 func ArchiveActiveGameIfNeeded() error {
 	game, err := lockActiveRuntimeState()
 	if err != nil {
@@ -329,35 +322,7 @@ func ArchiveActiveGameIfNeeded() error {
 	return nil
 }
 
-func loadArchivedGames() ([]ArchivedGame, error) {
-	bytes, err := os.ReadFile(archivePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return []ArchivedGame{}, nil
-		}
-		return nil, err
-	}
-	var records []ArchivedGame
-	if len(bytes) == 0 {
-		return []ArchivedGame{}, nil
-	}
-	if err := json.Unmarshal(bytes, &records); err != nil {
-		return nil, err
-	}
-	return records, nil
-}
-
-func saveArchivedGames(records []ArchivedGame) error {
-	if err := os.MkdirAll(filepath.Dir(archivePath), 0o755); err != nil {
-		return err
-	}
-	bytes, err := json.MarshalIndent(records, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(archivePath, bytes, 0o644)
-}
-
+// UpdateGameConfig - updates game config
 func UpdateGameConfig(mode GameMode, gameType GameType, humanColor string, aiGameCount int, startFEN string) (GameSession, error) {
 	normalizedCount, err := validateGameConfig(mode, gameType, humanColor, aiGameCount, startFEN)
 	if err != nil {
@@ -381,6 +346,7 @@ func UpdateGameConfig(mode GameMode, gameType GameType, humanColor string, aiGam
 	return game.Session, nil
 }
 
+// StartConfiguredNewGame - starts configured new game
 func StartConfiguredNewGame() (GameSession, error) {
 	currentGame, err := lockActiveRuntimeState()
 	if err != nil {
@@ -413,7 +379,7 @@ func StartConfiguredNewGame() (GameSession, error) {
 	outcome := evaluateOutcomeForGameType(currentType)
 	game.Session.Outcome = outcome
 	game.Session.Result = gameResultFromOutcome(outcome)
-	// Carry time control onto the new game; remaining resets to initial bases.
+	// carry time control onto the new game; remaining resets to initial bases.
 	if prevClock != nil && prevClock.Enabled {
 		game.Session.Clock = NewClock(prevClock.WhiteInitialMs, prevClock.BlackInitialMs, prevClock.IncrementMs)
 		game.Session.Clock.Start(string(CurrentTurnColor()), time.Now().UTC())
@@ -422,10 +388,12 @@ func StartConfiguredNewGame() (GameSession, error) {
 	return game.Session, nil
 }
 
+// piecesReset - performs pieces reset
 func piecesReset() {
 	ResetGame()
 }
 
+// FlagCurrentTurn - flags current turn
 func FlagCurrentTurn() GameSession {
 	game, err := lockActiveRuntimeState()
 	if err != nil {
@@ -436,6 +404,7 @@ func FlagCurrentTurn() GameSession {
 	return game.Session
 }
 
+// toArchivedPieceState - converts to archived piece state
 func toArchivedPieceState(state []PieceState) []ArchivedPieceState {
 	out := make([]ArchivedPieceState, 0, len(state))
 	for _, p := range state {
@@ -449,6 +418,7 @@ func toArchivedPieceState(state []PieceState) []ArchivedPieceState {
 	return out
 }
 
+// archiveFlagEntry - returns archive flag entry
 func archiveFlagEntry(game GameSession) string {
 	if game.Outcome.Status != "resigned" || game.Outcome.Loser == "" {
 		return ""
@@ -456,6 +426,7 @@ func archiveFlagEntry(game GameSession) string {
 	return fmt.Sprintf("%s: flag", sideLabelFromText(game.Outcome.Loser))
 }
 
+// sideLabelFromText - returns side label from text
 func sideLabelFromText(side string) string {
 	if side == "black" {
 		return "Black"
@@ -463,6 +434,7 @@ func sideLabelFromText(side string) string {
 	return "White"
 }
 
+// gameResultFromOutcome - performs game result from outcome
 func gameResultFromOutcome(outcome GameOutcome) GameResult {
 	switch outcome.Status {
 	case "checkmate":
@@ -486,6 +458,7 @@ func gameResultFromOutcome(outcome GameOutcome) GameResult {
 	}
 }
 
+// initializeSessionStore - performs initialize session store
 func initializeSessionStore() {
 	gameSessionMu.Lock()
 	defer gameSessionMu.Unlock()
@@ -495,6 +468,7 @@ func initializeSessionStore() {
 	initial.bindToGlobals()
 }
 
+// getActiveRuntimeGame - returns active runtime game
 func getActiveRuntimeGame() (*RuntimeGame, error) {
 	gameSessionMu.RLock()
 	activeID := activeGameID
@@ -506,6 +480,7 @@ func getActiveRuntimeGame() (*RuntimeGame, error) {
 	return game, nil
 }
 
+// lockActiveRuntimeState - performs lock active runtime state
 func lockActiveRuntimeState() (*RuntimeGame, error) {
 	runtimeStateMu.Lock()
 	game, err := getActiveRuntimeGame()
@@ -516,6 +491,7 @@ func lockActiveRuntimeState() (*RuntimeGame, error) {
 	return game, nil
 }
 
+// unlockActiveRuntimeState - performs unlock active runtime state
 func unlockActiveRuntimeState(game *RuntimeGame) {
 	if game != nil {
 		game.syncFromGlobals()
@@ -523,6 +499,7 @@ func unlockActiveRuntimeState(game *RuntimeGame) {
 	runtimeStateMu.Unlock()
 }
 
+// getRuntimeGameByID - returns runtime game by id
 func getRuntimeGameByID(gameID string) (*RuntimeGame, error) {
 	game, ok := sessionStore.Get(gameID)
 	if !ok {
@@ -531,6 +508,7 @@ func getRuntimeGameByID(gameID string) (*RuntimeGame, error) {
 	return game, nil
 }
 
+// lockRuntimeStateByID - lock runtime state by id
 func lockRuntimeStateByID(gameID string) (*RuntimeGame, error) {
 	runtimeStateMu.Lock()
 	game, err := getRuntimeGameByID(gameID)
@@ -542,6 +520,7 @@ func lockRuntimeStateByID(gameID string) (*RuntimeGame, error) {
 	return game, nil
 }
 
+// unlockRuntimeStateByID - unlock runtime state by id
 func unlockRuntimeStateByID(game *RuntimeGame) {
 	if game != nil {
 		game.syncFromGlobals()
@@ -549,6 +528,7 @@ func unlockRuntimeStateByID(game *RuntimeGame) {
 	runtimeStateMu.Unlock()
 }
 
+// ActivateGame - returns activate game
 func ActivateGame(gameID string) error {
 	if _, err := getRuntimeGameByID(gameID); err != nil {
 		return err
@@ -559,6 +539,7 @@ func ActivateGame(gameID string) error {
 	return nil
 }
 
+// validateGameConfig - validates game config
 func validateGameConfig(mode GameMode, gameType GameType, humanColor string, aiGameCount int, startFEN string) (int, error) {
 	if mode != GameModeHumanVsHuman && mode != GameModeHumanVsAI && mode != GameModeAIVsAI {
 		return 0, fmt.Errorf("invalid game mode")
@@ -595,7 +576,7 @@ func validateGameConfig(mode GameMode, gameType GameType, humanColor string, aiG
 	return aiGameCount, nil
 }
 
-// looksLikeXiangqiFEN: Xiangqi boards have 10 ranks (9 '/' separators in the placement field).
+// looksLikeXiangqiFEN - xiangqi boards have 10 ranks (9 '/' separators in the placement field)
 func looksLikeXiangqiFEN(fen string) bool {
 	parts := strings.Fields(strings.TrimSpace(fen))
 	if len(parts) == 0 {
@@ -604,6 +585,7 @@ func looksLikeXiangqiFEN(fen string) bool {
 	return strings.Count(parts[0], "/") == 9
 }
 
+// normalizeStartFEN - normalizes start fen
 func normalizeStartFEN(gameType GameType, startFEN string) string {
 	startFEN = strings.TrimSpace(startFEN)
 	if startFEN != "" {

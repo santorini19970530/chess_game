@@ -18,13 +18,13 @@ type statusRecorder struct {
 	statusCode int
 }
 
-// WriteHeader stores and writes the HTTP status code
+// WriteHeader - stores and writes the HTTP status code
 func (sr *statusRecorder) WriteHeader(code int) {
 	sr.statusCode = code
 	sr.ResponseWriter.WriteHeader(code)
 }
 
-// Write writes the response body and defaults status to 200
+// Write - writes the response body and defaults status to 200
 func (sr *statusRecorder) Write(data []byte) (int, error) {
 	if sr.statusCode == 0 {
 		sr.statusCode = http.StatusOK
@@ -33,7 +33,7 @@ func (sr *statusRecorder) Write(data []byte) (int, error) {
 	return sr.ResponseWriter.Write(data)
 }
 
-// Hijack implements http.Hijacker so WebSocket upgrades work through the recorder.
+// Hijack - implements http.Hijacker so WebSocket upgrades work through the recorder
 func (sr *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	hijacker, ok := sr.ResponseWriter.(interface {
 		Hijack() (net.Conn, *bufio.ReadWriter, error)
@@ -44,7 +44,7 @@ func (sr *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	return hijacker.Hijack()
 }
 
-// statusReport maps an HTTP status code to a short label
+// statusReport - maps an HTTP status code to a short label
 func statusReport(code int) string {
 	switch {
 	case code >= 200 && code < 300:
@@ -60,11 +60,10 @@ func statusReport(code int) string {
 	}
 }
 
-// withRequestLogging logs method, path, and status for each request in the server.
-// WebSocket upgrade requests are skipped to preserve the http.Hijacker interface.
+// withRequestLogging - logs method, path, and status; skips websocket upgrades to keep hijacker intact
 func withRequestLogging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Skip logging for WebSocket routes so the upgrade can succeed
+		// skip logging for WebSocket routes so the upgrade can succeed
 		if strings.HasPrefix(r.URL.Path, "/ws/") {
 			next.ServeHTTP(w, r)
 			return

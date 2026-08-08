@@ -1,3 +1,6 @@
+// CM3070 FP code
+// load_moves_test.go - tests for load moves
+
 package handlers
 
 import (
@@ -11,6 +14,7 @@ import (
 	sessionpkg "go_backend/game/session"
 )
 
+// TestExtractUCIList_PlainText - checks extract uci list plain text
 func TestExtractUCIList_PlainText(t *testing.T) {
 	got, err := extractUCIList("e2e4 e7e5 g1f3")
 	if err != nil {
@@ -22,6 +26,7 @@ func TestExtractUCIList_PlainText(t *testing.T) {
 	}
 }
 
+// TestExtractUCIList_NewlinesAndCommas - checks extract uci list newlines and commas
 func TestExtractUCIList_NewlinesAndCommas(t *testing.T) {
 	got, err := extractUCIList("e2e4,\ne7e5\tg1f3")
 	if err != nil {
@@ -33,12 +38,14 @@ func TestExtractUCIList_NewlinesAndCommas(t *testing.T) {
 	}
 }
 
+// TestExtractUCIList_Empty - checks extract uci list empty
 func TestExtractUCIList_Empty(t *testing.T) {
 	if _, err := extractUCIList("  \n\t "); err == nil {
 		t.Fatal("expected error for empty input")
 	}
 }
 
+// TestExtractUCIFromPlayJSON_AnalysisExportHistory - checks extract uci from play json analysis export history
 func TestExtractUCIFromPlayJSON_AnalysisExportHistory(t *testing.T) {
 	raw := `{
 		"game": {"type": "chess"},
@@ -57,6 +64,7 @@ func TestExtractUCIFromPlayJSON_AnalysisExportHistory(t *testing.T) {
 	}
 }
 
+// TestExtractUCIFromPlayJSON_SimulationHistoryDetailed - checks extract uci from play json simulation history detailed
 func TestExtractUCIFromPlayJSON_SimulationHistoryDetailed(t *testing.T) {
 	raw := `{
 		"game_type": "chess",
@@ -78,6 +86,7 @@ func TestExtractUCIFromPlayJSON_SimulationHistoryDetailed(t *testing.T) {
 	}
 }
 
+// TestExtractUCIFromPlayJSON_Garbage - checks extract uci from play json garbage
 func TestExtractUCIFromPlayJSON_Garbage(t *testing.T) {
 	if _, _, err := extractUCIFromPlayJSON(`{"foo":1}`); err == nil {
 		t.Fatal("expected error for JSON without history")
@@ -87,6 +96,7 @@ func TestExtractUCIFromPlayJSON_Garbage(t *testing.T) {
 	}
 }
 
+// TestParseLoadMovesRaw_Dispatches - checks parse load moves raw dispatches
 func TestParseLoadMovesRaw_Dispatches(t *testing.T) {
 	moves, gameType, err := parseLoadMovesRaw("e2e4 e7e5")
 	if err != nil {
@@ -109,6 +119,7 @@ func TestParseLoadMovesRaw_Dispatches(t *testing.T) {
 	}
 }
 
+// TestPostAPIGameLoadMoves_PlainUCI - checks post api game load moves plain uci
 func TestPostAPIGameLoadMoves_PlainUCI(t *testing.T) {
 	h := NewHandler()
 	template, err := sessionpkg.CreateGame(
@@ -154,6 +165,7 @@ func TestPostAPIGameLoadMoves_PlainUCI(t *testing.T) {
 	}
 }
 
+// TestPostAPIGameLoadMoves_IllegalPly - checks post api game load moves illegal ply
 func TestPostAPIGameLoadMoves_IllegalPly(t *testing.T) {
 	h := NewHandler()
 	template, err := sessionpkg.CreateGame(
@@ -184,6 +196,7 @@ func TestPostAPIGameLoadMoves_IllegalPly(t *testing.T) {
 	}
 }
 
+// TestPostAPIGameLoadMoves_AnalysisExportJSON - checks post api game load moves analysis export json
 func TestPostAPIGameLoadMoves_AnalysisExportJSON(t *testing.T) {
 	h := NewHandler()
 	template, err := sessionpkg.CreateGame(
@@ -221,6 +234,7 @@ func TestPostAPIGameLoadMoves_AnalysisExportJSON(t *testing.T) {
 	}
 }
 
+// TestPostAPIGameLoadMoves_SimHistoryDetailed - checks post api game load moves sim history detailed
 func TestPostAPIGameLoadMoves_SimHistoryDetailed(t *testing.T) {
 	h := NewHandler()
 	template, err := sessionpkg.CreateGame(
@@ -264,6 +278,7 @@ func TestPostAPIGameLoadMoves_SimHistoryDetailed(t *testing.T) {
 	}
 }
 
+// TestPostAPIGameLoadMoves_EmptyRawStartPosition - checks post api game load moves empty raw start position
 func TestPostAPIGameLoadMoves_EmptyRawStartPosition(t *testing.T) {
 	h := NewHandler()
 	template, err := sessionpkg.CreateGame(
@@ -304,6 +319,7 @@ func TestPostAPIGameLoadMoves_EmptyRawStartPosition(t *testing.T) {
 	}
 }
 
+// TestPostAPIGameLoadMoves_RealExportPrefix - checks post api game load moves real export prefix
 func TestPostAPIGameLoadMoves_RealExportPrefix(t *testing.T) {
 	// Smoke against a shortened slice of a real analysis_exports history shape.
 	rawJSON := `{"game":{"type":"chess"},"history":["White: e2e4","Black: e7e6","White: c2c3","Black: d8h4","White: d2d3","Black: f8e7"]}`

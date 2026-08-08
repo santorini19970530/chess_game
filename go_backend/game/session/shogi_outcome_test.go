@@ -1,7 +1,11 @@
+// CM3070 FP code
+// shogi_outcome_test.go - tests for shogi outcome
+
 package session
 
 import "testing"
 
+// TestShogiOutcome_Checkmate - checks shogi outcome checkmate
 func TestShogiOutcome_Checkmate(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -20,6 +24,7 @@ func TestShogiOutcome_Checkmate(t *testing.T) {
 	}
 }
 
+// TestShogiOutcome_MissingKing - checks shogi outcome missing king
 func TestShogiOutcome_MissingKing(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -34,6 +39,7 @@ func TestShogiOutcome_MissingKing(t *testing.T) {
 	}
 }
 
+// TestShogiOutcome_Flag - checks shogi outcome flag
 func TestShogiOutcome_Flag(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -54,6 +60,7 @@ func TestShogiOutcome_Flag(t *testing.T) {
 	}
 }
 
+// TestShogiOutcome_InProgressAtStart - checks shogi outcome in progress at start
 func TestShogiOutcome_InProgressAtStart(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()

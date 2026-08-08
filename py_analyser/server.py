@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""
-Persistent Python analyzer service.
-
-Endpoints:
-  - GET /health
-  - POST /analyze
-  - POST /explain          (LLM move explanation, provider selected via LLM_PROVIDER)
-"""
+# server.py - flask http edge for analyze, explain, and the three play agents
 
 from __future__ import annotations
 
@@ -20,12 +13,10 @@ from typing import Any
 
 from flask import Flask, jsonify, request
 
+from agents import AgentContext, run_agent
 from analyzer import (
     analyze_position,
     build_concept_hints,
-    build_history_payload,
-    build_policy_payload,
-    build_value_payload,
 )
 from llm_providers import get_llm_provider
 
@@ -42,8 +33,8 @@ MAX_CONCEPT_HINTS = 3
 _EXPLAIN_LOG_DIR = Path(__file__).resolve().parent / "data" / "explain_logs"
 
 
+# _append_explain_log - appends one json line for qa evidence; set EXPLAIN_LOG=0 to disable
 def _append_explain_log(entry: dict[str, Any]) -> None:
-    """Append one JSON line for QA / report evidence. Set EXPLAIN_LOG=0 to disable."""
     if os.getenv("EXPLAIN_LOG", "1").strip() == "0":
         return
     try:
@@ -55,8 +46,8 @@ def _append_explain_log(entry: dict[str, Any]) -> None:
         pass
 
 
+# _parse_skill_level - maps missing or invalid skill_level to intermediate for old clients
 def _parse_skill_level(payload: dict[str, Any]) -> str:
-    """Missing → intermediate. Invalid → clamp to intermediate (keep old clients working)."""
     raw = payload.get("skill_level", None)
     if raw is None or str(raw).strip() == "":
         return DEFAULT_SKILL_LEVEL
@@ -66,8 +57,8 @@ def _parse_skill_level(payload: dict[str, Any]) -> str:
     return DEFAULT_SKILL_LEVEL
 
 
+# _parse_concept_hints - pulls up to three concept hints from payload or analysis
 def _parse_concept_hints(payload: dict[str, Any]) -> list[str]:
-    """Optional concept_hints[] or analysis{} → at most 3 strings. Missing → []."""
     raw = payload.get("concept_hints", None)
     if isinstance(raw, list):
         out: list[str] = []
@@ -88,6 +79,7 @@ def _parse_concept_hints(payload: dict[str, Any]) -> list[str]:
     return []
 
 
+# _error_response - builds a standard json error body and http status tuple
 def _error_response(
     request_id: str | None,
     message: str,
@@ -107,6 +99,7 @@ def _error_response(
     )
 
 
+# _parse_common_payload - validates shared fen/color/game_type fields for agent and coach routes
 def _parse_common_payload(
     payload: dict[str, Any],
     allowed_game_types: set[str] | None = None,
@@ -162,6 +155,7 @@ def _parse_common_payload(
     )
 
 
+# _extract_move_fields - reads move_uci/move_san or returns a validation error response
 def _extract_move_fields(payload: dict[str, Any]) -> tuple[str | None, str | None, tuple | None]:
     move_uci = str(payload.get("move_uci", "")).strip() or None
     move_san = str(payload.get("move_san", "")).strip() or None
@@ -171,6 +165,7 @@ def _extract_move_fields(payload: dict[str, Any]) -> tuple[str | None, str | Non
     return move_uci, move_san, None
 
 
+# health - returns a simple ok status payload for liveness checks
 @app.get("/health")
 def health() -> tuple:
     return (
@@ -185,6 +180,7 @@ def health() -> tuple:
     )
 
 
+# analyze - runs position analysis and returns the shared coach schema
 @app.post("/analyze")
 def analyze() -> tuple:
     payload = request.get_json(silent=True) or {}
@@ -217,7 +213,7 @@ def analyze() -> tuple:
             profile=profile,
         )
     except ValueError as exc:
-        # Covers invalid FEN / color parser errors from analyzer.
+        # covers invalid fen / color parser errors from analyzer
         return jsonify({"error": str(exc)}), 400
     except Exception:
         return jsonify({"error": "Internal analyzer error"}), 500
@@ -225,6 +221,7 @@ def analyze() -> tuple:
     return jsonify(result), 200
 
 
+# history - runs the history AgentStrategy and returns its payload
 @app.post("/history")
 def history() -> tuple:
     payload = request.get_json(silent=True) or {}
@@ -234,12 +231,15 @@ def history() -> tuple:
 
     assert common is not None
     try:
-        result = build_history_payload(
-            fen=common["fen"],
-            color=common["color"],
-            move_history=common["move_history"],
-            request_id=common["request_id"],
-            profile=common.get("profile", "intermediate"),
+        result = run_agent(
+            "history",
+            AgentContext(
+                fen=common["fen"],
+                color=common["color"],
+                move_history=common["move_history"],
+                request_id=common["request_id"],
+                profile=common.get("profile", "intermediate"),
+            ),
         )
     except ValueError as exc:
         return _error_response(common["request_id"], str(exc), "validation", 400)
@@ -248,6 +248,7 @@ def history() -> tuple:
     return jsonify(result), 200
 
 
+# policy - runs the policy AgentStrategy and returns candidate moves
 @app.post("/policy")
 def policy() -> tuple:
     payload = request.get_json(silent=True) or {}
@@ -264,12 +265,15 @@ def policy() -> tuple:
     top_k_value = min(20, max(1, top_k_value))
 
     try:
-        result = build_policy_payload(
-            fen=common["fen"],
-            color=common["color"],
-            top_k=top_k_value,
-            request_id=common["request_id"],
-            profile=common.get("profile", "intermediate"),
+        result = run_agent(
+            "policy",
+            AgentContext(
+                fen=common["fen"],
+                color=common["color"],
+                top_k=top_k_value,
+                request_id=common["request_id"],
+                profile=common.get("profile", "intermediate"),
+            ),
         )
     except ValueError as exc:
         return _error_response(common["request_id"], str(exc), "validation", 400)
@@ -278,6 +282,7 @@ def policy() -> tuple:
     return jsonify(result), 200
 
 
+# value - runs the value AgentStrategy and returns score fields
 @app.post("/value")
 def value() -> tuple:
     payload = request.get_json(silent=True) or {}
@@ -287,11 +292,14 @@ def value() -> tuple:
 
     assert common is not None
     try:
-        result = build_value_payload(
-            fen=common["fen"],
-            color=common["color"],
-            request_id=common["request_id"],
-            profile=common.get("profile", "intermediate"),
+        result = run_agent(
+            "value",
+            AgentContext(
+                fen=common["fen"],
+                color=common["color"],
+                request_id=common["request_id"],
+                profile=common.get("profile", "intermediate"),
+            ),
         )
     except ValueError as exc:
         return _error_response(common["request_id"], str(exc), "validation", 400)
@@ -300,10 +308,11 @@ def value() -> tuple:
     return jsonify(result), 200
 
 
+# explain - returns coach text via LLMProvider with finalize/sanitize applied
 @app.post("/explain")
 def explain() -> tuple:
     payload = dict(request.get_json(silent=True) or {})
-    # Optional `game` alias + default chess (loader can later key chess_* / xiangqi_* / shogi_*).
+    # optional `game` alias + default chess for terms/tone file selection
     if not str(payload.get("game_type", "")).strip():
         game_alias = str(payload.get("game", "")).strip().lower()
         payload["game_type"] = game_alias or "chess"
@@ -330,7 +339,8 @@ def explain() -> tuple:
     game_type = common["game_type"]
 
     from analyzer import build_move_ground_truth
-    from llm_providers import finalize_explanation, looks_like_uci, side_to_move_from_fen
+    from explain_finalize import finalize_explanation
+    from teacher_prompt import looks_like_uci, side_to_move_from_fen
 
     ground = build_move_ground_truth(
         fen=common["fen"],
@@ -338,7 +348,7 @@ def explain() -> tuple:
         move_history=history,
         game_type=game_type,
     )
-    # Always prefer board-derived SAN; Go often sends UCI in the san field.
+    # prefer board-derived san; go often sends uci in the san field
     if ground.get("san"):
         move_san = ground["san"]
     elif move_san and looks_like_uci(move_san):
@@ -349,7 +359,7 @@ def explain() -> tuple:
     last_mover = "black" if to_move == "white" else "white"
 
     if quick:
-        from llm_providers import build_quick_coach_line
+        from teacher_prompt import build_quick_coach_line
 
         explanation = build_quick_coach_line(
             fen=common["fen"],
@@ -377,7 +387,7 @@ def explain() -> tuple:
                 concept_hints=concept_hints or None,
             )
         except Exception:
-            # Any failure (Ollama down, timeout, bad response, etc.) → heuristic
+            # any failure (ollama down, timeout, bad response) falls back to heuristic
             from analyzer import build_explanation_fallback as _fallback
 
             explanation = _fallback(
@@ -435,6 +445,7 @@ def explain() -> tuple:
         200,
     )
 
+# main - starts the flask analyser service from env host/port/debug
 def main() -> None:
     host = os.getenv("PY_ANALYSER_HOST", "127.0.0.1")
     port = int(os.getenv("PY_ANALYSER_PORT", "8001"))
@@ -444,5 +455,5 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 elif os.getenv("PY_EXPLAIN_SELFCHECK"):
-    # ponytail: one tiny runnable check that the /explain route is registered
+    # one tiny runnable check that the /explain route is registered
     assert any(r.rule == "/explain" for r in app.url_map.iter_rules())

@@ -5,11 +5,10 @@ package session
 
 import pieces "go_backend/game/piece"
 
-// GameSession holds runtime game state metadata.
-
+// gameSession holds runtime game state metadata
 var initialPiecesSnapshot = append([]pieces.ChessPiece(nil), pieces.ChessPieces...)
 
-// ResetGame resets board, turn state, move history, and session metadata.
+// ResetGame - resets board, turn state, move history, and session metadata
 func ResetGame() {
 	game, err := lockActiveRuntimeState()
 	if err == nil {
@@ -18,6 +17,7 @@ func ResetGame() {
 	resetGlobalsToInitialState()
 }
 
+// resetGlobalsToInitialState - resets globals to initial state
 func resetGlobalsToInitialState() {
 	pieces.ChessPieces = append([]pieces.ChessPiece(nil), initialPiecesSnapshot...)
 	moveHistory = nil

@@ -1,12 +1,17 @@
+// CM3070 FP code
+// xiangqi_elephant.go - implements the xiangqi elephant movement strategy
+
 package movement
 
 import pieces "go_backend/game/piece"
 
-// XiangqiElephantStrategy — 2-step diagonal; blocked by eye; cannot cross river.
+// xiangqiElephantStrategy - 2-step diagonal; blocked by eye; cannot cross river
 type XiangqiElephantStrategy struct{}
 
+// Name - returns the piece strategy name
 func (XiangqiElephantStrategy) Name() string { return "XiangqiElephant" }
 
+// LegalMoves - returns legal destinations for this piece from the square
 func (XiangqiElephantStrategy) LegalMoves(board any, from any) []any {
 	ctx, ok := board.(MovementBoard)
 	if !ok {
@@ -27,7 +32,7 @@ func (XiangqiElephantStrategy) LegalMoves(board any, from any) []any {
 		if !isInsideXiangqiBoard(tf, tr) {
 			continue
 		}
-		// Cannot cross river.
+		// cannot cross river.
 		if ctx.Color == pieces.White && tr > 5 {
 			continue
 		}

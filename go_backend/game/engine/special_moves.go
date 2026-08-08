@@ -5,7 +5,7 @@ package engine
 
 import pieces "go_backend/game/piece"
 
-// LastMoveInfo is a lightweight move snapshot for special-move checks.
+// lastMoveInfo is a lightweight move snapshot for special-move checks
 type LastMoveInfo struct {
 	FromFile       int
 	FromRank       int
@@ -16,7 +16,7 @@ type LastMoveInfo struct {
 	PawnDoubleStep bool
 }
 
-// CanEnPassant validates en passant rule conditions.
+// CanEnPassant - validates en passant rule conditions
 func CanEnPassant(
 	source pieces.ChessPiece,
 	fromFile, fromRank, toFile, toRank int,
@@ -58,8 +58,7 @@ func CanEnPassant(
 	return adjacentPawn.Kind == pieces.Pawn && adjacentPawn.Color != source.Color
 }
 
-// CanCastle validates king-side / queen-side castling conditions,
-// excluding check-related rules for now.
+// CanCastle - validates king-side / queen-side castling conditions, excluding check-related rules for now
 func CanCastle(
 	source pieces.ChessPiece,
 	fromFile, fromRank, toFile, toRank int,
@@ -99,7 +98,7 @@ func CanCastle(
 		return false
 	}
 
-	// Squares between king and rook must be empty.
+	// squares between king and rook must be empty.
 	pathFiles := []int{6, 7}
 	if queenSide {
 		pathFiles = []int{4, 3, 2}
@@ -113,6 +112,7 @@ func CanCastle(
 	return true
 }
 
+// absInt - returns abs int
 func absInt(v int) int {
 	if v < 0 {
 		return -v
@@ -120,6 +120,7 @@ func absInt(v int) int {
 	return v
 }
 
+// getPieceAt - returns piece at
 func getPieceAt(file, rank int) (pieces.ChessPiece, bool) {
 	for _, p := range pieces.ChessPieces {
 		if p.File == file && p.Rank == rank {

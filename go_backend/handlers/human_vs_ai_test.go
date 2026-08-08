@@ -1,3 +1,6 @@
+// CM3070 FP code
+// human_vs_ai_test.go - tests for human vs ai
+
 package handlers
 
 import (
@@ -6,8 +9,7 @@ import (
 	sessionpkg "go_backend/game/session"
 )
 
-// TestHumanVsAIModeDetection verifies that the mode check in the move handlers
-// correctly identifies human_vs_ai mode (step 5 & 6 regression test).
+// TestHumanVsAIModeDetection - verifies that the mode check in the move handlers correctly identifies human_vs_ai mode (step 5 & 6 regression test)
 func TestHumanVsAIModeDetection(t *testing.T) {
 	// These tests are lightweight because the full orchestration
 	// is already exercised through the existing move flow tests.
@@ -30,8 +32,7 @@ func TestHumanVsAIModeDetection(t *testing.T) {
 	}
 }
 
-// TestSelectAIMoveIsCallable verifies the decision layer entry point exists
-// and can be called without panicking (step 6).
+// TestSelectAIMoveIsCallable - verifies the decision layer entry point exists and can be called without panicking (step 6)
 func TestSelectAIMoveIsCallable(t *testing.T) {
 	// We only test that the function symbol exists and returns an error
 	// when given a non-existent game (this is expected behavior).
@@ -41,8 +42,7 @@ func TestSelectAIMoveIsCallable(t *testing.T) {
 	}
 }
 
-// TestHumanVsAI_BasicHumanThenAIMove exercises the core Human → AI → Human cycle
-// for issue0021 regression coverage.
+// TestHumanVsAI_BasicHumanThenAIMove - exercises the core Human → AI → Human cycle for issue0021 regression coverage
 func TestHumanVsAI_BasicHumanThenAIMove(t *testing.T) {
 	game, err := sessionpkg.CreateGame(
 		sessionpkg.GameModeHumanVsAI,
@@ -103,8 +103,7 @@ func TestHumanVsAI_BasicHumanThenAIMove(t *testing.T) {
 	}
 }
 
-// TestHumanVsAI_StrengthProfileIsRespected verifies that the aiProfile passed at
-// game creation is correctly forwarded into the AI decision request (issue0021).
+// TestHumanVsAI_StrengthProfileIsRespected - verifies that the aiProfile passed at game creation is correctly forwarded into the AI decision request (issue0021)
 func TestHumanVsAI_StrengthProfileIsRespected(t *testing.T) {
 	profiles := []string{"beginner", "master"}
 	for _, p := range profiles {
@@ -133,8 +132,7 @@ func TestHumanVsAI_StrengthProfileIsRespected(t *testing.T) {
 	}
 }
 
-// TestHumanVsAI_GameTerminationHandling forces a resignation and verifies the
-// game reaches a terminal state with the correct Result (issue0021).
+// TestHumanVsAI_GameTerminationHandling - forces a resignation and verifies the game reaches a terminal state with the correct Result (issue0021)
 func TestHumanVsAI_GameTerminationHandling(t *testing.T) {
 	game, err := sessionpkg.CreateGame(
 		sessionpkg.GameModeHumanVsAI,
@@ -169,10 +167,7 @@ func TestHumanVsAI_GameTerminationHandling(t *testing.T) {
 	}
 }
 
-// TestHumanVsAI_BackgroundMoveEnqueuesAnalysis is a lightweight check that
-// after a human move in human_vs_ai mode the analysis enqueue path is exercised.
-// We simply verify that calling the move path does not panic and the game
-// remains in a state where analysis would have been requested (issue0021).
+// TestHumanVsAI_BackgroundMoveEnqueuesAnalysis - is a lightweight check that after a human move in human_vs_ai mode the analysis enqueue path is exercised. we simply verify that calling the move path does not panic and the game remains in a state where analysis would have been requested (issue0021)
 func TestHumanVsAI_BackgroundMoveEnqueuesAnalysis(t *testing.T) {
 	game, err := sessionpkg.CreateGame(
 		sessionpkg.GameModeHumanVsAI,
@@ -206,9 +201,7 @@ func TestHumanVsAI_BackgroundMoveEnqueuesAnalysis(t *testing.T) {
 	}
 }
 
-// TestHumanVsAI_InitialAIMoveWhenHumanIsBlack verifies that when a human_vs_ai
-// game is created with humanColor=black, the AI (White) automatically makes
-// the first move (issue0021 regression).
+// TestHumanVsAI_InitialAIMoveWhenHumanIsBlack - verifies that when a human_vs_ai game is created with humanColor=black, the AI (White) automatically makes the first move (issue0021 regression)
 func TestHumanVsAI_InitialAIMoveWhenHumanIsBlack(t *testing.T) {
 	game, err := sessionpkg.CreateGame(
 		sessionpkg.GameModeHumanVsAI,
@@ -252,8 +245,7 @@ func TestHumanVsAI_InitialAIMoveWhenHumanIsBlack(t *testing.T) {
 	}
 }
 
-// TestHumanVsAI_DifferentOpeningSequence tests a different human opening (d4)
-// followed by an AI reply to ensure the flow works for multiple sequences.
+// TestHumanVsAI_DifferentOpeningSequence - tests a different human opening (d4) followed by an AI reply to ensure the flow works for multiple sequences
 func TestHumanVsAI_DifferentOpeningSequence(t *testing.T) {
 	game, err := sessionpkg.CreateGame(
 		sessionpkg.GameModeHumanVsAI,
@@ -288,8 +280,7 @@ func TestHumanVsAI_DifferentOpeningSequence(t *testing.T) {
 	}
 }
 
-// TestHumanVsAI_MultipleExchanges runs two full human-AI cycles to verify
-// repeated legal state transitions work.
+// TestHumanVsAI_MultipleExchanges - runs two full human-AI cycles to verify repeated legal state transitions work
 func TestHumanVsAI_MultipleExchanges(t *testing.T) {
 	game, err := sessionpkg.CreateGame(
 		sessionpkg.GameModeHumanVsAI,
@@ -328,8 +319,7 @@ func TestHumanVsAI_MultipleExchanges(t *testing.T) {
 	}
 }
 
-// TestHumanVsAI_ProfileVariation ensures different strength profiles can be
-// used without crashing and still produce legal moves.
+// TestHumanVsAI_ProfileVariation - ensures different strength profiles can be used without crashing and still produce legal moves
 func TestHumanVsAI_ProfileVariation(t *testing.T) {
 	profiles := []string{"beginner", "intermediate", "advanced", "master"}
 	for _, p := range profiles {

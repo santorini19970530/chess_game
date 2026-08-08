@@ -1,3 +1,6 @@
+// CM3070 FP code
+// load_moves.go - load move-list review sessions for the coach pipe
+
 package handlers
 
 import (
@@ -11,12 +14,12 @@ import (
 	sessionpkg "go_backend/game/session"
 )
 
+// request body for the load-moves endpoint
 type loadMovesRequest struct {
 	Raw string `json:"raw"`
 }
 
-// parseLoadMovesRaw turns pasted UCI text or a saved play JSON blob into UCI moves.
-// gameType is set when the JSON carries game_type or game.type; otherwise "".
+// parseLoadMovesRaw - turns pasted uci text or a saved play json blob into uci moves
 func parseLoadMovesRaw(raw string) (moves []string, gameType string, err error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -29,6 +32,7 @@ func parseLoadMovesRaw(raw string) (moves []string, gameType string, err error) 
 	return moves, "", err
 }
 
+// extractUCIList - pulls uci move tokens from free-form pasted text
 func extractUCIList(raw string) ([]string, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -56,6 +60,7 @@ func extractUCIList(raw string) ([]string, error) {
 	return out, nil
 }
 
+// extractUCIFromPlayJSON - pulls uci moves from a saved play/export json blob
 func extractUCIFromPlayJSON(raw string) ([]string, string, error) {
 	var payload map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
@@ -119,7 +124,7 @@ func extractUCIFromPlayJSON(raw string) ([]string, string, error) {
 	return nil, gameType, fmt.Errorf("play JSON missing history or history_detailed moves")
 }
 
-// stripHistorySideLabel turns "White: e2e4" / "Black:e7e5" into "e2e4".
+// stripHistorySideLabel - turns "White: e2e4" / "Black:e7e5" into "e2e4"
 func stripHistorySideLabel(line string) string {
 	line = strings.TrimSpace(line)
 	if line == "" {
@@ -131,8 +136,7 @@ func stripHistorySideLabel(line string) string {
 	return strings.ToLower(line)
 }
 
-// postAPIGameLoadMoves creates a fresh HvH (clock-off) session, applies a UCI/JSON
-// move list via ApplyMoveByCommandByID, and enqueues analysis once for the last ply.
+// postAPIGameLoadMoves - creates a clock-off hvh session and applies a uci/json move list for review
 func (h *Handler) postAPIGameLoadMoves(w http.ResponseWriter, r *http.Request, gameID string) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
@@ -157,7 +161,7 @@ func (h *Handler) postAPIGameLoadMoves(w http.ResponseWriter, r *http.Request, g
 		return
 	}
 
-	// Empty raw = start position only (used by review Prev back to ply 0).
+	// empty raw = start position only (used by review Prev back to ply 0).
 	var moves []string
 	var jsonGameType string
 	if strings.TrimSpace(req.Raw) == "" {
@@ -187,7 +191,7 @@ func (h *Handler) postAPIGameLoadMoves(w http.ResponseWriter, r *http.Request, g
 		return
 	}
 
-	// Fresh session: HvH + default clock-off so replay cannot flag.
+	// fresh session: HvH + default clock-off so replay cannot flag.
 	game, err := sessionpkg.CreateGame(
 		sessionpkg.GameModeHumanVsHuman,
 		gameType,

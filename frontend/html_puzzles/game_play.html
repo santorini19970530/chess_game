@@ -1,0 +1,60 @@
+<!-- CM3070 FP code -->
+<!-- game_play.html - command bar, review ply, simulation summary, notes -->
+
+{{define "game_play"}}
+<div class="game_panel_right_bottom">
+  <div class="play_chrome">
+    <label for="chess_command">Chess command</label>
+    <div class="command_row">
+      <input id="chess_command" type="text" placeholder="e2e4" />
+      <button id="chess_command_submit" type="button">Submit</button>
+      <button id="chess_flag" type="button">Flag</button>
+      <button id="chess_new_game" type="button">New Game</button>
+    </div>
+    <p id="chess_command_status" class="command_status" role="status" aria-live="polite"></p>
+  </div>
+  <div id="simulation_summary_panel" class="simulation_summary_panel simulation_summary_hidden" aria-live="polite">
+    <table class="simulation_summary_table" aria-label="Simulation summary">
+      <thead>
+        <tr>
+          <th>Games</th>
+          <th>White wins</th>
+          <th>Black wins</th>
+          <th>Draws</th>
+          <th>Avg moves</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td id="simulation_summary_games">0</td>
+          <td id="simulation_summary_white">0</td>
+          <td id="simulation_summary_black">0</td>
+          <td id="simulation_summary_draws">0</td>
+          <td id="simulation_summary_avg">0.0</td>
+        </tr>
+      </tbody>
+    </table>
+    <details id="simulation_result_details" class="simulation_result_details">
+      <summary id="simulation_result_summary_text">Per-game results</summary>
+      <ol id="simulation_result_list" class="simulation_result_list"></ol>
+    </details>
+    <div class="simulation_download_actions">
+      <button id="simulation_download_json_btn" type="button" class="run-simulation-btn simulation_download_btn" disabled>Download JSON</button>
+      <button id="simulation_download_csv_btn" type="button" class="run-simulation-btn simulation_download_btn" disabled>Download CSV</button>
+    </div>
+  </div>
+  <input id="active_game_id" type="hidden" value="" />
+  <div id="promotion_picker" class="promotion_picker_hidden" role="dialog" aria-modal="true" aria-labelledby="promotion_picker_title">
+    <div class="promotion_picker_panel">
+      <h4 id="promotion_picker_title">Choose promotion piece</h4>
+      <div class="promotion_picker_choices">
+        <button type="button" class="promotion_choice_btn" data-promotion="q">Queen</button>
+        <button type="button" class="promotion_choice_btn" data-promotion="r">Rook</button>
+        <button type="button" class="promotion_choice_btn" data-promotion="b">Bishop</button>
+        <button type="button" class="promotion_choice_btn" data-promotion="n">Knight</button>
+      </div>
+    </div>
+  </div>
+  <textarea id="game_info_notes" class="game_info_notes_box" placeholder="Reserved for future use" rows="7" readonly></textarea>
+</div>
+{{end}}

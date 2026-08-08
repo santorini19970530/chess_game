@@ -1,7 +1,11 @@
+// CM3070 FP code
+// xiangqi_captured_test.go - tests for xiangqi captured
+
 package session
 
 import "testing"
 
+// TestXiangqiCapturedSummary_StartPositionEmpty - checks xiangqi captured summary start position empty
 func TestXiangqiCapturedSummary_StartPositionEmpty(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()

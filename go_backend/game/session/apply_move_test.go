@@ -1,3 +1,6 @@
+// CM3070 FP code
+// apply_move_test.go - tests for apply move
+
 package session
 
 import (
@@ -5,8 +8,10 @@ import (
 	"testing"
 )
 
+// initial chess pieces for the game
 var initialChessPieces = append([]pieces.ChessPiece(nil), pieces.ChessPieces...)
 
+// resetChessPieces - resets chess pieces
 func resetChessPieces() {
 	pieces.ChessPieces = append([]pieces.ChessPiece(nil), initialChessPieces...)
 	moveHistory = nil
@@ -17,6 +22,7 @@ func resetChessPieces() {
 	resetGameSessionForTest()
 }
 
+// pieceAt - returns piece at
 func pieceAt(file, rank int) (pieces.ChessPiece, bool) {
 	for _, p := range pieces.ChessPieces {
 		if p.File == file && p.Rank == rank {
@@ -26,6 +32,7 @@ func pieceAt(file, rank int) (pieces.ChessPiece, bool) {
 	return pieces.ChessPiece{}, false
 }
 
+// TestApplyMoveByCommand_BlackPawnDoubleStep_UCIRejectedOnWhiteTurn - checks apply move by command black pawn double step uci rejected on white turn
 func TestApplyMoveByCommand_BlackPawnDoubleStep_UCIRejectedOnWhiteTurn(t *testing.T) {
 	resetChessPieces()
 
@@ -34,6 +41,7 @@ func TestApplyMoveByCommand_BlackPawnDoubleStep_UCIRejectedOnWhiteTurn(t *testin
 	}
 }
 
+// TestApplyMoveByCommand_BlackPawnDoubleStep_SANAfterWhiteMove - checks apply move by command black pawn double step san after white move
 func TestApplyMoveByCommand_BlackPawnDoubleStep_SANAfterWhiteMove(t *testing.T) {
 	resetChessPieces()
 
@@ -58,6 +66,7 @@ func TestApplyMoveByCommand_BlackPawnDoubleStep_SANAfterWhiteMove(t *testing.T) 
 	}
 }
 
+// TestApplyMoveByCommand_BlackPawnDoubleStep_SANFromInitialPositionRejected - checks apply move by command black pawn double step san from initial position rejected
 func TestApplyMoveByCommand_BlackPawnDoubleStep_SANFromInitialPositionRejected(t *testing.T) {
 	resetChessPieces()
 
@@ -66,6 +75,7 @@ func TestApplyMoveByCommand_BlackPawnDoubleStep_SANFromInitialPositionRejected(t
 	}
 }
 
+// TestApplyMoveByCommand_QueenStrategy - checks apply move by command queen strategy
 func TestApplyMoveByCommand_QueenStrategy(t *testing.T) {
 	resetChessPieces()
 
@@ -94,6 +104,7 @@ func TestApplyMoveByCommand_QueenStrategy(t *testing.T) {
 	}
 }
 
+// TestApplyMoveByCommand_KnightStrategy - checks apply move by command knight strategy
 func TestApplyMoveByCommand_KnightStrategy(t *testing.T) {
 	resetChessPieces()
 
@@ -113,6 +124,7 @@ func TestApplyMoveByCommand_KnightStrategy(t *testing.T) {
 	}
 }
 
+// TestApplyMoveByCommand_SANQueenCapture_Qxd3 - checks apply move by command san queen capture qxd3
 func TestApplyMoveByCommand_SANQueenCapture_Qxd3(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.Queen, File: 4, Rank: 5}, // Qd5
@@ -134,6 +146,7 @@ func TestApplyMoveByCommand_SANQueenCapture_Qxd3(t *testing.T) {
 	}
 }
 
+// TestApplyMoveByCommand_SANPawnCapture_Pxd4 - checks apply move by command san pawn capture pxd4
 func TestApplyMoveByCommand_SANPawnCapture_Pxd4(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.Black, Kind: pieces.Pawn, File: 5, Rank: 5}, // pe5
@@ -155,6 +168,7 @@ func TestApplyMoveByCommand_SANPawnCapture_Pxd4(t *testing.T) {
 	}
 }
 
+// TestApplyMoveByCommand_EnPassant_UCI - checks apply move by command en passant uci
 func TestApplyMoveByCommand_EnPassant_UCI(t *testing.T) {
 	resetChessPieces()
 
@@ -188,6 +202,7 @@ func TestApplyMoveByCommand_EnPassant_UCI(t *testing.T) {
 	}
 }
 
+// TestApplyMoveByCommand_PawnPromotion_Queen - checks apply move by command pawn promotion queen
 func TestApplyMoveByCommand_PawnPromotion_Queen(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.Pawn, ImgFile: "pic/chess_pic/pawn_light.png", File: 5, Rank: 7}, // e7
@@ -215,6 +230,7 @@ func TestApplyMoveByCommand_PawnPromotion_Queen(t *testing.T) {
 	}
 }
 
+// TestApplyMoveByCommand_PawnUnderpromotion_Knight - checks apply move by command pawn underpromotion knight
 func TestApplyMoveByCommand_PawnUnderpromotion_Knight(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.Black, Kind: pieces.Pawn, ImgFile: "pic/chess_pic/pawn_dark.png", File: 1, Rank: 2}, // a2
@@ -242,6 +258,7 @@ func TestApplyMoveByCommand_PawnUnderpromotion_Knight(t *testing.T) {
 	}
 }
 
+// TestApplyMoveByCommand_PawnPromotion_SAN - checks apply move by command pawn promotion san
 func TestApplyMoveByCommand_PawnPromotion_SAN(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.Pawn, ImgFile: "pic/chess_pic/pawn_light.png", File: 5, Rank: 7}, // e7
@@ -263,6 +280,7 @@ func TestApplyMoveByCommand_PawnPromotion_SAN(t *testing.T) {
 	}
 }
 
+// TestApplyMoveByCommand_PawnPromotion_SANWithoutEquals - checks apply move by command pawn promotion san without equals
 func TestApplyMoveByCommand_PawnPromotion_SANWithoutEquals(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.Pawn, ImgFile: "pic/chess_pic/pawn_light.png", File: 5, Rank: 7}, // e7
@@ -279,6 +297,7 @@ func TestApplyMoveByCommand_PawnPromotion_SANWithoutEquals(t *testing.T) {
 	}
 }
 
+// TestApplyMoveByCommand_PawnPromotion_StockfishUppercase - checks apply move by command pawn promotion stockfish uppercase
 func TestApplyMoveByCommand_PawnPromotion_StockfishUppercase(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.Pawn, ImgFile: "pic/chess_pic/pawn_light.png", File: 5, Rank: 7}, // e7
@@ -295,6 +314,7 @@ func TestApplyMoveByCommand_PawnPromotion_StockfishUppercase(t *testing.T) {
 	}
 }
 
+// TestApplyMoveByCommand_CastlingKingSide_UCI - checks apply move by command castling king side uci
 func TestApplyMoveByCommand_CastlingKingSide_UCI(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 5, Rank: 1},
@@ -322,6 +342,7 @@ func TestApplyMoveByCommand_CastlingKingSide_UCI(t *testing.T) {
 	}
 }
 
+// TestApplyMoveByCommand_CastlingQueenSide_SAN - checks apply move by command castling queen side san
 func TestApplyMoveByCommand_CastlingQueenSide_SAN(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 5, Rank: 1},
@@ -349,6 +370,7 @@ func TestApplyMoveByCommand_CastlingQueenSide_SAN(t *testing.T) {
 	}
 }
 
+// TestApplyMoveByCommand_RejectsMoveLeavingOwnKingInCheck - checks apply move by command rejects move leaving own king in check
 func TestApplyMoveByCommand_RejectsMoveLeavingOwnKingInCheck(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 5, Rank: 1}, // Ke1
@@ -364,6 +386,7 @@ func TestApplyMoveByCommand_RejectsMoveLeavingOwnKingInCheck(t *testing.T) {
 	}
 }
 
+// TestApplyMoveByCommand_CheckedSideLabel_AfterCheckingMove - checks apply move by command checked side label after checking move
 func TestApplyMoveByCommand_CheckedSideLabel_AfterCheckingMove(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 1, Rank: 1}, // Ka1
@@ -381,6 +404,7 @@ func TestApplyMoveByCommand_CheckedSideLabel_AfterCheckingMove(t *testing.T) {
 	}
 }
 
+// TestApplyMoveByCommand_CastlingThroughAttackedSquareRejected - checks apply move by command castling through attacked square rejected
 func TestApplyMoveByCommand_CastlingThroughAttackedSquareRejected(t *testing.T) {
 	pieces.ChessPieces = []pieces.ChessPiece{
 		{Color: pieces.White, Kind: pieces.King, ImgFile: "pic/chess_pic/king_light.png", File: 5, Rank: 1}, // Ke1

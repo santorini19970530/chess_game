@@ -3,7 +3,7 @@
 
 package movement
 
-// KnightStrategy handles knight movement rules
+// knightStrategy handles knight movement rules
 type KnightStrategy struct{}
 
 // Name - returns the name of the knight strategy

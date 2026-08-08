@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_move_test.go - tests for shogi move
+
 package session
 
 import (
@@ -5,6 +8,7 @@ import (
 	"testing"
 )
 
+// TestShogiHumanMove_PawnAdvances - checks shogi human move pawn advances
 func TestShogiHumanMove_PawnAdvances(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -28,6 +32,7 @@ func TestShogiHumanMove_PawnAdvances(t *testing.T) {
 	}
 }
 
+// TestShogiHumanMove_IllegalRejected - checks shogi human move illegal rejected
 func TestShogiHumanMove_IllegalRejected(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -45,6 +50,7 @@ func TestShogiHumanMove_IllegalRejected(t *testing.T) {
 	}
 }
 
+// TestShogiCapture_GoesToHand - checks shogi capture goes to hand
 func TestShogiCapture_GoesToHand(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -67,6 +73,7 @@ func TestShogiCapture_GoesToHand(t *testing.T) {
 	}
 }
 
+// TestShogiDrop_FromHand - checks shogi drop from hand
 func TestShogiDrop_FromHand(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -104,6 +111,7 @@ func TestShogiDrop_FromHand(t *testing.T) {
 	}
 }
 
+// TestShogiDrop_NifuRejected - checks shogi drop nifu rejected
 func TestShogiDrop_NifuRejected(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -125,6 +133,7 @@ func TestShogiDrop_NifuRejected(t *testing.T) {
 	}
 }
 
+// TestShogiPromotion_AutoOnLastRank - checks shogi promotion auto on last rank
 func TestShogiPromotion_AutoOnLastRank(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -154,6 +163,7 @@ func TestShogiPromotion_AutoOnLastRank(t *testing.T) {
 	}
 }
 
+// TestShogiPromotion_OptionalWithPlus - checks shogi promotion optional with plus
 func TestShogiPromotion_OptionalWithPlus(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -187,6 +197,7 @@ func TestShogiPromotion_OptionalWithPlus(t *testing.T) {
 	}
 }
 
+// TestShogiLegalMoves_IncludesDrops - checks shogi legal moves includes drops
 func TestShogiLegalMoves_IncludesDrops(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()

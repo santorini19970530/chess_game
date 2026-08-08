@@ -10,41 +10,46 @@ import (
 	"net/http"
 )
 
-// Handler is the root handler type
+// root handler type
 type Handler struct{}
 
-// Page stores a page title and page body content
+// webpage title and body content
 type Page struct {
 	Title string
 	Body  []byte
 }
 
-// NewHandler returns a Handler instance
+// NewHandler - returns a Handler instance
 func NewHandler() *Handler {
 	return &Handler{}
 }
 
-// renderTemplate parses and executes a local html template
+// renderTemplate - parses and executes a local html template
 func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 	t, err := template.ParseFiles(tmpl + ".html")
+
 	if err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		log.Printf("template parse error for %s: %v", tmpl, err)
 		return
 	}
+
 	if err := t.Execute(w, p); err != nil {
 		http.Error(w, "Template render error", http.StatusInternalServerError)
 		log.Printf("template execute error for %s: %v", tmpl, err)
 	}
 }
 
+// gameIDLabel - returns game id label
 func gameIDLabel(gameID string) string {
 	if gameID == "" {
 		return "[Game ID: unknown]"
 	}
+
 	return "[Game ID: " + gameID + "]"
 }
 
+// writeJSONError - writes a json error payload with the given status
 func writeJSONError(w http.ResponseWriter, statusCode int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)

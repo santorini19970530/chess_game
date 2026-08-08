@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_move_test.go - tests for xiangqi move
+
 package session
 
 import (
@@ -5,6 +8,7 @@ import (
 	"testing"
 )
 
+// TestXiangqiHumanMove_LegalUpdatesFENAndHistory - checks xiangqi human move legal updates fen and history
 func TestXiangqiHumanMove_LegalUpdatesFENAndHistory(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -54,6 +58,7 @@ func TestXiangqiHumanMove_LegalUpdatesFENAndHistory(t *testing.T) {
 	}
 }
 
+// TestXiangqiHumanMove_IllegalRejected - checks xiangqi human move illegal rejected
 func TestXiangqiHumanMove_IllegalRejected(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -76,6 +81,7 @@ func TestXiangqiHumanMove_IllegalRejected(t *testing.T) {
 	}
 }
 
+// TestXiangqiHumanMove_Rank10Notation - checks xiangqi human move rank10 notation
 func TestXiangqiHumanMove_Rank10Notation(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()

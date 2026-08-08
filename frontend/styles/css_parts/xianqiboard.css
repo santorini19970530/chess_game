@@ -1,8 +1,5 @@
-/*
- * Xiangqi: real point geometry inside an inset field.
- * Outer points sit on the line frame; padding around the field absorbs piece overhang
- * (junction pieces would otherwise clip at top/bottom/side ranks & files).
- */
+/* xianqiboard.css - .chess_board_wrapper[data-game-type=xianqi] point board + labels (board SSR) */
+/* pad around the line field absorbs piece overhang at edge junctions */
 
 .chess_board_wrapper[data-game-type="xianqi"] {
   --xq-line: #2b1a0e;
@@ -121,11 +118,27 @@
   background: var(--xq-line);
 }
 
+/* xianqi_palace - X via corner gradients (cross at e2 / e9) */
 .chess_board_wrapper[data-game-type="xianqi"] .xianqi_palace {
   position: absolute;
   width: calc(100% * 2 / 8);
   height: calc(100% * 2 / 9);
   pointer-events: none;
+  background:
+    linear-gradient(
+      to top left,
+      transparent calc(50% - 1px),
+      var(--xq-line) calc(50% - 1px),
+      var(--xq-line) calc(50% + 1px),
+      transparent calc(50% + 1px)
+    ),
+    linear-gradient(
+      to top right,
+      transparent calc(50% - 1px),
+      var(--xq-line) calc(50% - 1px),
+      var(--xq-line) calc(50% + 1px),
+      transparent calc(50% + 1px)
+    );
 }
 
 .chess_board_wrapper[data-game-type="xianqi"] .xianqi_palace_top {
@@ -136,28 +149,6 @@
 .chess_board_wrapper[data-game-type="xianqi"] .xianqi_palace_bottom {
   left: calc(100% * 3 / 8);
   top: calc(100% * 7 / 9);
-}
-
-.chess_board_wrapper[data-game-type="xianqi"] .xianqi_palace::before,
-.chess_board_wrapper[data-game-type="xianqi"] .xianqi_palace::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  width: 141.421%;
-  height: 2px;
-  background: var(--xq-line);
-}
-
-.chess_board_wrapper[data-game-type="xianqi"] .xianqi_palace::before {
-  top: 0;
-  transform: rotate(45deg);
-  transform-origin: 0 0;
-}
-
-.chess_board_wrapper[data-game-type="xianqi"] .xianqi_palace::after {
-  bottom: 0;
-  transform: rotate(-45deg);
-  transform-origin: 0 100%;
 }
 
 .chess_board_wrapper[data-game-type="xianqi"] .xianqi_points {

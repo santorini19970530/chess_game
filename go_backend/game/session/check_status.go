@@ -8,6 +8,7 @@ import (
 	pieces "go_backend/game/piece"
 )
 
+// game outcome for the game
 type GameOutcome struct {
 	Status      string `json:"status"`
 	Winner      string `json:"winner,omitempty"`
@@ -17,18 +18,19 @@ type GameOutcome struct {
 	Message     string `json:"message,omitempty"`
 }
 
-// CheckedSideColor returns the color currently in check.
+// CheckedSideColor - returns the color currently in check for the game
 func CheckedSideColor() pieces.PieceColor {
 	return engine.CheckedColor()
 }
 
-// CheckedSideLabel returns "white", "black", or "".
+// CheckedSideLabel - returns "white", "black", or ""
 func CheckedSideLabel() string {
 	return string(CheckedSideColor())
 }
 
+// EvaluateGameOutcome - evaluates checkmate, stalemate, and draw outcomes for chess
 func EvaluateGameOutcome() GameOutcome {
-	// Safety check: if either side has no king left, the game is over
+	// safety check: if either side has no king left, the game is over
 	whiteKings := 0
 	blackKings := 0
 	for _, p := range pieces.ChessPieces {
@@ -124,6 +126,7 @@ func EvaluateGameOutcome() GameOutcome {
 	}
 }
 
+// countLegalMoves - counts legal moves
 func countLegalMoves(color pieces.PieceColor) int {
 	total := 0
 	for _, p := range pieces.ChessPieces {
@@ -135,10 +138,12 @@ func countLegalMoves(color pieces.PieceColor) int {
 	return total
 }
 
+// pieceLegalMoveCount - returns piece legal move count
 func pieceLegalMoveCount(sourcePiece pieces.ChessPiece) int {
 	return len(pieceLegalDestinations(sourcePiece))
 }
 
+// opponentOf - performs opponent of
 func opponentOf(color pieces.PieceColor) pieces.PieceColor {
 	if color == pieces.White {
 		return pieces.Black
@@ -146,6 +151,7 @@ func opponentOf(color pieces.PieceColor) pieces.PieceColor {
 	return pieces.White
 }
 
+// sideLabel - returns side label
 func sideLabel(color pieces.PieceColor) string {
 	if color == pieces.Black {
 		return "Black"

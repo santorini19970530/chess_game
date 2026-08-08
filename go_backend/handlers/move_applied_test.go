@@ -1,3 +1,6 @@
+// CM3070 FP code
+// move_applied_test.go - tests for move applied
+
 package handlers
 
 import (
@@ -6,6 +9,7 @@ import (
 	sessionpkg "go_backend/game/session"
 )
 
+// TestMoveAppliedPayload_IncludesCaptureFlag - checks move applied payload includes capture flag
 func TestMoveAppliedPayload_IncludesCaptureFlag(t *testing.T) {
 	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "intermediate")
 	if err != nil {

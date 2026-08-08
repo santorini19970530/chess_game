@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_legal.go - shogi legal move enumeration for the session
+
 package session
 
 import (
@@ -7,6 +10,7 @@ import (
 	pieces "go_backend/game/piece"
 )
 
+// shogiLegalDestinationsForSquare - performs shogi legal destinations for square
 func shogiLegalDestinationsForSquare(file, rank int) ([]LegalDestination, error) {
 	sourcePiece, found := getPieceAt(file, rank)
 	if !found {
@@ -35,6 +39,7 @@ func shogiLegalDestinationsForSquare(file, rank int) ([]LegalDestination, error)
 	return out, nil
 }
 
+// shogiAllLegalUCIMoves - performs shogi all legal uci moves
 func shogiAllLegalUCIMoves() ([]string, error) {
 	side := CurrentTurnColor()
 	out := make([]string, 0, 128)
@@ -64,6 +69,7 @@ func shogiAllLegalUCIMoves() ([]string, error) {
 	return out, nil
 }
 
+// shogiAllLegalDrops - returns shogi all legal drops
 func shogiAllLegalDrops(side pieces.PieceColor) []string {
 	hand := shogiHandMap(side)
 	if len(hand) == 0 {
@@ -83,13 +89,14 @@ func shogiAllLegalDrops(side pieces.PieceColor) []string {
 			if dropCh >= 'A' && dropCh <= 'Z' {
 				dropCh += 'a' - 'A'
 			}
-			// Lowercase so handlers.normalizeUCI matches engine candidates.
+			// lowercase so handlers.normalizeUCI matches engine candidates.
 			out = append(out, fmt.Sprintf("%c*%c%d", dropCh, byte('a'+d.File-1), d.Rank))
 		}
 	}
 	return out
 }
 
+// shogiLegalDropDestinations - returns shogi legal drop destinations
 func shogiLegalDropDestinations(kind pieces.PieceKind, side pieces.PieceColor) []LegalDestination {
 	out := make([]LegalDestination, 0, 32)
 	for file := 1; file <= 9; file++ {
@@ -103,6 +110,7 @@ func shogiLegalDropDestinations(kind pieces.PieceKind, side pieces.PieceColor) [
 	return out
 }
 
+// formatShogiBoardUCI - formats shogi board uci
 func formatShogiBoardUCI(fromFile, fromRank, toFile, toRank int) string {
 	return fmt.Sprintf("%c%d%c%d", byte('a'+fromFile-1), fromRank, byte('a'+toFile-1), toRank)
 }

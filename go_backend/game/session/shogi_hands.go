@@ -1,7 +1,11 @@
+// CM3070 FP code
+// shogi_hands.go - shogi hand / drop piece state helpers
+
 package session
 
 import pieces "go_backend/game/piece"
 
+// shogiHandMap - returns shogi hand map
 func shogiHandMap(color pieces.PieceColor) map[pieces.PieceKind]int {
 	if color == pieces.Black {
 		return shogiHands.black
@@ -9,6 +13,7 @@ func shogiHandMap(color pieces.PieceColor) map[pieces.PieceKind]int {
 	return shogiHands.white
 }
 
+// shogiAddToHand - performs shogi add to hand
 func shogiAddToHand(color pieces.PieceColor, kind pieces.PieceKind) {
 	base := shogiUnpromoteForHand(kind)
 	if base == pieces.King || base == "" {
@@ -18,6 +23,7 @@ func shogiAddToHand(color pieces.PieceColor, kind pieces.PieceKind) {
 	m[base]++
 }
 
+// shogiTakeFromHand - reports shogi take from hand
 func shogiTakeFromHand(color pieces.PieceColor, kind pieces.PieceKind) bool {
 	m := shogiHandMap(color)
 	if m[kind] <= 0 {
@@ -30,11 +36,12 @@ func shogiTakeFromHand(color pieces.PieceColor, kind pieces.PieceKind) bool {
 	return true
 }
 
+// shogiHandCount - returns shogi hand count
 func shogiHandCount(color pieces.PieceColor, kind pieces.PieceKind) int {
 	return shogiHandMap(color)[kind]
 }
 
-// Captured promoted pieces return to hand as their unpromoted form.
+// shogiUnpromoteForHand - captured promoted pieces return to hand as their unpromoted form
 func shogiUnpromoteForHand(kind pieces.PieceKind) pieces.PieceKind {
 	switch kind {
 	case pieces.PromotedPawn:
@@ -56,6 +63,7 @@ func shogiUnpromoteForHand(kind pieces.PieceKind) pieces.PieceKind {
 	}
 }
 
+// shogiHandsSummary - performs shogi hands summary
 func shogiHandsSummary() CapturedSummary {
 	toMap := func(src map[pieces.PieceKind]int) map[string]int {
 		out := map[string]int{}
@@ -72,7 +80,7 @@ func shogiHandsSummary() CapturedSummary {
 	}
 }
 
-// shogiHasUnpromotedPawnOnFile reports nifu risk for a pawn drop on file.
+// shogiHasUnpromotedPawnOnFile - reports nifu risk for a pawn drop on file
 func shogiHasUnpromotedPawnOnFile(color pieces.PieceColor, file int) bool {
 	for _, p := range pieces.ChessPieces {
 		if p.Color == color && p.Kind == pieces.Pawn && p.File == file {

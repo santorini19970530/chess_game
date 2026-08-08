@@ -1,3 +1,6 @@
+// CM3070 FP code
+// shogi_fen.go - shogi fen import and export for the session
+
 package session
 
 import (
@@ -8,8 +11,8 @@ import (
 	pieces "go_backend/game/piece"
 )
 
-// DefaultShogiStartFEN is the standard Shogi start (Fairy-Stockfish compatible).
-// Hands sit in [] on the placement field; empty at start.
+// defaultShogiStartFEN is the standard Shogi start (Fairy-Stockfish compatible).
+// hands sit in [] on the placement field; empty at start.
 const DefaultShogiStartFEN = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL[] w - - 0 1"
 
 // shogiHands tracks captured pieces available to drop (relife inventory).
@@ -23,6 +26,7 @@ type shogiHandState struct {
 	black map[pieces.PieceKind]int
 }
 
+// resetShogiHands - resets shogi hands
 func resetShogiHands() {
 	shogiHands = shogiHandState{
 		white: map[pieces.PieceKind]int{},
@@ -30,7 +34,7 @@ func resetShogiHands() {
 	}
 }
 
-// applyShogiFENToCurrentGlobals sets board, hands, side-to-move, and BoardFEN.
+// applyShogiFENToCurrentGlobals - sets board, hands, side-to-move, and BoardFEN
 func applyShogiFENToCurrentGlobals(fen string) error {
 	parts := strings.Fields(strings.TrimSpace(fen))
 	if len(parts) < 2 {
@@ -61,6 +65,7 @@ func applyShogiFENToCurrentGlobals(fen string) error {
 	return nil
 }
 
+// splitShogiPlacementAndHands - splits shogi placement and hands
 func splitShogiPlacementAndHands(raw string) (placement, hands string) {
 	raw = strings.TrimSpace(raw)
 	if i := strings.IndexByte(raw, '['); i >= 0 {
@@ -74,6 +79,7 @@ func splitShogiPlacementAndHands(raw string) (placement, hands string) {
 	return raw, ""
 }
 
+// parseShogiFENBoard - parses shogi fen board
 func parseShogiFENBoard(boardPart string) ([]pieces.ChessPiece, error) {
 	ranks := strings.Split(boardPart, "/")
 	if len(ranks) != 9 {
@@ -122,6 +128,7 @@ func parseShogiFENBoard(boardPart string) ([]pieces.ChessPiece, error) {
 	return out, nil
 }
 
+// shogiPieceFromChar - performs shogi piece from char
 func shogiPieceFromChar(ch rune, promoted bool) (pieces.PieceKind, pieces.PieceColor, bool) {
 	color := pieces.White
 	if unicode.IsLower(ch) {
@@ -168,6 +175,7 @@ func shogiPieceFromChar(ch rune, promoted bool) (pieces.PieceKind, pieces.PieceC
 	}
 }
 
+// shogiCharFromPiece - performs shogi char from piece
 func shogiCharFromPiece(kind pieces.PieceKind, color pieces.PieceColor) (string, bool) {
 	var base byte
 	promoted := false
@@ -212,6 +220,7 @@ func shogiCharFromPiece(kind pieces.PieceKind, color pieces.PieceColor) (string,
 	return string(base), true
 }
 
+// parseShogiHands - parses shogi hands
 func parseShogiHands(handText string) (shogiHandState, error) {
 	out := shogiHandState{
 		white: map[pieces.PieceKind]int{},
@@ -234,6 +243,7 @@ func parseShogiHands(handText string) (shogiHandState, error) {
 	return out, nil
 }
 
+// exportShogiHands - exports shogi hands
 func exportShogiHands() string {
 	order := []pieces.PieceKind{
 		pieces.Rook, pieces.Bishop, pieces.Gold, pieces.Silver,
@@ -259,7 +269,7 @@ func exportShogiHands() string {
 	return b.String()
 }
 
-// exportShogiFEN builds FEN from current pieces, hands, and side to move.
+// exportShogiFEN - builds FEN from current pieces, hands, and side to move
 func exportShogiFEN() string {
 	type cell struct {
 		kind  pieces.PieceKind
@@ -309,11 +319,12 @@ func exportShogiFEN() string {
 	return fmt.Sprintf("%s %s - - 0 %d", placement.String(), active, fullmove)
 }
 
+// syncShogiBoardFEN - syncs shogi board fen
 func syncShogiBoardFEN() {
 	boardFEN = exportShogiFEN()
 }
 
-// looksLikeShogiFEN: Shogi boards have 9 ranks (8 '/' separators in the placement field).
+// looksLikeShogiFEN - shogi boards have 9 ranks (8 '/' separators in the placement field)
 func looksLikeShogiFEN(fen string) bool {
 	parts := strings.Fields(strings.TrimSpace(fen))
 	if len(parts) == 0 {

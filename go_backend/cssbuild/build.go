@@ -1,3 +1,6 @@
+// CM3070 FP code
+// build.go - builds and writes bundled frontend css
+
 package cssbuild
 
 import (
@@ -9,10 +12,10 @@ import (
 	"time"
 )
 
+// global mutex for the css build
 var buildMu sync.Mutex
 
-// EnsureStyleCSS rebuilds style.css from input.css when input or any imported
-// partial under the same styles directory is newer than the output.
+// EnsureStyleCSS - rebuilds style.css from input.css when input or any imported partial under the same styles directory is newer than the output
 func EnsureStyleCSS(inputPath, outputPath, tailwindPath string) error {
 	buildMu.Lock()
 	defer buildMu.Unlock()
@@ -28,7 +31,7 @@ func EnsureStyleCSS(inputPath, outputPath, tailwindPath string) error {
 	}
 
 	cmd := exec.Command(tailwindPath, "-i", inputPath, "-o", outputPath)
-	cmd.Dir = filepath.Dir(inputPath)
+	cmd.Dir = tailwindProjectRoot(inputPath)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		log.Printf("tailwind build failed: %v\n%s", err, out)
 		return err
@@ -38,6 +41,12 @@ func EnsureStyleCSS(inputPath, outputPath, tailwindPath string) error {
 	return nil
 }
 
+// tailwindProjectRoot - chess_game/ from styles/input.css (Tailwind v4 content scan cwd)
+func tailwindProjectRoot(inputPath string) string {
+	return filepath.Clean(filepath.Join(filepath.Dir(inputPath), "..", ".."))
+}
+
+// newestCSSSourceTime - performs newest css source time
 func newestCSSSourceTime(inputPath string) (time.Time, error) {
 	info, err := os.Stat(inputPath)
 	if err != nil {

@@ -3,7 +3,7 @@
 
 package movement
 
-// RookStrategy handles rook movement rules.
+// rookStrategy handles rook movement rules
 type RookStrategy struct{}
 
 // Name - returns the name of the rook strategy

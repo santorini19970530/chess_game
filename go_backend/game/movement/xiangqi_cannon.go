@@ -1,10 +1,15 @@
+// CM3070 FP code
+// xiangqi_cannon.go - implements the xiangqi cannon movement strategy
+
 package movement
 
-// XiangqiCannonStrategy — slides like a chariot; captures only by jumping exactly one screen.
+// xiangqiCannonStrategy - slides like a chariot; captures only by jumping exactly one screen
 type XiangqiCannonStrategy struct{}
 
+// Name - returns the piece strategy name
 func (XiangqiCannonStrategy) Name() string { return "XiangqiCannon" }
 
+// LegalMoves - returns legal destinations for this piece from the square
 func (XiangqiCannonStrategy) LegalMoves(board any, from any) []any {
 	ctx, ok := board.(MovementBoard)
 	if !ok {

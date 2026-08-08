@@ -1,0 +1,327 @@
+// CM3070 FP code
+// select.go - selects an ai move via the strategy chain
+
+package aimove
+
+import (
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+
+	"go_backend/game/engine"
+	sessionpkg "go_backend/game/session"
+)
+
+// mapping of side to fairy stockfish engine
+var (
+	fsEngines  = map[string]*engine.FairyStockfish{}
+	fsEngineMu sync.Mutex
+)
+
+// UseFairyStockfish - reports whether the Go UCI path should be used (env flag)
+func UseFairyStockfish() bool {
+	return strings.EqualFold(os.Getenv("USE_FAIRY_STOCKFISH"), "true") ||
+		strings.EqualFold(os.Getenv("USE_FAIRY_STOCKFISH"), "1")
+}
+
+// fairyStockfishBinary - resolves the path to the stockfish binary. default: relative to this module's parent (py_analyser/...)
+func fairyStockfishBinary() string {
+	if p := os.Getenv("FAIRY_STOCKFISH_PATH"); p != "" {
+		return p
+	}
+	// fallback default used in the project layout
+	return filepath.Join("..", "py_analyser", "Fairy-Stockfish-fairy_sf_14", "src", "stockfish")
+}
+
+// GetFairyStockfish - returns a started engine instance for one side (white|black)
+func GetFairyStockfish(side string) (*engine.FairyStockfish, error) {
+	key := strings.ToLower(strings.TrimSpace(side))
+	if key != "black" {
+		key = "white"
+	}
+
+	fsEngineMu.Lock()
+	defer fsEngineMu.Unlock()
+
+	if fs, ok := fsEngines[key]; ok && fs != nil && fs.IsRunning() {
+		return fs, nil
+	}
+	if fs, ok := fsEngines[key]; ok && fs != nil {
+		_ = fs.Close()
+		delete(fsEngines, key)
+	}
+
+	bin := fairyStockfishBinary()
+	fs, err := engine.NewFairyStockfish(bin)
+	if err != nil {
+		return nil, err
+	}
+	if err := fs.Start(); err != nil {
+		return nil, err
+	}
+	fsEngines[key] = fs
+	return fs, nil
+}
+
+// resetFairyStockfish - drops a dead/broken engine for that side and starts a new one
+func resetFairyStockfish(side string) (*engine.FairyStockfish, error) {
+	key := strings.ToLower(strings.TrimSpace(side))
+	if key != "black" {
+		key = "white"
+	}
+	fsEngineMu.Lock()
+	if fs, ok := fsEngines[key]; ok && fs != nil {
+		_ = fs.Close()
+		delete(fsEngines, key)
+	}
+	fsEngineMu.Unlock()
+	return GetFairyStockfish(side)
+}
+
+// SelectAIMove - builds move context then runs aiMoveStrategies until a go-legal move is accepted
+func SelectAIMove(gameID string) (string, error) {
+	fen, err := sessionpkg.CurrentFENByID(gameID)
+	if err != nil {
+		return "", err
+	}
+	color, err := sessionpkg.CurrentTurnColorByID(gameID)
+	if err != nil {
+		return "", err
+	}
+	history, err := sessionpkg.MoveHistoryByID(gameID)
+	if err != nil {
+		return "", err
+	}
+	snapshot, err := sessionpkg.BuildSnapshotByID(gameID)
+	if err != nil {
+		return "", err
+	}
+
+	// go rules engine is the only legality source
+	legalMoves, err := sessionpkg.AllLegalUCIMovesByID(gameID)
+	if err != nil {
+		return "", err
+	}
+	if len(legalMoves) == 0 {
+		return "", fmt.Errorf("no legal moves available")
+	}
+	sort.Strings(legalMoves)
+	gameType := string(snapshot.Game.Type)
+	if gameType == "" {
+		gameType = "chess"
+	}
+	legalByNorm := make(map[string]string, len(legalMoves))
+	for _, mv := range legalMoves {
+		legalByNorm[normalizeAIMove(gameType, mv)] = mv
+	}
+
+	ctx := &aiMoveContext{
+		GameID:       gameID,
+		FEN:          fen,
+		Side:         color,
+		GameType:     gameType,
+		Profile:      sessionpkg.ProfileForSide(snapshot.Game.Config, color),
+		AllowDegrade: snapshot.Game.Mode == sessionpkg.GameModeAIVsAI,
+		Clock:        snapshot.Game.Clock,
+		History:      history,
+		LegalMoves:   legalMoves,
+		LegalByNorm:  legalByNorm,
+	}
+	return runAIMoveStrategies(ctx)
+}
+
+// legalUCIMovesByID - collects legal uci moves for one side from piece destinations
+func legalUCIMovesByID(gameID string, pieces []sessionpkg.PieceState, side string) ([]string, error) {
+	normalizedSide := strings.ToLower(strings.TrimSpace(side))
+	seen := make(map[string]struct{}, 128)
+	for _, p := range pieces {
+		if strings.ToLower(p.Color) != normalizedSide {
+			continue
+		}
+		destinations, err := sessionpkg.LegalMovesForSquareByID(gameID, p.File, p.Rank)
+		if err != nil {
+			return nil, err
+		}
+		for _, d := range destinations {
+			uci := toUCIMove(p.File, p.Rank, d.File, d.Rank, d.RequiresPromotion)
+			if uci == "" {
+				continue
+			}
+			seen[uci] = struct{}{}
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for mv := range seen {
+		out = append(out, mv)
+	}
+	return out, nil
+}
+
+// chooseBestLegalCandidate - returns the first policy candidate that is in the legal set
+func chooseBestLegalCandidate(candidates []AIPolicyCandidate, legalSet map[string]struct{}) string {
+	for _, c := range candidates {
+		uci := normalizeAIMove("chess", c.UCI)
+		if uci == "" {
+			continue
+		}
+		if _, ok := legalSet[uci]; ok {
+			return uci
+		}
+	}
+	return ""
+}
+
+// toUCIMove - formats a chess square pair as uci, appending q when promotion is required
+func toUCIMove(fromFile, fromRank, toFile, toRank int, requiresPromotion bool) string {
+	if fromFile < 1 || fromFile > 8 || toFile < 1 || toFile > 8 || fromRank < 1 || fromRank > 8 || toRank < 1 || toRank > 8 {
+		return ""
+	}
+	move := fmt.Sprintf("%c%d%c%d", byte('a'+fromFile-1), fromRank, byte('a'+toFile-1), toRank)
+	if requiresPromotion {
+		move += "q"
+	}
+	return move
+}
+
+// normalizeUCI - trims and lowercases a raw uci string
+func normalizeUCI(raw string) string {
+	return strings.ToLower(strings.TrimSpace(raw))
+}
+
+// normalizeAIMove - lowercases UCI and maps shogi drop '@' → '*'
+func normalizeAIMove(gameType, raw string) string {
+	s := normalizeUCI(raw)
+	if (gameType == "shogi") && len(s) >= 4 && s[1] == '@' {
+		return s[:1] + "*" + s[2:]
+	}
+	return s
+}
+
+// selectMoveWithFairyStockfish - asks the local uci engine for one best move with profile/clock limits and optional degrade
+func selectMoveWithFairyStockfish(fen, profile, side string, allowDegrade bool, gameType string, clk *sessionpkg.Clock) (string, error) {
+	var lastErr error
+	chain := []string{strings.ToLower(strings.TrimSpace(profile))}
+	if chain[0] == "" {
+		chain[0] = "intermediate"
+	}
+	if allowDegrade {
+		chain = fsProfileFallbackChain(profile)
+	}
+	for _, p := range chain {
+		limit := FsLimitForGame(p, clk, side)
+		for attempt := 1; attempt <= 3; attempt++ {
+			fs, err := GetFairyStockfish(side)
+			if err != nil {
+				lastErr = err
+				_, _ = resetFairyStockfish(side)
+				continue
+			}
+			if err := fs.SetVariant(gameType); err != nil {
+				lastErr = err
+				_, _ = resetFairyStockfish(side)
+				continue
+			}
+			if err := fs.SetStrengthProfile(p); err != nil {
+				lastErr = err
+				_, _ = resetFairyStockfish(side)
+				continue
+			}
+			move, err := fs.BestMove(fen, limit)
+			if err == nil && strings.TrimSpace(move) != "" {
+				if allowDegrade && (p != strings.ToLower(strings.TrimSpace(profile)) || attempt > 1) {
+					log.Printf("fairy-stockfish recovered side=%s profile=%s attempt=%d (requested=%s)",
+						side, p, attempt, profile)
+				}
+				return move, nil
+			}
+			lastErr = err
+			_, _ = resetFairyStockfish(side)
+		}
+		if allowDegrade {
+			log.Printf("fairy-stockfish giving up profile=%s for side=%s; trying weaker profile", p, side)
+		}
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("fairy-stockfish unavailable")
+	}
+	return "", lastErr
+}
+
+// fsProfileFallbackChain - returns strength profiles from the requested level down to beginner
+func fsProfileFallbackChain(profile string) []string {
+	order := []string{"master", "advanced", "intermediate", "beginner"}
+	start := strings.ToLower(strings.TrimSpace(profile))
+	idx := 0
+	for i, p := range order {
+		if p == start {
+			idx = i
+			break
+		}
+	}
+	return order[idx:]
+}
+
+// fsLimitForProfile - maps a strength profile to depth and movetime limits
+func fsLimitForProfile(profile string) engine.Limit {
+	limit := engine.Limit{Depth: 8, MoveTime: 600 * time.Millisecond}
+	switch strings.ToLower(strings.TrimSpace(profile)) {
+	case "beginner":
+		limit.Depth = 3
+		limit.MoveTime = 250 * time.Millisecond
+	case "intermediate":
+		limit.Depth = 8
+		limit.MoveTime = 600 * time.Millisecond
+	case "advanced":
+		limit.Depth = 14
+		limit.MoveTime = 1000 * time.Millisecond
+	case "master":
+		limit.Depth = 20
+		limit.MoveTime = 1200 * time.Millisecond
+	}
+	return limit
+}
+
+// fsLimitForGame - clock off → profile movetime only; clock on → wtime/btime/inc + capped movetime
+func FsLimitForGame(profile string, clk *sessionpkg.Clock, side string) engine.Limit {
+	limit := fsLimitForProfile(profile)
+	if clk == nil || !clk.Enabled {
+		return limit
+	}
+	limit.WhiteTime = time.Duration(clk.WhiteRemainingMs) * time.Millisecond
+	limit.BlackTime = time.Duration(clk.BlackRemainingMs) * time.Millisecond
+	inc := time.Duration(clk.IncrementMs) * time.Millisecond
+	limit.WhiteInc = inc
+	limit.BlackInc = inc
+
+	remMs := clk.Remaining(side)
+	if remMs <= 0 {
+		limit.MoveTime = 50 * time.Millisecond
+		return limit
+	}
+	rem := time.Duration(remMs) * time.Millisecond
+	slice := rem / 20
+	if slice < 50*time.Millisecond {
+		slice = 50 * time.Millisecond
+	}
+	if slice < limit.MoveTime {
+		limit.MoveTime = slice
+	}
+	if limit.MoveTime > rem {
+		limit.MoveTime = rem
+	}
+	return limit
+}
+
+// gameIDLabel - short id for logs
+func gameIDLabel(gameID string) string {
+	id := strings.TrimSpace(gameID)
+	if id == "" {
+		return "(no-game-id)"
+	}
+	return id
+}

@@ -1,11 +1,16 @@
+// CM3070 FP code
+// xiangqi_common.go - shared xiangqi board helpers for strategies
+
 package movement
 
 import pieces "go_backend/game/piece"
 
+// isInsideXiangqiBoard - reports whether inside xiangqi board
 func isInsideXiangqiBoard(file, rank int) bool {
 	return file >= 1 && file <= 9 && rank >= 1 && rank <= 10
 }
 
+// inXiangqiPalace - reports in xiangqi palace
 func inXiangqiPalace(file, rank int, color pieces.PieceColor) bool {
 	if file < 4 || file > 6 {
 		return false
@@ -16,7 +21,7 @@ func inXiangqiPalace(file, rank int, color pieces.PieceColor) bool {
 	return rank >= 8 && rank <= 10
 }
 
-// White river is between rank 5 and 6; white has crossed when rank >= 6.
+// xiangqiSoldierCrossedRiver - white river is between rank 5 and 6; white has crossed when rank >= 6
 func xiangqiSoldierCrossedRiver(rank int, color pieces.PieceColor) bool {
 	if color == pieces.White {
 		return rank >= 6
@@ -24,6 +29,7 @@ func xiangqiSoldierCrossedRiver(rank int, color pieces.PieceColor) bool {
 	return rank <= 5
 }
 
+// collectXiangqiSlidingMoves - collects xiangqi sliding moves
 func collectXiangqiSlidingMoves(ctx MovementBoard, src Square, directions [][2]int, capacity int) []any {
 	legal := make([]any, 0, capacity)
 	for _, dir := range directions {
@@ -46,6 +52,7 @@ func collectXiangqiSlidingMoves(ctx MovementBoard, src Square, directions [][2]i
 	return legal
 }
 
+// appendIfEnemyOrEmpty - appends if enemy or empty
 func appendIfEnemyOrEmpty(legal []any, ctx MovementBoard, file, rank int) []any {
 	if !isInsideXiangqiBoard(file, rank) {
 		return legal

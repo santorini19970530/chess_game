@@ -1,3 +1,6 @@
+// CM3070 FP code
+// build_test.go - tests for build
+
 package cssbuild
 
 import (
@@ -7,6 +10,16 @@ import (
 	"time"
 )
 
+// TestTailwindProjectRoot - styles/input.css → chess_game (not styles/)
+func TestTailwindProjectRoot(t *testing.T) {
+	got := tailwindProjectRoot(filepath.Join("chess_game", "frontend", "styles", "input.css"))
+	want := filepath.Clean(filepath.Join("chess_game"))
+	if got != want {
+		t.Fatalf("got %q want %q", got, want)
+	}
+}
+
+// TestNewestCSSSourceTime_SeesPartials - checks newest css source time sees partials
 func TestNewestCSSSourceTime_SeesPartials(t *testing.T) {
 	dir := t.TempDir()
 	input := filepath.Join(dir, "input.css")

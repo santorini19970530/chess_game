@@ -1,7 +1,11 @@
+// CM3070 FP code
+// shogi_config_test.go - tests for shogi config
+
 package session
 
 import "testing"
 
+// TestCreateGame_AllowsShogiAndSetsDefaultStartFEN - checks create game allows shogi and sets default start fen
 func TestCreateGame_AllowsShogiAndSetsDefaultStartFEN(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -18,6 +22,7 @@ func TestCreateGame_AllowsShogiAndSetsDefaultStartFEN(t *testing.T) {
 	}
 }
 
+// TestCreateGame_RejectsChessFENForShogi - checks create game rejects chess fen for shogi
 func TestCreateGame_RejectsChessFENForShogi(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -29,6 +34,7 @@ func TestCreateGame_RejectsChessFENForShogi(t *testing.T) {
 	}
 }
 
+// TestCreateGame_RejectsXiangqiFENForShogi - checks create game rejects xiangqi fen for shogi
 func TestCreateGame_RejectsXiangqiFENForShogi(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -39,6 +45,7 @@ func TestCreateGame_RejectsXiangqiFENForShogi(t *testing.T) {
 	}
 }
 
+// TestCreateGame_ShogiMaterializesStartBoard - checks create game shogi materializes start board
 func TestCreateGame_ShogiMaterializesStartBoard(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -82,6 +89,7 @@ func TestCreateGame_ShogiMaterializesStartBoard(t *testing.T) {
 	}
 }
 
+// TestUpdateGameConfigByID_AllowsShogi - checks update game config by id allows shogi
 func TestUpdateGameConfigByID_AllowsShogi(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()

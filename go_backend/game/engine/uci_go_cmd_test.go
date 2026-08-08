@@ -1,3 +1,6 @@
+// CM3070 FP code
+// uci_go_cmd_test.go - tests for uci go cmd
+
 package engine
 
 import (
@@ -6,6 +9,7 @@ import (
 	"time"
 )
 
+// TestBuildGoCmd_ClockOffUsesMovetime - checks build go cmd clock off uses movetime
 func TestBuildGoCmd_ClockOffUsesMovetime(t *testing.T) {
 	fs := &FairyStockfish{}
 	cmd := fs.buildGoCmd(Limit{Depth: 8, MoveTime: 600 * time.Millisecond})
@@ -14,6 +18,7 @@ func TestBuildGoCmd_ClockOffUsesMovetime(t *testing.T) {
 	}
 }
 
+// TestBuildGoCmd_ClockOnUsesWtimeBtimeInc - checks build go cmd clock on uses wtime btime inc
 func TestBuildGoCmd_ClockOnUsesWtimeBtimeInc(t *testing.T) {
 	fs := &FairyStockfish{}
 	cmd := fs.buildGoCmd(Limit{

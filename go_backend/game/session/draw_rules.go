@@ -5,14 +5,17 @@ package session
 
 import pieces "go_backend/game/piece"
 
+// isFiftyMoveDraw - reports whether fifty move draw
 func isFiftyMoveDraw() bool {
 	return GetHalfmoveClock() >= 100
 }
 
+// isThreefoldRepetitionDraw - reports whether threefold repetition draw
 func isThreefoldRepetitionDraw() bool {
 	return GetCurrentPositionRepetitionCount() >= 3
 }
 
+// isInsufficientMaterialDraw - reports whether insufficient material draw
 func isInsufficientMaterialDraw() bool {
 	nonKings := make([]pieces.ChessPiece, 0, len(pieces.ChessPieces))
 	for _, p := range pieces.ChessPieces {
@@ -36,6 +39,7 @@ func isInsufficientMaterialDraw() bool {
 	return false
 }
 
+// squareColor - returns square color
 func squareColor(file, rank int) int {
 	return (file + rank) % 2
 }

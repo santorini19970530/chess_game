@@ -1,7 +1,11 @@
+// CM3070 FP code
+// clock_session_test.go - tests for clock session
+
 package session
 
 import "testing"
 
+// TestCreateGame_ClockDisabledByDefault - checks create game clock disabled by default
 func TestCreateGame_ClockDisabledByDefault(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -18,6 +22,7 @@ func TestCreateGame_ClockDisabledByDefault(t *testing.T) {
 	}
 }
 
+// TestSetClockByID_AsymmetricAndStartsActiveSide - checks set clock by id asymmetric and starts active side
 func TestSetClockByID_AsymmetricAndStartsActiveSide(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
@@ -48,6 +53,7 @@ func TestSetClockByID_AsymmetricAndStartsActiveSide(t *testing.T) {
 	}
 }
 
+// TestClockSidesFromHumanAI - checks clock sides from human ai
 func TestClockSidesFromHumanAI(t *testing.T) {
 	w, b := ClockSidesFromHumanAI("white", 300_000, 60_000)
 	if w != 300_000 || b != 60_000 {
@@ -59,6 +65,7 @@ func TestClockSidesFromHumanAI(t *testing.T) {
 	}
 }
 
+// TestSetClockByID_Disable - checks set clock by id disable
 func TestSetClockByID_Disable(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()

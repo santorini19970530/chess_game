@@ -1,3 +1,6 @@
+// CM3070 FP code
+// api_clock_expose_test.go - tests for api clock expose
+
 package handlers
 
 import (
@@ -11,6 +14,7 @@ import (
 	sessionpkg "go_backend/game/session"
 )
 
+// TestAPIGameGet_SettlesClockRemaining - checks api game get settles clock remaining
 func TestAPIGameGet_SettlesClockRemaining(t *testing.T) {
 	h := NewHandler()
 	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "")
@@ -44,6 +48,7 @@ func TestAPIGameGet_SettlesClockRemaining(t *testing.T) {
 	}
 }
 
+// TestAPIGameMove_ResponseIncludesUpdatedClock - checks api game move response includes updated clock
 func TestAPIGameMove_ResponseIncludesUpdatedClock(t *testing.T) {
 	h := NewHandler()
 	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "")
@@ -83,6 +88,7 @@ func TestAPIGameMove_ResponseIncludesUpdatedClock(t *testing.T) {
 	}
 }
 
+// TestMoveAppliedPayload_IncludesClock - checks move applied payload includes clock
 func TestMoveAppliedPayload_IncludesClock(t *testing.T) {
 	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "")
 	if err != nil {
@@ -117,6 +123,7 @@ func TestMoveAppliedPayload_IncludesClock(t *testing.T) {
 	}
 }
 
+// TestAttachClockFields_TurnChangedShape - checks attach clock fields turn changed shape
 func TestAttachClockFields_TurnChangedShape(t *testing.T) {
 	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, "", "")
 	if err != nil {

@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_move.go - applies xiangqi uci moves to the session
+
 package session
 
 import (
@@ -9,10 +12,11 @@ import (
 	pieces "go_backend/game/piece"
 )
 
-// Fairy-Stockfish / API UCI for Xiangqi: files a-i, ranks 1-10 (e.g. a4a5, b3b10, a10a9).
-// Move legality is enforced by Go strategies, not Fairy-Stockfish.
+// fairy-Stockfish / API UCI for Xiangqi: files a-i, ranks 1-10 (e.g. a4a5, b3b10, a10a9).
+// move legality is enforced by Go strategies, not Fairy-Stockfish.
 var xiangqiUCIMovePattern = regexp.MustCompile(`^[a-i](?:10|[1-9])[a-i](?:10|[1-9])$`)
 
+// applyXiangqiUCIMove - applies xiangqi uci move
 func applyXiangqiUCIMove(commandText string) (string, error) {
 	move := strings.ToLower(strings.TrimSpace(commandText))
 	if !xiangqiUCIMovePattern.MatchString(move) {
@@ -62,6 +66,7 @@ func applyXiangqiUCIMove(commandText string) (string, error) {
 	return move, nil
 }
 
+// parseXiangqiUCISquares - parses xiangqi uci squares
 func parseXiangqiUCISquares(move string) (fromFile, fromRank, toFile, toRank int, err error) {
 	if len(move) < 4 {
 		return 0, 0, 0, 0, fmt.Errorf("invalid move")
@@ -83,6 +88,7 @@ func parseXiangqiUCISquares(move string) (fromFile, fromRank, toFile, toRank int
 	return fromFile, fromRank, toFile, toRank, nil
 }
 
+// atoiDec - returns atoi dec
 func atoiDec(s string) int {
 	n := 0
 	for _, ch := range s {

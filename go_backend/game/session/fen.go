@@ -10,7 +10,7 @@ import (
 	pieces "go_backend/game/piece"
 )
 
-// ApplyFEN sets board state, side to move, and castling rights from a FEN string.
+// ApplyFEN - sets board state, side to move, and castling rights from a FEN string
 func ApplyFEN(fen string) error {
 	game, err := lockActiveRuntimeState()
 	if err != nil {
@@ -20,6 +20,7 @@ func ApplyFEN(fen string) error {
 	return applyFENToCurrentGlobals(fen)
 }
 
+// applyFENToCurrentGlobals - applies fen to current globals
 func applyFENToCurrentGlobals(fen string) error {
 	parts := strings.Fields(strings.TrimSpace(fen))
 	if len(parts) < 4 {
@@ -62,6 +63,7 @@ func applyFENToCurrentGlobals(fen string) error {
 	return nil
 }
 
+// parseFENBoard - parses fen board
 func parseFENBoard(boardPart string) ([]pieces.ChessPiece, error) {
 	ranks := strings.Split(boardPart, "/")
 	if len(ranks) != 8 {
@@ -93,6 +95,7 @@ func parseFENBoard(boardPart string) ([]pieces.ChessPiece, error) {
 	return out, nil
 }
 
+// fenCharToPiece - performs fen char to piece
 func fenCharToPiece(ch rune, file, rank int) (pieces.ChessPiece, error) {
 	color := pieces.White
 	if ch >= 'a' && ch <= 'z' {
@@ -136,6 +139,7 @@ func fenCharToPiece(ch rune, file, rank int) (pieces.ChessPiece, error) {
 	}, nil
 }
 
+// parseInt - parses int
 func parseInt(v string) (int, error) {
 	n := 0
 	for _, ch := range v {

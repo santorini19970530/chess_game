@@ -1,3 +1,6 @@
+// CM3070 FP code
+// archive_test.go - tests for archive
+
 package simulation
 
 import (
@@ -9,6 +12,7 @@ import (
 	session "go_backend/game/session"
 )
 
+// TestSimulationArchiveRoot_UsesGoModDirectory - checks simulation archive root uses go mod directory
 func TestSimulationArchiveRoot_UsesGoModDirectory(t *testing.T) {
 	t.Chdir(t.TempDir())
 	modDir := filepath.Join(t.TempDir(), "module")
@@ -32,6 +36,7 @@ func TestSimulationArchiveRoot_UsesGoModDirectory(t *testing.T) {
 	}
 }
 
+// TestSimulationArchiveRoot_RespectsEnvOverride - checks simulation archive root respects env override
 func TestSimulationArchiveRoot_RespectsEnvOverride(t *testing.T) {
 	t.Setenv("SIMULATION_ARCHIVE_DIR", "/tmp/custom-sim-archive")
 	if got := simulationArchiveRoot(); got != "/tmp/custom-sim-archive" {
@@ -39,6 +44,7 @@ func TestSimulationArchiveRoot_RespectsEnvOverride(t *testing.T) {
 	}
 }
 
+// TestArchiveSimulationRun_WritesUnderModuleRoot - checks archive simulation run writes under module root
 func TestArchiveSimulationRun_WritesUnderModuleRoot(t *testing.T) {
 	archiveDir := t.TempDir()
 	t.Setenv("SIMULATION_ARCHIVE_DIR", archiveDir)

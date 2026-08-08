@@ -1,3 +1,6 @@
+// CM3070 FP code
+// game_runtime_api.go - runtime api for session snapshots and moves by id
+
 package session
 
 import (
@@ -9,6 +12,7 @@ import (
 	pieces "go_backend/game/piece"
 )
 
+// game snapshot for the game
 type GameSnapshot struct {
 	CurrentTurn     string
 	CheckedSide     string
@@ -19,6 +23,7 @@ type GameSnapshot struct {
 	State           []PieceState
 }
 
+// CreateGame - creates a stored game session from the given config
 func CreateGame(mode GameMode, gameType GameType, humanColor string, aiGameCount int, startFEN string, aiProfile string) (GameSession, error) {
 	normalizedCount, err := validateGameConfig(mode, gameType, humanColor, aiGameCount, startFEN)
 	if err != nil {
@@ -59,7 +64,7 @@ func CreateGame(mode GameMode, gameType GameType, humanColor string, aiGameCount
 	return game.Session, nil
 }
 
-// materializeStartPosition loads board state for the given game type.
+// materializeStartPosition - loads board state for the given game type
 func materializeStartPosition(gameType GameType, startFEN string) error {
 	switch gameType {
 	case GameTypeChess:
@@ -84,6 +89,7 @@ func materializeStartPosition(gameType GameType, startFEN string) error {
 	}
 }
 
+// GetGameSessionByID - loads a game session by id
 func GetGameSessionByID(gameID string) (GameSession, error) {
 	game, err := getRuntimeGameByID(gameID)
 	if err != nil {
@@ -92,6 +98,7 @@ func GetGameSessionByID(gameID string) (GameSession, error) {
 	return game.Session, nil
 }
 
+// UpdateGameConfigByID - updates game config by id
 func UpdateGameConfigByID(gameID string, mode GameMode, gameType GameType, humanColor string, aiGameCount int, startFEN string, aiProfile string) (GameSession, error) {
 	normalizedCount, err := validateGameConfig(mode, gameType, humanColor, aiGameCount, startFEN)
 	if err != nil {
@@ -114,15 +121,14 @@ func UpdateGameConfigByID(gameID string, mode GameMode, gameType GameType, human
 		AIProfile:      profile,
 		WhiteAIProfile: white,
 		BlackAIProfile: black,
-		// Keep coach level unless unset (then derive from AI profile).
+		// keep coach level unless unset (then derive from AI profile).
 		SkillLevel: ResolveSkillLevel(prevSkill, profile),
 	}
 	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 	return game.Session, nil
 }
 
-// SetClockByID configures the session clock (Fischer). Bases 0/0 disables (unlimited).
-// When enabled, starts the clock on the side to move.
+// SetClockByID - configures the session clock (Fischer). bases 0/0 disables (unlimited). when enabled, starts the clock on the side to move
 func SetClockByID(gameID string, whiteInitialMs, blackInitialMs, incrementMs int64) (GameSession, error) {
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
@@ -138,7 +144,7 @@ func SetClockByID(gameID string, whiteInitialMs, blackInitialMs, incrementMs int
 	return game.Session, nil
 }
 
-// SetSkillLevelByID sets the coach/explain skill level for a game session.
+// SetSkillLevelByID - sets the coach/explain skill level for a game session
 func SetSkillLevelByID(gameID, skillLevel string) (GameSession, error) {
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
@@ -150,8 +156,7 @@ func SetSkillLevelByID(gameID, skillLevel string) (GameSession, error) {
 	return game.Session, nil
 }
 
-// SetAISideProfilesByID sets White/Black strengths for AI-vs-AI evaluation.
-// When white==black, AIProfile is set to that value; otherwise AIProfile is left as the white value for compat.
+// SetAISideProfilesByID - sets white/black ai strengths for ai-vs-ai; mirrors both into AIProfile when equal
 func SetAISideProfilesByID(gameID, whiteProfile, blackProfile string) (GameSession, error) {
 	white, okW := ParseAIProfile(whiteProfile)
 	if !okW {
@@ -173,6 +178,7 @@ func SetAISideProfilesByID(gameID, whiteProfile, blackProfile string) (GameSessi
 	return game.Session, nil
 }
 
+// RefreshGameSessionOutcomeByID - refreshes game session outcome by id
 func RefreshGameSessionOutcomeByID(gameID string) (GameSession, error) {
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
@@ -189,6 +195,7 @@ func RefreshGameSessionOutcomeByID(gameID string) (GameSession, error) {
 	return game.Session, nil
 }
 
+// ApplyMoveByCommandByID - applies a move command to the named session
 func ApplyMoveByCommandByID(gameID, commandText string) (string, error) {
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
@@ -233,6 +240,7 @@ func ApplyMoveByCommandByID(gameID, commandText string) (string, error) {
 	return normalized, nil
 }
 
+// FlagCurrentTurnByID - flags the side to move on the named session
 func FlagCurrentTurnByID(gameID string) (GameSession, error) {
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
@@ -243,6 +251,7 @@ func FlagCurrentTurnByID(gameID string) (GameSession, error) {
 	return game.Session, nil
 }
 
+// rejectIfGameOverLocked - rejects if game over locked
 func rejectIfGameOverLocked(game *RuntimeGame) error {
 	if game == nil {
 		return fmt.Errorf("game session not found")
@@ -257,7 +266,7 @@ func rejectIfGameOverLocked(game *RuntimeGame) error {
 	return nil
 }
 
-// settleClockOrFlagLocked deducts elapsed time; on flag, ends the game and returns an error.
+// settleClockOrFlagLocked - deducts elapsed time; on flag, ends the game and returns an error
 func settleClockOrFlagLocked(game *RuntimeGame, now time.Time) error {
 	clk := game.Session.Clock
 	if clk == nil || !clk.Enabled {
@@ -271,6 +280,7 @@ func settleClockOrFlagLocked(game *RuntimeGame, now time.Time) error {
 	return nil
 }
 
+// awardClockAfterMoveLocked - awards clock after move locked
 func awardClockAfterMoveLocked(game *RuntimeGame, mover string, now time.Time) {
 	clk := game.Session.Clock
 	if clk == nil || !clk.Enabled || game.Session.Result != GameResultInProgress {
@@ -279,6 +289,7 @@ func awardClockAfterMoveLocked(game *RuntimeGame, mover string, now time.Time) {
 	clk.OnMove(mover, now)
 }
 
+// applyFlagLossLocked - applies flag loss locked
 func applyFlagLossLocked(game *RuntimeGame, loser string) {
 	side := pieces.PieceColor(normalizeClockSide(loser))
 	if side == "" {
@@ -301,6 +312,7 @@ func applyFlagLossLocked(game *RuntimeGame, loser string) {
 	game.Session.Archived = false
 }
 
+// ArchiveGameIfNeededByID - archive game if needed by id
 func ArchiveGameIfNeededByID(gameID string) error {
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
@@ -355,6 +367,7 @@ func ArchiveGameIfNeededByID(gameID string) error {
 	return nil
 }
 
+// BuildSnapshotByID - builds snapshot by id
 func BuildSnapshotByID(gameID string) (GameSnapshot, error) {
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
@@ -383,7 +396,7 @@ func BuildSnapshotByID(gameID string) (GameSnapshot, error) {
 	}, nil
 }
 
-// syncClockLocked updates remaining for reads/snapshots; may end the game on flag.
+// syncClockLocked - updates remaining for reads/snapshots; may end the game on flag
 func syncClockLocked(game *RuntimeGame, now time.Time) {
 	if game == nil || game.Session.Result != GameResultInProgress {
 		return
@@ -398,7 +411,7 @@ func syncClockLocked(game *RuntimeGame, now time.Time) {
 	}
 }
 
-// AdjustClockLastTickByID sets LastTick (tests / controlled settle scenarios).
+// AdjustClockLastTickByID - sets LastTick (tests / controlled settle scenarios)
 func AdjustClockLastTickByID(gameID string, when time.Time) error {
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
@@ -412,6 +425,7 @@ func AdjustClockLastTickByID(gameID string, when time.Time) error {
 	return nil
 }
 
+// CurrentFENByID - current fen by id
 func CurrentFENByID(gameID string) (string, error) {
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
@@ -421,6 +435,7 @@ func CurrentFENByID(gameID string) (string, error) {
 	return CurrentFEN(), nil
 }
 
+// CurrentTurnColorByID - current turn color by id
 func CurrentTurnColorByID(gameID string) (string, error) {
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
@@ -430,6 +445,7 @@ func CurrentTurnColorByID(gameID string) (string, error) {
 	return string(CurrentTurnColor()), nil
 }
 
+// MoveHistoryByID - move history by id
 func MoveHistoryByID(gameID string) ([]string, error) {
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
@@ -439,7 +455,7 @@ func MoveHistoryByID(gameID string) ([]string, error) {
 	return GetMoveHistory(), nil
 }
 
-// LastMoveIsCaptureByID reports whether the latest history entry was a capture.
+// LastMoveIsCaptureByID - reports whether the latest history entry was a capture
 func LastMoveIsCaptureByID(gameID string) (bool, error) {
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
@@ -452,6 +468,7 @@ func LastMoveIsCaptureByID(gameID string) (bool, error) {
 	return moveHistoryDetailed[len(moveHistoryDetailed)-1].IsCapture, nil
 }
 
+// LegalMovesForSquareByID - legal moves for square by id
 func LegalMovesForSquareByID(gameID string, file, rank int) ([]LegalDestination, error) {
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
@@ -467,7 +484,7 @@ func LegalMovesForSquareByID(gameID string, file, rank int) ([]LegalDestination,
 	return LegalMovesForSquare(file, rank), nil
 }
 
-// LegalDropsForKindByID returns drop destinations for a hand piece (shogi only).
+// LegalDropsForKindByID - returns drop destinations for a hand piece (shogi only)
 func LegalDropsForKindByID(gameID string, kind string) ([]LegalDestination, error) {
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {
@@ -485,8 +502,7 @@ func LegalDropsForKindByID(gameID string, kind string) ([]LegalDestination, erro
 	return shogiLegalDropDestinations(k, side), nil
 }
 
-// AllLegalUCIMovesByID returns every legal UCI move for the side to move.
-// Chess / Xiangqi / Shogi use Go movement strategies (engine is advice-only).
+// AllLegalUCIMovesByID - returns every legal UCI move for the side to move. chess / Xiangqi / Shogi use Go movement strategies (engine is advice-only)
 func AllLegalUCIMovesByID(gameID string) ([]string, error) {
 	game, err := lockRuntimeStateByID(gameID)
 	if err != nil {

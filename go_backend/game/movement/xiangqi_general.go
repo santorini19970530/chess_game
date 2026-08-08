@@ -1,10 +1,15 @@
+// CM3070 FP code
+// xiangqi_general.go - implements the xiangqi general movement strategy
+
 package movement
 
-// XiangqiGeneralStrategy — one orthogonal step inside the palace.
+// xiangqiGeneralStrategy - one orthogonal step inside the palace
 type XiangqiGeneralStrategy struct{}
 
+// Name - returns the piece strategy name
 func (XiangqiGeneralStrategy) Name() string { return "XiangqiGeneral" }
 
+// LegalMoves - returns legal destinations for this piece from the square
 func (XiangqiGeneralStrategy) LegalMoves(board any, from any) []any {
 	ctx, ok := board.(MovementBoard)
 	if !ok {

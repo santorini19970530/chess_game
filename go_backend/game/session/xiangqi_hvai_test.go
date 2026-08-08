@@ -1,3 +1,6 @@
+// CM3070 FP code
+// xiangqi_hvai_test.go - tests for xiangqi hvai
+
 package session
 
 import (
@@ -10,6 +13,7 @@ import (
 	"go_backend/game/engine"
 )
 
+// TestXiangqiHumanVsAI_OneMoveCycle - checks xiangqi human vs ai one move cycle
 func TestXiangqiHumanVsAI_OneMoveCycle(t *testing.T) {
 	bin := os.Getenv("FAIRY_STOCKFISH_PATH")
 	if bin == "" {
