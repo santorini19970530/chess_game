@@ -236,7 +236,89 @@ def _variant_move_label(fen: str, target: str, gt: str) -> str:
     return f"{kind} {ff}{fr}→{tf}{tr}{suffix}"
 
 
-# build_move_ground_truth - builds deterministic facts about the move just played; never raises
+# _chess_ground_from_before_board - builds chess ground-truth dict from a before-move board
+def _chess_ground_from_before_board(
+    board: chess.Board,
+    move: chess.Move,
+    target: str,
+    fen: str,
+    hist: List[str],
+) -> Dict[str, str]:
+    piece = board.piece_at(move.from_square)
+    piece_name = _PIECE_NAMES.get(piece.piece_type, "piece") if piece else "piece"
+    mover = "White" if piece and piece.color == chess.WHITE else "Black"
+    from_sq = chess.square_name(move.from_square)
+    to_sq = chess.square_name(move.to_square)
+    san = board.san(move)
+    is_capture = board.is_capture(move)
+    if board.is_en_passant(move):
+        capture_bit = ", capturing pawn en passant"
+    elif is_capture:
+        victim = board.piece_at(move.to_square)
+        vname = _PIECE_NAMES.get(victim.piece_type, "piece") if victim else "piece"
+        capture_bit = f", capturing {vname} on {to_sq}"
+    else:
+        capture_bit = ", no capture"
+
+    board.push(move)
+    attacked: List[str] = []
+    for sq in board.attacks(move.to_square):
+        hit = board.piece_at(sq)
+        if hit is not None and piece is not None and hit.color != piece.color:
+            attacked.append(f"{_PIECE_NAMES.get(hit.piece_type, 'piece')} on {chess.square_name(sq)}")
+    if attacked:
+        attack_bit = " After the move, that piece attacks: " + ", ".join(attacked) + "."
+    else:
+        attack_bit = " After the move, that piece attacks no enemy piece."
+
+    fen_ok = True
+    fen_core = (fen or "").split()
+    if fen_core:
+        fen_ok = board.board_fen() == fen_core[0]
+    mismatch = "" if fen_ok else " (replay FEN mismatch — still prefer these move facts over invention)."
+
+    recent = " ".join(hist[-6:]) if hist else target
+    summary = (
+        f"GROUND TRUTH (never contradict): {mover} moved {piece_name} {from_sq}→{to_sq} "
+        f"(SAN {san}, UCI {target}){capture_bit}.{attack_bit} "
+        f"Recent UCI history: {recent}.{mismatch}"
+    )
+    return {"summary": summary, "san": san, "uci": target}
+
+
+# _chess_ground_from_after_fen - tip/diagram sessions: fen is after the move; undo uci for san
+def _chess_ground_from_after_fen(fen: str, target: str, hist: List[str]) -> Optional[Dict[str, str]]:
+    try:
+        after = chess.Board(fen)
+        move = chess.Move.from_uci(target)
+    except Exception:
+        return None
+    piece = after.piece_at(move.to_square)
+    if piece is None:
+        return None
+    # rebuild the before-move board by reversing the tip ply
+    before = after.copy(stack=False)
+    before.remove_piece_at(move.to_square)
+    if move.promotion:
+        before.set_piece_at(move.from_square, chess.Piece(chess.PAWN, piece.color))
+    else:
+        before.set_piece_at(move.from_square, piece)
+    before.turn = piece.color
+    if move not in before.legal_moves:
+        # capture: restore a missing enemy piece on the destination and retry
+        for pt in (chess.PAWN, chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.QUEEN):
+            before.set_piece_at(move.to_square, chess.Piece(pt, not piece.color))
+            if move in before.legal_moves:
+                break
+            before.remove_piece_at(move.to_square)
+        else:
+            return None
+    if move not in before.legal_moves:
+        return None
+    return _chess_ground_from_before_board(before, move, target, fen, hist)
+
+
+# build_move_ground_truth - builds grounded last-move facts for the explain prompt
 def build_move_ground_truth(
     fen: str,
     move_uci: str,
@@ -287,52 +369,20 @@ def build_move_ground_truth(
 
         move = chess.Move.from_uci(target)
         if move not in board.legal_moves:
+            # tip FEN games: history alone starts from classic opening — undo from after-fen instead
+            from_after = _chess_ground_from_after_fen(fen, target, hist)
+            if from_after is not None:
+                return from_after
             return {
                 "summary": f"GROUND TRUTH: {target} is not legal in the replayed position — do not invent tactics.",
                 "uci": target,
             }
 
-        piece = board.piece_at(move.from_square)
-        piece_name = _PIECE_NAMES.get(piece.piece_type, "piece") if piece else "piece"
-        mover = "White" if piece and piece.color == chess.WHITE else "Black"
-        from_sq = chess.square_name(move.from_square)
-        to_sq = chess.square_name(move.to_square)
-        san = board.san(move)
-        is_capture = board.is_capture(move)
-        if board.is_en_passant(move):
-            capture_bit = ", capturing pawn en passant"
-        elif is_capture:
-            victim = board.piece_at(move.to_square)
-            vname = _PIECE_NAMES.get(victim.piece_type, "piece") if victim else "piece"
-            capture_bit = f", capturing {vname} on {to_sq}"
-        else:
-            capture_bit = ", no capture"
-
-        board.push(move)
-        attacked: List[str] = []
-        for sq in board.attacks(move.to_square):
-            hit = board.piece_at(sq)
-            if hit is not None and piece is not None and hit.color != piece.color:
-                attacked.append(f"{_PIECE_NAMES.get(hit.piece_type, 'piece')} on {chess.square_name(sq)}")
-        if attacked:
-            attack_bit = " After the move, that piece attacks: " + ", ".join(attacked) + "."
-        else:
-            attack_bit = " After the move, that piece attacks no enemy piece."
-
-        fen_ok = True
-        fen_core = (fen or "").split()
-        if fen_core:
-            fen_ok = board.board_fen() == fen_core[0]
-        mismatch = "" if fen_ok else " (replay FEN mismatch — still prefer these move facts over invention)."
-
-        recent = " ".join(hist[-6:]) if hist else target
-        summary = (
-            f"GROUND TRUTH (never contradict): {mover} moved {piece_name} {from_sq}→{to_sq} "
-            f"(SAN {san}, UCI {target}){capture_bit}.{attack_bit} "
-            f"Recent UCI history: {recent}.{mismatch}"
-        )
-        return {"summary": summary, "san": san, "uci": target}
+        return _chess_ground_from_before_board(board, move, target, fen, hist)
     except Exception:
+        from_after = _chess_ground_from_after_fen(fen, target, hist)
+        if from_after is not None:
+            return from_after
         return {
             "summary": f"GROUND TRUTH: last move UCI {target}; do not invent piece attacks or captures.",
             "uci": target,

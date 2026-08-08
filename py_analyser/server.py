@@ -417,7 +417,8 @@ def explain() -> tuple:
     if ground.get("san"):
         move_san = ground["san"]
     elif move_san and looks_like_uci(move_san):
-        move_san = None
+        # keep a label so finalize never skips filters on tip-FEN explains
+        move_san = ground.get("uci") or move_uci or None
 
     quick = bool(payload.get("quick")) or str(payload.get("mode", "")).strip().lower() == "quick"
     to_move = side_to_move_from_fen(common["fen"], common["color"])

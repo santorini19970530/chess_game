@@ -68,10 +68,24 @@ class ExplainFinalizer:
         ground_summary: str = "",
         concept_hints: list[str] | None = None,
     ) -> str:
-        cleaned = self.sanitize(text)
+        cleaned = self.sanitize(text).strip().strip('"').strip("'")
         san = (move_san or "").strip()
         if not san:
-            return cleaned
+            # never return raw llm text unfiltered — tip FENs often clear san when only uci exists
+            m = re.search(
+                r"\b([a-h][1-8][a-h][1-8][qrbn]?)\b",
+                ground_summary or "",
+                flags=re.IGNORECASE,
+            )
+            san = (m.group(1) if m else "").strip()
+        if not san:
+            return self._safe_coach_followup(
+                ground_summary=ground_summary,
+                concept_hints=concept_hints,
+                last_mover=last_mover,
+                human_color=human_color,
+                move_san=None,
+            )
 
         mover = self._normalize_side(last_mover)
         human = self._normalize_side(human_color) if human_color else ""
@@ -116,8 +130,14 @@ class ExplainFinalizer:
         cue_blob = " ".join(str(h) for h in (concept_hints or [])).lower()
         allow_blob = f"{allow} {cue_blob} {san.lower()}"
         allowed_squares = set(re.findall(r"\b[a-i]\d{1,2}\b", allow_blob))
+        # also split bare uci tokens (c4f7 → c4, f7) so tip openers still anchor squares
+        for uci in re.findall(r"\b([a-h][1-8][a-h][1-8])[qrbn]?\b", allow_blob, flags=re.I):
+            allowed_squares.add(uci[:2].lower())
+            allowed_squares.add(uci[2:4].lower())
         allowed_moves = set(re.findall(r"\b[plnsgbr][*@][a-i][1-9]\b", allow_blob, flags=re.I))
         allowed_moves |= set(re.findall(r"\b[a-i]\d{1,2}[a-i]\d{1,2}\+?\b", allow_blob, flags=re.I))
+        # san replies from cues (Rxf7, Be6, Qxh2+)
+        allowed_moves |= set(re.findall(r"\b[NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQ])?\+?#?\b", cue_blob))
 
         piece_alt = (
             r"pawn|lance|knight|silver|gold|bishop|rook|queen|king|tokin|horse|dragon|"
@@ -138,6 +158,25 @@ class ExplainFinalizer:
             claimed_sq = set(re.findall(r"\b[a-i]\d{1,2}\b", sl))
             if claimed_sq and not claimed_sq.issubset(allowed_squares):
                 continue
+            # invented "play ...e6" / next-move san not present in cues
+            claimed_dots = set(re.findall(r"\.\.\.([NBRQK]?[a-h]?x?[a-h]?[1-8]?(?:=[NBRQ])?)", sl))
+            claimed_play = set(
+                re.findall(
+                    r"\b(?:play|plays|playing)\s+([NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQ])?\+?#?)",
+                    sl,
+                    flags=re.I,
+                )
+            )
+            if claimed_dots or claimed_play:
+                allowed_l = {m.lower().rstrip("+#") for m in allowed_moves}
+                bad = False
+                for raw_tok in claimed_dots | claimed_play:
+                    t = raw_tok.strip(".").lower()
+                    if t and t not in allowed_l and t not in allowed_squares:
+                        bad = True
+                        break
+                if bad:
+                    continue
             # invented drops / uci not present in ground truth or cues
             claimed_moves = set(re.findall(r"\b[plnsgbr][*@][a-i][1-9]\b", sl, flags=re.I))
             claimed_moves |= set(re.findall(r"\b[a-i]\d{1,2}[a-i]\d{1,2}\+?\b", sl, flags=re.I))
@@ -170,12 +209,34 @@ class ExplainFinalizer:
                 r"\b(now )?it'?s your (turn|move)\b|"
                 r"\byour (turn|move)[!.,]?\s*$|"
                 r"\b(white|black) to move\b|"
-                r"\bsafe hand\b",
+                r"\bsafe hand\b|"
+                r"\b(great|nice|excellent|amazing|brilliant|good|strong)\s+move\b|"
+                r"\bwell played\b|"
+                r"\b(let'?s start|keep it up|good job)\b",
                 sl,
             ):
                 continue
             if re.fullmatch(r"placeholder\.?", sl):
                 continue
+            # invented castling / pawn storms with no ground-truth support
+            if re.search(r"\bcastl", sl) and "castle" not in allow and "o-o" not in allow_blob:
+                continue
+            if "pawn storm" in sl and "pawn storm" not in allow and "pawn storm" not in cue_blob:
+                continue
+            # any SAN-like token in the follow-up must already be in cues / ground / opener
+            claimed_san = set(
+                re.findall(
+                    r"\b(O-O-O|O-O|[NBRQK][a-h]?[1-8]?x?[a-h][1-8](?:=[NBRQ])?\+?#?|"
+                    r"[a-h]x[a-h][1-8](?:=[NBRQ])?\+?#?|[a-h][1-8](?:=[NBRQ])?\+?#?)\b",
+                    sentence,
+                )
+            )
+            if claimed_san:
+                allowed_l = {m.lower().rstrip("+#") for m in allowed_moves}
+                allowed_l.add(san.lower().rstrip("+#"))
+                allowed_l |= {s.lower() for s in allowed_squares}
+                if any(tok.lower().rstrip("+#") not in allowed_l for tok in claimed_san):
+                    continue
             follow.append(sentence)
             break  # at most one follow-up sentence
 

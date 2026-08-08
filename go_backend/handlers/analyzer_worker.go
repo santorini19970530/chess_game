@@ -306,7 +306,10 @@ func enqueueExplanation(gameID, moveUCI, moveSAN string) {
 				gameType = string(game.Type)
 			}
 			skillLevel = sessionpkg.ResolveSkillLevel(game.Config.SkillLevel, game.Config.AIProfile)
-			humanColor = strings.ToLower(strings.TrimSpace(game.Config.HumanColor))
+			// "You played …" only for HvAI seat; HvH / diagram review has no single human seat
+			if game.Mode == sessionpkg.GameModeHumanVsAI {
+				humanColor = strings.ToLower(strings.TrimSpace(game.Config.HumanColor))
+			}
 		}
 		history, err := sessionpkg.MoveHistoryByID(gameID)
 		if err != nil {

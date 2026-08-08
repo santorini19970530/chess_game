@@ -12,6 +12,8 @@ from typing import Any
 
 from PIL import Image
 
+from shogi_hand_infer import apply_inferred_shogi_hands
+
 # _resolve_vendor_dir - prefers env, then sibling _local_ outside the git tree, then in-tree clone
 def _resolve_vendor_dir() -> Path:
     env = os.environ.get("CHESS_DIAGRAM_TO_FEN_DIR", "").strip()
@@ -47,7 +49,7 @@ _GAME_ALIASES = {
 
 SUPPORTED_DIAGRAM_GAMES = frozenset(_GAME_ALIASES)
 _LIMITS_NOTE = (
-    "Chess strongest; Xiangqi OK; Shogi weaker / no pieces-in-hand"
+    "Chess strongest; Xiangqi OK; Shogi weaker — hands inferred from board inventory"
 )
 
 
@@ -156,8 +158,12 @@ def fen_from_image_bytes(image_bytes: bytes, game: str) -> dict[str, Any]:
             "recognition",
         )
 
+    fen_text = str(fen).strip()
+    if resolved == "shogi":
+        fen_text = apply_inferred_shogi_hands(fen_text)
+
     return {
-        "fen": str(fen).strip(),
+        "fen": fen_text,
         "game": resolved,
         "board_is_flipped": getattr(result, "board_is_flipped", None),
         "image_rotation_angle": getattr(result, "image_rotation_angle", None),

@@ -222,6 +222,7 @@ func TestPostAPIGameLoadFen_EnqueuesAnalyzeAndExplain(t *testing.T) {
 	var analyzeHits atomic.Int32
 	var explainHits atomic.Int32
 	var lastExplainUCI atomic.Value
+	var lastExplainHuman atomic.Value
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/analyze":
@@ -241,6 +242,11 @@ func TestPostAPIGameLoadFen_EnqueuesAnalyzeAndExplain(t *testing.T) {
 			_ = json.NewDecoder(r.Body).Decode(&body)
 			if uci, ok := body["move_uci"].(string); ok {
 				lastExplainUCI.Store(uci)
+			}
+			if hc, ok := body["human_color"].(string); ok {
+				lastExplainHuman.Store(hc)
+			} else {
+				lastExplainHuman.Store("")
 			}
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{
@@ -301,6 +307,9 @@ func TestPostAPIGameLoadFen_EnqueuesAnalyzeAndExplain(t *testing.T) {
 	}
 	if uci != "c4f7" && uci != "position" {
 		t.Fatalf("explain move_uci=%q want best-move c4f7 or position", uci)
+	}
+	if hc, _ := lastExplainHuman.Load().(string); strings.TrimSpace(hc) != "" {
+		t.Fatalf("hvH diagram explain must omit human_color (no You-played seat), got %q", hc)
 	}
 }
 

@@ -44,11 +44,12 @@ class HintsCoach {
     const board = raw.match(/^([a-i])(\d{1,2})([a-i])(\d{1,2})([qrbn+]?)$/);
     if (board) {
       const promo = board[5] || "";
+      // "" must not count — String.includes("") is always true
       return {
         from: { file: board[1].charCodeAt(0) - 96, rank: Number(board[2]) },
         to: { file: board[3].charCodeAt(0) - 96, rank: Number(board[4]) },
         dropKind: null,
-        promote: promo === "+" || "qrbn".includes(promo),
+        promote: promo === "+" || (promo.length === 1 && "qrbn".includes(promo)),
       };
     }
     const drop = raw.match(/^([plnsgbr])[*@]([a-i])([1-9])$/);
@@ -355,8 +356,9 @@ if (typeof window !== "undefined") {
   const coach = new HintsCoach({ state: {}, el: {}, SHOGI_DROP_KIND_FROM_CHAR: {} });
   const promo = coach.parseUciMove("e7e8q");
   const quiet = coach.parseUciMove("e2e4");
+  const mid = coach.parseUciMove("d6e7");
   const shogi = coach.parseUciMove("a2a1+");
-  if (!promo?.promote || promo.to.rank !== 8 || !quiet || !shogi?.promote) {
+  if (!promo?.promote || promo.to.rank !== 8 || !quiet || quiet.promote || mid?.promote || !shogi?.promote) {
     throw new Error("parseUciMove self-check failed");
   }
   const line = coach.formatHintLine(1, null, 3402, "e7e8q");
