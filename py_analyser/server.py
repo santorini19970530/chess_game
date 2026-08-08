@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# server.py - flask http edge for analyze, explain, and the three play agents
+# server.py - flask http edge for analyze, explain, play agents, and diagram fen
 
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ from analyzer import (
     analyze_position,
     build_concept_hints,
 )
+from fen_from_image import FenFromImageError, fen_from_image_bytes
 from llm_providers import get_llm_provider
 
 
@@ -25,12 +26,14 @@ app = Flask(__name__)
 
 
 # History/Policy/Value stay chess-only. Coach (/analyze, /explain) accepts variants.
+# /fen_from_image is on-demand vision only — never called from the live /move path.
 SUPPORTED_GAME_TYPES = {"chess"}
 COACH_GAME_TYPES = {"chess", "xianqi", "shogi"}
 SKILL_LEVELS = frozenset({"beginner", "intermediate", "advanced"})
 DEFAULT_SKILL_LEVEL = "intermediate"
 MAX_CONCEPT_HINTS = 3
 _EXPLAIN_LOG_DIR = Path(__file__).resolve().parent / "data" / "explain_logs"
+_MAX_DIAGRAM_BYTES = 12 * 1024 * 1024
 
 
 # _append_explain_log - appends one json line for qa evidence; set EXPLAIN_LOG=0 to disable
@@ -174,6 +177,68 @@ def health() -> tuple:
                 "status": "ok",
                 "service": "py_analyser",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+        ),
+        200,
+    )
+
+
+# fen_from_image - accepts a board diagram image and returns a FEN-like string
+@app.post("/fen_from_image")
+def fen_from_image() -> tuple:
+    request_id = (
+        str(request.form.get("request_id", "")).strip()
+        or str(request.args.get("request_id", "")).strip()
+        or None
+    )
+    game_raw = (
+        request.form.get("game")
+        or request.form.get("type")
+        or request.form.get("game_type")
+        or ""
+    )
+    upload = request.files.get("image") or request.files.get("file")
+    if upload is None:
+        return _error_response(
+            request_id,
+            'Missing multipart file field: "image"',
+        )
+    if not str(game_raw).strip():
+        return _error_response(
+            request_id,
+            'Missing required field: "game" (chess / xianqi / shogi)',
+        )
+
+    image_bytes = upload.read(_MAX_DIAGRAM_BYTES + 1)
+    if len(image_bytes) > _MAX_DIAGRAM_BYTES:
+        return _error_response(
+            request_id,
+            f"Image too large (max {_MAX_DIAGRAM_BYTES} bytes)",
+        )
+
+    try:
+        result = fen_from_image_bytes(image_bytes, str(game_raw))
+    except FenFromImageError as exc:
+        status = 400 if exc.error_kind in {"validation", "recognition"} else 500
+        return _error_response(request_id, str(exc), exc.error_kind, status)
+    except Exception:
+        return _error_response(
+            request_id,
+            "Internal diagram recognition error",
+            "internal",
+            500,
+        )
+
+    return (
+        jsonify(
+            {
+                "request_id": request_id,
+                "status": "ok",
+                "fen": result["fen"],
+                "game": result["game"],
+                "board_is_flipped": result.get("board_is_flipped"),
+                "image_rotation_angle": result.get("image_rotation_angle"),
+                "limits_note": result.get("limits_note"),
             }
         ),
         200,
@@ -455,5 +520,7 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 elif os.getenv("PY_EXPLAIN_SELFCHECK"):
-    # one tiny runnable check that the /explain route is registered
-    assert any(r.rule == "/explain" for r in app.url_map.iter_rules())
+    # one tiny runnable check that coach + diagram routes are registered
+    rules = {r.rule for r in app.url_map.iter_rules()}
+    assert "/explain" in rules
+    assert "/fen_from_image" in rules

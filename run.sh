@@ -8,6 +8,13 @@ INPUT_CSS="$ROOT_DIR/frontend/styles/input.css"
 OUTPUT_CSS="$ROOT_DIR/frontend/styles/style.css"
 PY_SERVER="$ROOT_DIR/py_analyser/server.py"
 GO_DIR="$ROOT_DIR/go_backend"
+# prefer vendor venv (torch) for /fen_from_image; else plain python3 for coach-only
+VENDOR_PY="$ROOT_DIR/../_local_Chess_diagram_to_FEN/.venv/bin/python"
+if [[ -x "$VENDOR_PY" ]]; then
+  PY_BIN="$VENDOR_PY"
+else
+  PY_BIN="python3"
+fi
 PY_PID=""
 GO_PID=""
 
@@ -30,12 +37,13 @@ if lsof -t -nP -iTCP:8001 -sTCP:LISTEN >/dev/null 2>&1; then
 fi
 
 echo "starting python analyzer server on http://127.0.0.1:8001 ..."
+echo "python: $PY_BIN"
 if lsof -t -nP -iTCP:11434 -sTCP:LISTEN >/dev/null 2>&1; then
   echo "Ollama detected → LLM explainer enabled (model=llama3.2)"
-  LLM_PROVIDER=ollama OLLAMA_MODEL=llama3.2 python3 "$PY_SERVER" &
+  LLM_PROVIDER=ollama OLLAMA_MODEL=llama3.2 "$PY_BIN" "$PY_SERVER" &
 else
   echo "Ollama not running → /explain will use heuristic fallback only"
-  LLM_PROVIDER=heuristic python3 "$PY_SERVER" &
+  LLM_PROVIDER=heuristic "$PY_BIN" "$PY_SERVER" &
 fi
 PY_PID=$!
 

@@ -28,6 +28,54 @@ AI move path (FS vs History/Policy/Value): `report/documentation/fs_vs_hpv_decis
 2. Go backend API, sessions, and orchestration.
 3. Fairy-Stockfish playing agents (strength profiles).
 4. Python analyst service (`/analyze` + `/explain`).
+5. Diagram → FEN: `POST /fen_from_image` on the Python analyser (on-demand; not on the live `/move` path).
+
+## Diagram → FEN
+
+On-demand image model ([tsoj/Chess_diagram_to_FEN](https://github.com/tsoj/Chess_diagram_to_FEN)). Limits: Chess strongest; Xiangqi OK; Shogi weaker / no pieces-in-hand.
+
+**Vendor (not in git — large weights/venv):** keep a local clone next to `chess_game`:
+
+```text
+final_project/
+  chess_game/                 # this repo
+  _local_Chess_diagram_to_FEN/   # clone + models + .venv
+```
+
+```bash
+cd final_project
+git clone https://github.com/tsoj/Chess_diagram_to_FEN.git _local_Chess_diagram_to_FEN
+cd _local_Chess_diagram_to_FEN
+uv sync --extra cpu
+./download_models.sh
+# analyser deps into the same venv
+uv pip install --python .venv/bin/python flask Pillow python-chess
+brew install cairo   # macOS; cairocffi needs libcairo
+```
+
+Override path with `CHESS_DIAGRAM_TO_FEN_DIR=/path/to/clone` if needed.
+
+**Run (easiest):** from `chess_game/`, `./run.sh` — uses the vendor `.venv` when `../_local_Chess_diagram_to_FEN` exists.
+
+**Analyser only:**
+
+```bash
+cd chess_game/py_analyser
+../../_local_Chess_diagram_to_FEN/.venv/bin/python server.py
+```
+
+**Smoke:**
+
+```bash
+# from chess_game/
+curl -F "image=@gameplay_capture/chess/chess-08082026.webp" -F "game=chess" \
+  http://127.0.0.1:8001/fen_from_image
+
+# offline self-check (aliases always; fixture+vendor when present)
+../_local_Chess_diagram_to_FEN/.venv/bin/python py_analyser/fen_from_image.py
+```
+
+`game` / `type` / `game_type`: `chess` | `xianqi` | `shogi` (`xianqi` maps to upstream `xiangqi`). FE confirm + session load is a later step.
 
 ## Main Phases
 
