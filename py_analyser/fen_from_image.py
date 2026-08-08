@@ -163,3 +163,22 @@ def fen_from_image_bytes(image_bytes: bytes, game: str) -> dict[str, Any]:
         "image_rotation_angle": getattr(result, "image_rotation_angle", None),
         "limits_note": _LIMITS_NOTE,
     }
+
+
+if __name__ == "__main__":
+    # offline self-check: aliases always; chess fixture when vendor + capture exist
+    assert resolve_diagram_game("xianqi") == "xiangqi"
+    assert resolve_diagram_game("chess") == "chess"
+    assert resolve_diagram_game("shogi") == "shogi"
+    fixture = (
+        Path(__file__).resolve().parents[1]
+        / "gameplay_capture"
+        / "chess"
+        / "chess-08082026.webp"
+    )
+    if fixture.is_file() and _VENDOR_DIR.is_dir():
+        out = fen_from_image_bytes(fixture.read_bytes(), "chess")
+        assert out["fen"] and "/" in out["fen"]
+        print("ok", out["fen"])
+    else:
+        print("ok aliases only (missing vendor or gameplay_capture fixture)")
