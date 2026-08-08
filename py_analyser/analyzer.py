@@ -415,9 +415,17 @@ def build_explanation_fallback(
 ) -> str:
     move_text = move_san or move_uci
     gt = (game_type or "chess").strip().lower()
+    token = normalize_history_uci(move_uci or "")
+    position_only = token in {"", "position", "diagram"}
+
     if gt in {"xianqi", "xiangqi", "shogi"}:
         label = "Xiangqi" if gt in {"xianqi", "xiangqi"} else "Shogi"
-        lab = _variant_move_label(fen, normalize_history_uci(move_uci or ""), gt) or move_text
+        if position_only:
+            return (
+                f"Tip {label} position — re-check checks, captures, and piece safety. "
+                f"Next: use the suggested moves for the side to move."
+            )
+        lab = _variant_move_label(fen, token, gt) or move_text
         return (
             f"{lab} is a legal-looking {label} move. "
             f"Re-check checks, captures, and piece safety before committing."
@@ -430,6 +438,11 @@ def build_explanation_fallback(
     threat = build_threat_summary(board, evaluate_position(board, chess.WHITE))
     material = material_score(board, requested)
     sign = "ahead" if material > 50 else ("behind" if material < -50 else "level")
+    if position_only:
+        return (
+            f"Tip position — material looks {sign}. {threat} "
+            "Next: check the suggested moves for the side to move, and watch checks, captures, and loose pieces."
+        )
     return (
         f"{move_text} keeps material {sign}. {threat} "
         "Next: check the suggested moves for replies, and watch checks, captures, and loose pieces."

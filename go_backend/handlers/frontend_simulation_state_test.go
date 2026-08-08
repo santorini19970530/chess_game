@@ -265,6 +265,9 @@ func TestFrontendDiagramImport_Markers(t *testing.T) {
 	requireSnippet(t, jsSrc, "DiagramImport")
 	requireSnippet(t, jsSrc, "confirmLoad")
 	requireSnippet(t, jsSrc, "analysisMoveNumber")
+	requireSnippet(t, jsSrc, "pieces in hand are not recovered")
+	requireSnippet(t, jsSrc, "Xiangqi: confirm the board carefully")
+	requireSnippet(t, indexSrc, "pieces in hand are not recovered from the image")
 }
 
 // TestFrontendSimulationDownload_Step2StyleMarkers - checks frontend simulation download step2 style markers

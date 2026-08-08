@@ -122,6 +122,23 @@ class TeacherPrompt:
         )
         san = (ground.get("san") or move_san or move_uci or "").strip()
         summary = str(ground.get("summary") or "").lower()
+        to_move = self.side_to_move_from_fen(fen, side_to_move)
+        # tip / diagram loads have no last ply — coach the position, not a fake "played" move
+        if not self.looks_like_uci(move_uci) or (move_uci or "").strip().lower() in {
+            "position",
+            "diagram",
+        }:
+            seed = (
+                f"Tip position — {to_move} to move. "
+                f"Watch checks, captures, and loose pieces; use the suggested moves."
+            )
+            return finalize_explanation(
+                seed,
+                move_san="",
+                last_mover="",
+                human_color=human_color,
+                ground_summary=str(ground.get("summary") or ""),
+            )
         if "capturing" in summary:
             idea = "That was a capture — check whether the piece is safe."
         elif "attacks:" in summary:
@@ -132,7 +149,6 @@ class TeacherPrompt:
             idea = "Watch checks, captures, and piece safety."
         else:
             idea = "Watch checks, captures, and loose pieces."
-        to_move = self.side_to_move_from_fen(fen, side_to_move)
         last_mover = "black" if to_move == "white" else "white"
         mover = _normalize_side(last_mover)
         human = _normalize_side(human_color) if human_color else ""

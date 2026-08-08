@@ -32,7 +32,15 @@ AI move path (FS vs History/Policy/Value): `report/documentation/fs_vs_hpv_decis
 
 ## Diagram → FEN
 
-On-demand image model ([tsoj/Chess_diagram_to_FEN](https://github.com/tsoj/Chess_diagram_to_FEN)). Limits: Chess strongest; Xiangqi OK; Shogi weaker / no pieces-in-hand.
+On-demand image model ([tsoj/Chess_diagram_to_FEN](https://github.com/tsoj/Chess_diagram_to_FEN)).
+
+**Variant product notes (diagram import):**
+
+| Game | Product stance |
+|------|----------------|
+| **Chess** | Primary path — full recognize → confirm → load → coach. |
+| **Xiangqi** | Supported end-to-end, but recognition is less reliable than Chess; always confirm the board before load. Formal image fixture smoke → `issue0064`. |
+| **Shogi** | Board placement only — **pieces in hand are not recovered** from the image model (empty hand `[]` after load). Weaker recognition; confirm carefully. |
 
 **Vendor (not in git — large weights/venv):** keep a local clone next to `chess_game`:
 
@@ -75,7 +83,9 @@ curl -F "image=@gameplay_capture/chess/chess-08082026.webp" -F "game=chess" \
 ../_local_Chess_diagram_to_FEN/.venv/bin/python py_analyser/fen_from_image.py
 ```
 
-`game` / `type` / `game_type`: `chess` | `xianqi` | `shogi` (`xianqi` maps to upstream `xiangqi`). FE confirm + session load is a later step.
+`game` / `type` / `game_type`: `chess` | `xianqi` | `shogi` (`xianqi` maps to upstream `xiangqi`).
+
+**After Confirm load (UI):** Go `POST /api/games/{id}/load-fen` enqueues the existing `/analyze` + `/explain` pipe (no new coach API). Win% / threat notes update from analysis; coach text uses Ollama when available, else heuristic fallback (`LLM_PROVIDER=heuristic` / Ollama down).
 
 ## Main Phases
 

@@ -84,13 +84,15 @@ func analysisWorkerLoop() {
 			log.Printf("warning: analyzer job failed game_id=%s move=%d: %v", job.GameID, job.MoveNumber, err)
 			// still coach the move (without MultiPV cues) so notes are not silent on analyzer failure.
 			if shouldExplainCommand(job.Command) {
-				enqueueExplanation(job.GameID, job.Command, job.Command)
+				uci, san := explainArgsFromAnalysis(job.Command, nil)
+				enqueueExplanation(job.GameID, uci, san)
 			}
 			continue
 		}
 		if result == nil {
 			if shouldExplainCommand(job.Command) {
-				enqueueExplanation(job.GameID, job.Command, job.Command)
+				uci, san := explainArgsFromAnalysis(job.Command, nil)
+				enqueueExplanation(job.GameID, uci, san)
 			}
 			continue
 		}
@@ -118,7 +120,8 @@ func analysisWorkerLoop() {
 		recordMoveAnalysisForGame(job.GameID, job.MoveNumber, job.Command, *result)
 		// explain after MultiPV is cached for this FEN → non-empty concept_hints aligned with Suggested moves.
 		if shouldExplainCommand(job.Command) {
-			enqueueExplanation(job.GameID, job.Command, job.Command)
+			uci, san := explainArgsFromAnalysis(job.Command, result)
+			enqueueExplanation(job.GameID, uci, san)
 		}
 		gameSocketHub.Broadcast(job.GameID, socketEventAnalysisStatus, map[string]interface{}{
 			"status":                "ready",
@@ -261,6 +264,37 @@ func shouldExplainCommand(command string) bool {
 	return c != "" && c != "flag"
 }
 
+// explainArgsFromAnalysis - picks /explain move labels; diagram tips use best move (not the sentinel)
+func explainArgsFromAnalysis(command string, result *analyzerResponse) (uci string, san string) {
+	cmd := strings.TrimSpace(command)
+	if !strings.EqualFold(cmd, "diagram") {
+		return cmd, cmd
+	}
+	if result != nil {
+		best := strings.TrimSpace(result.BestMoveUCI)
+		if best != "" {
+			uci, san = best, best
+		}
+		if len(result.SuggestedMoves) > 0 {
+			if u := strings.TrimSpace(result.SuggestedMoves[0].UCI); u != "" {
+				uci = u
+			}
+			if s := strings.TrimSpace(result.SuggestedMoves[0].SAN); s != "" {
+				san = s
+			} else if uci != "" {
+				san = uci
+			}
+		}
+		if uci != "" {
+			if san == "" {
+				san = uci
+			}
+			return uci, san
+		}
+	}
+	return "position", "position"
+}
+
 // enqueueExplanation - calls python /explain asynchronously after analysis cues are ready for the same fen
 func enqueueExplanation(gameID, moveUCI, moveSAN string) {
 	go func() {
@@ -287,6 +321,10 @@ func enqueueExplanation(gameID, moveUCI, moveSAN string) {
 			return
 		}
 		moveNumber := len(history)
+		// tip / diagram loads have no plies; keep explain keys aligned with analysis move #1
+		if moveNumber == 0 {
+			moveNumber = 1
+		}
 		noteExplainRequest(gameID, moveNumber)
 
 		hints := waitConceptHintsForFEN(gameID, fen, explainHintWait())
