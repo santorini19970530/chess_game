@@ -75,6 +75,32 @@
         <span id="review_moves_ply" class="review_moves_ply" aria-live="polite">Ply 0 / 0</span>
       </div>
     </div>
+    <div class="diagram_import_block">
+      <label for="diagram_import_file">Import board diagram</label>
+      <div class="command_row diagram_import_row">
+        <input
+          id="diagram_import_file"
+          type="file"
+          accept="image/*,.png,.jpg,.jpeg,.webp,.gif"
+          aria-describedby="diagram_import_hint"
+        />
+        <button id="diagram_import_recognize" type="button">Recognize</button>
+      </div>
+      <p id="diagram_import_hint" class="diagram_import_hint">
+        Upload an external board image, confirm the FEN, then load into a review session (not mid-game overwrite).
+        Chess is the primary path. Xiangqi: confirm carefully (recognition less reliable). Shogi: pieces in hand are not recovered from the image.
+      </p>
+      <div id="diagram_import_confirm" class="diagram_import_confirm" hidden>
+        <label for="diagram_import_fen">Recognized FEN (confirm before load)</label>
+        <textarea id="diagram_import_fen" rows="3" readonly aria-readonly="true"></textarea>
+        <div id="diagram_import_preview" class="diagram_import_preview" aria-label="Diagram confirmation board"></div>
+        <p id="diagram_import_note" class="diagram_import_note" aria-live="polite"></p>
+        <div class="command_row diagram_import_actions">
+          <button id="diagram_import_confirm_btn" type="button">Confirm load</button>
+          <button id="diagram_import_cancel_btn" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 {{end}}

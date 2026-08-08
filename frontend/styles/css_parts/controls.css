@@ -159,6 +159,124 @@
   cursor: not-allowed;
 }
 
+/* diagram import (confirm fen before load) */
+.diagram_import_block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 10px;
+}
+
+.diagram_import_block label {
+  font-size: 0.9rem;
+}
+
+.diagram_import_hint,
+.diagram_import_note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #b8b8b8;
+  line-height: 1.35;
+}
+
+.game_panel_config .diagram_import_row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.game_panel_config .diagram_import_row input[type="file"] {
+  width: 100%;
+  text-align: center;
+  border: none;
+  background: transparent;
+  color: #d0d0d0;
+}
+
+.game_panel_config #diagram_import_recognize,
+.game_panel_config #diagram_import_confirm_btn,
+.game_panel_config #diagram_import_cancel_btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.diagram_import_confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.diagram_import_confirm[hidden] {
+  display: none !important;
+}
+
+#diagram_import_fen {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 3.5em;
+  padding: 6px 8px;
+  border: 1px solid #3a3a3a;
+  border-radius: 0;
+  background: #0f0f0f;
+  color: #f5f5f5;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+}
+
+.diagram_preview_board {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 220px;
+  border: 1px solid #3a3a3a;
+  background: #1a1a1a;
+}
+
+.diagram_preview_rank {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+}
+
+.diagram_preview_sq {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #c9b896;
+}
+
+.diagram_preview_rank:nth-child(even) .diagram_preview_sq:nth-child(odd),
+.diagram_preview_rank:nth-child(odd) .diagram_preview_sq:nth-child(even) {
+  background: #6b5238;
+}
+
+.diagram_preview_piece {
+  width: 85%;
+  height: 85%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.diagram_import_fen_fallback {
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px solid #3a3a3a;
+  background: #0f0f0f;
+  color: #f5f5f5;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.game_panel_config .diagram_import_actions {
+  flex-direction: column;
+  gap: 8px;
+}
+
 .promotion_picker_hidden {
   display: none;
 }

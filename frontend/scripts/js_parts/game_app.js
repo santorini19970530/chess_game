@@ -17,6 +17,7 @@ class GameApp {
     this.moveHistory = null;
     this.setup = null;
     this.review = null;
+    this.diagram = null;
     this.simulation = null;
   }
 

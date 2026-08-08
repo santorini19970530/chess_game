@@ -82,41 +82,34 @@ func (h *Handler) APIGameRoutes(w http.ResponseWriter, r *http.Request) {
 	}
 	parts := strings.Split(path, "/")
 	gameID := parts[0]
-	if len(parts) == 1 {
+
+	switch {
+	case len(parts) == 1:
 		h.getAPIGameByID(w, r, gameID)
-		return
-	}
-	if len(parts) == 2 && parts[1] == "move" {
-		h.postAPIGameMove(w, r, gameID)
-		return
-	}
-	if len(parts) == 2 && parts[1] == "config" {
-		h.postAPIGameConfig(w, r, gameID)
-		return
-	}
-	if len(parts) == 2 && parts[1] == "flag" {
-		h.postAPIGameFlag(w, r, gameID)
-		return
-	}
-	if len(parts) == 2 && parts[1] == "new" {
-		h.postAPIGameNew(w, r, gameID)
-		return
-	}
-	if len(parts) == 2 && parts[1] == "load-moves" {
-		h.postAPIGameLoadMoves(w, r, gameID)
-		return
-	}
-	if len(parts) == 2 && parts[1] == "legal-moves" {
-		h.getAPIGameLegalMoves(w, r, gameID)
-		return
-	}
-	if len(parts) == 2 && parts[1] == "top-moves" {
-		h.getAPIGameTopMoves(w, r, gameID)
-		return
-	}
-	if len(parts) == 3 && parts[1] == "analysis" && parts[2] == "latest" {
+	case len(parts) == 2:
+		switch parts[1] {
+		case "move":
+			h.postAPIGameMove(w, r, gameID)
+		case "config":
+			h.postAPIGameConfig(w, r, gameID)
+		case "flag":
+			h.postAPIGameFlag(w, r, gameID)
+		case "new":
+			h.postAPIGameNew(w, r, gameID)
+		case "load-moves":
+			h.postAPIGameLoadMoves(w, r, gameID)
+		case "load-fen":
+			h.postAPIGameLoadFen(w, r, gameID)
+		case "legal-moves":
+			h.getAPIGameLegalMoves(w, r, gameID)
+		case "top-moves":
+			h.getAPIGameTopMoves(w, r, gameID)
+		default:
+			writeJSONError(w, http.StatusNotFound, "API route not found")
+		}
+	case len(parts) == 3 && parts[1] == "analysis" && parts[2] == "latest":
 		h.getAPIGameLatestAnalysis(w, r, gameID)
-		return
+	default:
+		writeJSONError(w, http.StatusNotFound, "API route not found")
 	}
-	writeJSONError(w, http.StatusNotFound, "API route not found")
 }
