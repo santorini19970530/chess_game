@@ -1367,10 +1367,13 @@ span.shogi_hand_piece {
 }
 .game_panel_config .diagram_import_row input[type="file"] {
   width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid #3a3a3a;
+  border-radius: 0;
+  background: #0f0f0f;
+  color: #f5f5f5;
   text-align: center;
-  border: none;
-  background: transparent;
-  color: #d0d0d0;
 }
 .game_panel_config #diagram_import_recognize, .game_panel_config #diagram_import_confirm_btn, .game_panel_config #diagram_import_cancel_btn {
   width: 100%;
