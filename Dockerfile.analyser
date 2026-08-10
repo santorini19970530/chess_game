@@ -1,5 +1,4 @@
-# lean python analyst image (heuristic coach by default; no Ollama/vision vendor)
-# fairy-stockfish - linux binary for variant /analyze
+# python analyst + fairy-stockfish; optional diagram→FEN when vendor is mounted
 FROM debian:bookworm-slim AS fs-builder
 RUN apt-get update \
   && apt-get install -y --no-install-recommends make g++ \
@@ -14,11 +13,31 @@ RUN set -eux; \
 
 FROM python:3.12-slim-bookworm
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates \
+  && apt-get install -y --no-install-recommends \
+       ca-certificates \
+       libcairo2 \
+       libgdk-pixbuf-2.0-0 \
+       libgl1 \
+       libglib2.0-0 \
+       libgomp1 \
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY py_analyser/requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+  && pip install --no-cache-dir \
+       --index-url https://download.pytorch.org/whl/cpu \
+       torch torchvision \
+  && pip install --no-cache-dir \
+       numpy \
+       matplotlib \
+       scikit-image \
+       tqdm \
+       pyffish \
+       cairosvg \
+       cairocffi \
+       pyfastnoiselite \
+       gdown \
+       opencv-python-headless
 COPY py_analyser/ ./
 COPY --from=fs-builder /stockfish /usr/local/bin/stockfish
 RUN chmod +x /usr/local/bin/stockfish

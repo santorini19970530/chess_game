@@ -1,11 +1,14 @@
 # issue0042 — local reproducibility / demo aid (not a production deployment claim)
 # usage: docker compose up --build
 # only host port 8080 is published; analyser stays on the compose network.
+# vision: mount host vendor and set CHESS_DIAGRAM_TO_FEN_DIR (optional; omit volume on lean hosts)
 services:
   analyser:
     build:
       context: .
       dockerfile: Dockerfile.analyser
+    volumes:
+      - ${CHESS_DIAGRAM_HOST_DIR:-/root/_local_Chess_diagram_to_FEN}:/vendor/Chess_diagram_to_FEN:ro
     environment:
       PY_ANALYSER_HOST: "0.0.0.0"
       PY_ANALYSER_PORT: "8001"
@@ -14,6 +17,7 @@ services:
       OLLAMA_URL: "${OLLAMA_URL:-http://host.docker.internal:11434}"
       OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3.2}"
       EXPLAIN_LOG: "0"
+      CHESS_DIAGRAM_TO_FEN_DIR: /vendor/Chess_diagram_to_FEN
     # do not publish 8001 — go reaches analyser via service DNS
     expose:
       - "8001"

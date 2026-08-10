@@ -34,6 +34,9 @@ _VENDOR_DIR = _resolve_vendor_dir()
 _CAIRO_CANDIDATES = (
     Path("/opt/homebrew/opt/cairo/lib/libcairo.2.dylib"),
     Path("/usr/local/opt/cairo/lib/libcairo.2.dylib"),
+    Path("/usr/lib/x86_64-linux-gnu/libcairo.so.2"),
+    Path("/usr/lib/aarch64-linux-gnu/libcairo.so.2"),
+    Path("/usr/lib/libcairo.so.2"),
 )
 _CAIRO_FIND_NAMES = frozenset({"cairo", "cairo-2", "libcairo-2", "libcairo.2"})
 _cairo_ready = False
@@ -90,15 +93,19 @@ def _find_library(name: str) -> str | None:
     return _orig_find_library(name)
 
 
-# _ensure_cairo_library - points cairocffi at homebrew libcairo (conda shells miss it)
+# _ensure_cairo_library - points cairocffi at known libcairo paths when find_library misses
 def _ensure_cairo_library() -> None:
     global _cairo_ready
     if _cairo_ready:
         return
 
+    if _orig_find_library("cairo") or _orig_find_library("cairo-2"):
+        _cairo_ready = True
+        return
+
     if not any(p.is_file() for p in _CAIRO_CANDIDATES):
         raise FenFromImageError(
-            "libcairo not found; install with: brew install cairo",
+            "libcairo not found; install libcairo2 (Linux) or: brew install cairo (macOS)",
             "internal",
         )
 
