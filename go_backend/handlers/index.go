@@ -69,7 +69,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := indexPageData{
-		PageTitle:      "Chess Game",
+		PageTitle:      "Multi-Variant Board Game Platform with Explainable AI Coaching",
 		BoardHTML:      generateChessBoard(),
 		WhiteTurnClass: whiteTurnClass,
 		BlackTurnClass: blackTurnClass,

@@ -1,0 +1,85 @@
+/* how_it_works.css - how-to dialog overlay (header help button styles live in base.css) */
+
+.how_it_works_dialog:not([hidden]) {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.how_it_works_backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.how_it_works_panel {
+  position: relative;
+  z-index: 1;
+  width: min(520px, 92vw);
+  max-height: min(80vh, 640px);
+  overflow: auto;
+  border: 1px solid #4a4a4a;
+  background: #111111;
+  padding: 16px 18px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);
+}
+
+.how_it_works_header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.how_it_works_header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+#how_it_works_close {
+  flex-shrink: 0;
+  border: 1px solid #4a4a4a;
+  background: #1c1c1c;
+  color: #f5f5f5;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+#how_it_works_close:hover,
+#how_it_works_close:focus-visible {
+  border-color: #8a8a8a;
+  outline: none;
+}
+
+.how_it_works_steps {
+  margin: 0;
+  padding-left: 1.5rem;
+  list-style-type: decimal;
+  list-style-position: outside;
+  color: #e8e8e8;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.how_it_works_steps > li {
+  display: list-item;
+  list-style-type: decimal;
+  margin: 0 0 8px;
+}
+
+.how_it_works_steps > li:last-child {
+  margin-bottom: 0;
+}
+
+.how_it_works_optional {
+  margin: 12px 0 0;
+  color: #c8c8c8;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
