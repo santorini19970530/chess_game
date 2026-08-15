@@ -192,22 +192,23 @@ type analyzerSuggestedMove struct {
 
 // response from the analyzer
 type analyzerResponse struct {
-	RequestID      string                  `json:"request_id"`
-	Status         string                  `json:"status"`
-	Source         string                  `json:"source"`
-	FEN            string                  `json:"fen"`
-	EvaluatedColor string                  `json:"evaluated_for_color"`
-	HealthSummary  map[string]interface{}  `json:"health_summary"`
-	IsCheck        bool                    `json:"is_check"`
-	IsCheckmate    bool                    `json:"is_checkmate"`
-	IsStalemate    bool                    `json:"is_stalemate"`
-	EvalCPWhite    int                     `json:"eval_cp_white"`
-	WinChanceWhite float64                 `json:"win_chance_white"`
-	WinChanceBlack float64                 `json:"win_chance_black"`
-	ThreatSummary  string                  `json:"threat_summary"`
-	BestMoveUCI    string                  `json:"best_move_uci"`
-	SuggestedMoves []analyzerSuggestedMove `json:"suggested_moves"`
-	LatencyMS      int                     `json:"latency_ms"`
+	RequestID        string                  `json:"request_id"`
+	Status           string                  `json:"status"`
+	Source           string                  `json:"source"`
+	EvaluationSource string                  `json:"evaluation_source,omitempty"`
+	FEN              string                  `json:"fen"`
+	EvaluatedColor   string                  `json:"evaluated_for_color"`
+	HealthSummary    map[string]interface{}  `json:"health_summary"`
+	IsCheck          bool                    `json:"is_check"`
+	IsCheckmate      bool                    `json:"is_checkmate"`
+	IsStalemate      bool                    `json:"is_stalemate"`
+	EvalCPWhite      int                     `json:"eval_cp_white"`
+	WinChanceWhite   float64                 `json:"win_chance_white"`
+	WinChanceBlack   float64                 `json:"win_chance_black"`
+	ThreatSummary    string                  `json:"threat_summary"`
+	BestMoveUCI      string                  `json:"best_move_uci"`
+	SuggestedMoves   []analyzerSuggestedMove `json:"suggested_moves"`
+	LatencyMS        int                     `json:"latency_ms"`
 }
 
 // record of the move analysis

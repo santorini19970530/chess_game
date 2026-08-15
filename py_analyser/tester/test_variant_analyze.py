@@ -22,6 +22,7 @@ REQUIRED_FIELDS = {
     "request_id",
     "status",
     "source",
+    "evaluation_source",
     "fen",
     "evaluated_for_color",
     "health_summary",
@@ -113,6 +114,28 @@ class TestVariantAnalyze(unittest.TestCase):
         expected = analyzer.cp_to_win_chance(cp)
         self.assertAlmostEqual(expected + (1.0 - expected), 1.0, places=9)
         self.assertGreater(expected, 0.5)
+
+    # test_variant_fs_failure_reports_unavailable - no chess.Board heuristic for variant fen
+    def test_variant_fs_failure_reports_unavailable(self) -> None:
+        from unittest import mock
+        from move_suggest import FairyStockfishVariantSuggest
+
+        with mock.patch.object(
+            FairyStockfishVariantSuggest,
+            "suggest_with_eval",
+            side_effect=RuntimeError("engine down"),
+        ):
+            result = analyzer.analyze_position(
+                fen=XIANGQI_START,
+                color="white",
+                top_k=3,
+                request_id="xq-unavailable",
+                game_type="xianqi",
+            )
+        self.assertEqual(result["source"], "fallback")
+        self.assertEqual(result["evaluation_source"], "unavailable")
+        self.assertEqual(result["eval_cp_white"], 0)
+        self.assertEqual(result["suggested_moves"], [])
 
 
 if __name__ == "__main__":

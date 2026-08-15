@@ -45,6 +45,7 @@ class TestChessAnalyzeFsEval(unittest.TestCase):
         self.assertEqual(result["best_move_uci"], "e2e4")
         self.assertEqual(result["suggested_moves"][0]["uci"], "e2e4")
         self.assertEqual(result["source"], "fairy-stockfish")
+        self.assertEqual(result["evaluation_source"], "fairy-stockfish")
 
     # test_analyze_fs_failure_falls_back_to_heuristic - engine miss keeps playable heuristic payload
     def test_analyze_fs_failure_falls_back_to_heuristic(self) -> None:
@@ -61,6 +62,7 @@ class TestChessAnalyzeFsEval(unittest.TestCase):
                 game_type="chess",
             )
         self.assertEqual(result["source"], "heuristic")
+        self.assertEqual(result["evaluation_source"], "heuristic-fallback")
         self.assertIn("eval_cp_white", result)
         self.assertGreaterEqual(len(result["suggested_moves"]), 1)
 

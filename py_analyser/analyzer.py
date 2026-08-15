@@ -513,6 +513,7 @@ def _analyze_position_variant(
     eval_cp_white = 0
     suggestions: List[MoveSuggestion] = []
     source = "fairy-stockfish"
+    evaluation_source = "fairy-stockfish"
     # leave empty on success — a stub threat line looked like fs endorsed the llm
     threat = ""
 
@@ -533,6 +534,7 @@ def _analyze_position_variant(
     except Exception:
         # fs down / timeout: keep service up with empty suggestions
         source = "fallback"
+        evaluation_source = "unavailable"
         threat = "Fairy-Stockfish unavailable; variant analysis fallback."
         suggestions = []
         eval_cp_white = 0
@@ -549,6 +551,7 @@ def _analyze_position_variant(
         "request_id": request_id or str(uuid.uuid4()),
         "status": "ok",
         "source": source,
+        "evaluation_source": evaluation_source,
         "fen": fen,
         "evaluated_for_color": "white" if requested_color == chess.WHITE else "black",
         "health_summary": {
@@ -598,6 +601,7 @@ def analyze_position(
     board = chess.Board(fen)
     requested_color = parse_color(color)
     source = "fairy-stockfish"
+    evaluation_source = "fairy-stockfish"
     suggestions: List[MoveSuggestion] = []
     eval_cp_white = 0
 
@@ -617,6 +621,7 @@ def analyze_position(
     except Exception:
         # fs down / empty: keep service up with heuristic eval + suggestions
         source = "heuristic"
+        evaluation_source = "heuristic-fallback"
         suggestions = HeuristicSuggest().suggest(
             MoveSuggestContext(fen=fen, color=color, top_k=top_k, game_type="chess")
         )
@@ -631,6 +636,7 @@ def analyze_position(
         "request_id": request_id or str(uuid.uuid4()),
         "status": "ok",
         "source": source,
+        "evaluation_source": evaluation_source,
         "fen": fen,
         "evaluated_for_color": "white" if requested_color == chess.WHITE else "black",
         "health_summary": build_health_summary(board),
