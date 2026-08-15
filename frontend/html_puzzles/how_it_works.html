@@ -1,0 +1,37 @@
+<!-- CM3070 FP code -->
+<!-- how_it_works.html - how-to popup; not left-panel guide text -->
+
+{{define "how_it_works"}}
+<div
+  id="how_it_works_dialog"
+  class="how_it_works_dialog"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="how_it_works_title"
+  hidden
+>
+  <div class="how_it_works_backdrop" data-how-it-works-dismiss tabindex="-1"></div>
+  <div class="how_it_works_panel">
+    <div class="how_it_works_header">
+      <h2 id="how_it_works_title">How it works</h2>
+      <button type="button" id="how_it_works_close" aria-label="Close">Close</button>
+    </div>
+    <ol class="how_it_works_steps">
+      <li>Pick a game: Chess, Xiangqi, or Shogi.</li>
+      <li>Pick a mode: Human vs Human, Human vs AI, or AI vs AI.</li>
+      <li>
+        Human vs AI: choose AI strength, move on the board (or type a command), then Fairy-Stockfish
+        replies.
+      </li>
+      <li>
+        After moves, notes, estimated win chance, and coach text update (Ollama when available;
+        otherwise a simple fallback).
+      </li>
+      <li>
+        Optional: import a board diagram (confirm before load), paste a move list, use the clock, or
+        Preview mode to try one what-if move without changing the live game.
+      </li>
+    </ol>
+  </div>
+</div>
+{{end}}
