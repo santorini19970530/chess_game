@@ -80,4 +80,7 @@ func TestParseAIProfile_RejectsUnknown(t *testing.T) {
 	if p, ok := ParseAIProfile("Beginner"); !ok || p != "beginner" {
 		t.Fatalf("got %q ok=%v", p, ok)
 	}
+	if p, ok := ParseAIProfile("nnue"); !ok || p != "nnue" {
+		t.Fatalf("got %q ok=%v", p, ok)
+	}
 }

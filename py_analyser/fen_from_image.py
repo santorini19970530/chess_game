@@ -51,6 +51,17 @@ SUPPORTED_DIAGRAM_GAMES = frozenset(_GAME_ALIASES)
 _LIMITS_NOTE = (
     "Chess strongest; Xiangqi OK; Shogi weaker — hands inferred from board inventory"
 )
+VISION_WEIGHTS_RELEASE = (
+    "https://github.com/tsoj/Chess_diagram_to_FEN/releases/download/1.0/models.zip"
+)
+
+
+# chess_vision_checkpoints - vendor models/chess best_model_*.pth basenames
+def chess_vision_checkpoints() -> list[str]:
+    d = _VENDOR_DIR / "models" / "chess"
+    if not d.is_dir():
+        return []
+    return sorted(p.name for p in d.glob("best_model_*.pth"))
 
 
 class FenFromImageError(Exception):

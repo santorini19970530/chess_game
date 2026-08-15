@@ -29,6 +29,25 @@ _TERMS_TONE_FILES = (
 
 
 class TestTeacherSmokeOffline(unittest.TestCase):
+    # test_configured_ollama_model_default_and_env - unset → gemma2:2b; OLLAMA_MODEL wins
+    def test_configured_ollama_model_default_and_env(self) -> None:
+        import importlib
+        from unittest.mock import patch
+
+        import llm_providers
+
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("OLLAMA_MODEL", None)
+            importlib.reload(llm_providers)
+            self.assertEqual(llm_providers.configured_ollama_model(), "gemma2:2b")
+            self.assertEqual(llm_providers.OllamaProvider().model, "gemma2:2b")
+        with patch.dict(os.environ, {"OLLAMA_MODEL": "llama3.2"}, clear=False):
+            importlib.reload(llm_providers)
+            self.assertEqual(llm_providers.configured_ollama_model(), "llama3.2")
+            self.assertEqual(llm_providers.OllamaProvider().model, "llama3.2")
+        importlib.reload(llm_providers)
+
+    # test_terms_and_tone_json_load - each game has beginner/intermediate/advanced keys
     def test_terms_and_tone_json_load(self) -> None:
         for name in _TERMS_TONE_FILES:
             path = DATA_DIR / name
@@ -38,6 +57,7 @@ class TestTeacherSmokeOffline(unittest.TestCase):
             for level in ("beginner", "intermediate", "advanced"):
                 self.assertIn(level, data, f"{name} missing {level}")
 
+    # test_prompts_differ_beginner_vs_advanced - beginner tone vs advanced terms
     def test_prompts_differ_beginner_vs_advanced(self) -> None:
         from teacher_prompt import build_teacher_prompt
 
@@ -54,6 +74,7 @@ class TestTeacherSmokeOffline(unittest.TestCase):
         self.assertIn("friendly teacher", beg)
         self.assertIn("prophylaxis", adv)
 
+    # test_variant_prompts_use_own_terms - xiangqi palace / shogi drop; chess ok-list has no drop
     def test_variant_prompts_use_own_terms(self) -> None:
         from teacher_prompt import build_teacher_prompt
 
@@ -74,6 +95,7 @@ class TestTeacherSmokeOffline(unittest.TestCase):
         self.assertRegex(chess, r"Ok terms:.*\bdevelopment\b")
         self.assertNotRegex(chess, r"Ok terms:.*\bdrop\b")
 
+    # test_explain_heuristic_nonempty - /explain fallback starts with You played e4
     def test_explain_heuristic_nonempty(self) -> None:
         os.environ["LLM_PROVIDER"] = "heuristic"
         import server
@@ -100,6 +122,7 @@ class TestTeacherSmokeOffline(unittest.TestCase):
         self.assertEqual(body.get("move_san"), "e4")
         self.assertTrue(str(body.get("explanation")).startswith("You played e4."))
 
+    # test_quick_explain_is_instant_ground_truth - quick source, under 500ms
     def test_quick_explain_is_instant_ground_truth(self) -> None:
         os.environ["LLM_PROVIDER"] = "heuristic"
         import server
@@ -132,6 +155,7 @@ class TestTeacherSmokeOffline(unittest.TestCase):
     "set TEACHER_SMOKE_OLLAMA=1 with Ollama running to enable live smoke",
 )
 class TestTeacherSmokeOllama(unittest.TestCase):
+    # test_beginner_and_advanced_ollama - live /explain source=ollama for both levels
     def test_beginner_and_advanced_ollama(self) -> None:
         os.environ["LLM_PROVIDER"] = "ollama"
         import importlib

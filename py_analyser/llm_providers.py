@@ -13,6 +13,14 @@ from analyzer import build_explanation_fallback
 from explain_finalize import sanitize_explanation
 from teacher_prompt import build_teacher_prompt
 
+# code default if OLLAMA_MODEL is unset; run.sh may set llama3.2 — do not treat either as a product lock
+_DEFAULT_OLLAMA_MODEL = "gemma2:2b"
+
+
+# configured_ollama_model - env tag if set, otherwise the code default
+def configured_ollama_model() -> str:
+    return (os.getenv("OLLAMA_MODEL") or "").strip() or _DEFAULT_OLLAMA_MODEL
+
 
 # LLMProvider - protocol for coach explanation providers
 class LLMProvider(Protocol):
@@ -42,7 +50,7 @@ class OllamaProvider:
 
     # __init__ - configures model, timeout, and generate url from env defaults
     def __init__(self, model: str | None = None, timeout: float | None = None) -> None:
-        self.model = model or os.getenv("OLLAMA_MODEL", "gemma2:2b")
+        self.model = model or configured_ollama_model()
         timeout_ms_raw = os.getenv("OLLAMA_TIMEOUT_MS", "15000").strip()
         try:
             timeout_ms = max(1000, int(timeout_ms_raw))

@@ -175,7 +175,7 @@ func (fs *FairyStockfish) SetStrengthProfile(profile string) error {
 		skill, multipv = 5, 3
 	case "advanced":
 		skill, multipv = 15, 3
-	case "master":
+	case "master", "nnue":
 		// multiPV>1 is for suggestion UI; BestMove only needs one line and
 		// multiPV 5 made long eval runs crash more often (EOF / broken pipe).
 		skill, multipv = 20, 1
@@ -189,7 +189,11 @@ func (fs *FairyStockfish) SetStrengthProfile(profile string) error {
 	if err := fs.SetOption("MultiPV", fmt.Sprintf("%d", multipv)); err != nil {
 		return err
 	}
-	return nil
+	useNNUE := "false"
+	if p == "nnue" && ResolveNNUEPath() != "" {
+		useNNUE = "true"
+	}
+	return fs.SetOption("Use NNUE", useNNUE)
 }
 
 // BestMove - sends position + go and returns the bestmove

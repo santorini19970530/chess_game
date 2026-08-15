@@ -62,6 +62,19 @@ class SetupCommand {
     }
   }
 
+  // syncChessNnueOption - NNUE strength is Chess-only; Xiangqi/Shogi fall back to master
+  syncChessNnueOption() {
+    const sel = this.app.el.aiStrengthSelect;
+    if (!sel) return;
+    const chess = String(this.app.el.gameTypeSelect?.value || "chess") === "chess";
+    const nnue = sel.querySelector('option[value="nnue"]');
+    if (nnue) {
+      nnue.hidden = !chess;
+      nnue.disabled = !chess;
+    }
+    if (!chess && sel.value === "nnue") sel.value = "master";
+  }
+
   // updateSetupControlState - enables or disables setup controls for mode and simulation busy state
   updateSetupControlState() {
     const mode = String(this.app.el.gameModeSelect?.value || "human_vs_human");
@@ -76,6 +89,7 @@ class SetupCommand {
     }
     if (this.app.el.aiStrengthSelect) {
       this.app.el.aiStrengthSelect.disabled = !(mode === "human_vs_ai" || isAIVsAI) || simulationBusy;
+      this.syncChessNnueOption();
     }
     if (this.app.el.gameModeSelect) this.app.el.gameModeSelect.disabled = simulationBusy;
     if (this.app.el.gameTypeSelect) this.app.el.gameTypeSelect.disabled = simulationBusy;
@@ -134,6 +148,7 @@ class SetupCommand {
     if (this.app.el.fenInput) this.app.el.fenInput.value = String(cfg.startFen || "");
     if (this.app.el.aiStrengthSelect) {
       this.app.el.aiStrengthSelect.value = String(cfg.aiProfile || cfg.aiStrength || "intermediate");
+      this.syncChessNnueOption();
     }
     if (this.app.el.coachLevelSelect) {
       const skill = String(cfg.skillLevel || "").toLowerCase();

@@ -225,7 +225,7 @@ USE_FAIRY_STOCKFISH=true go run ./cmd/match -games 5 -game xianqi -profile begin
 USE_FAIRY_STOCKFISH=true go run ./cmd/match -games 5 -game shogi -profile beginner -format json > "$OUT/eval_shogi_smoke.json"
 ```
 
-Profiles: `beginner` | `intermediate` | `advanced` | `master`.  
+Profiles: `beginner` | `intermediate` | `advanced` | `master` | Chess-only `nnue`.  
 Results write-up: FYP repo log sheet `123_chess_formal_ai_vs_ai_evaluation.md`.
 
 ---

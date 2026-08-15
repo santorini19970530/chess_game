@@ -44,8 +44,8 @@ func diagramTimeout() time.Duration {
 	return time.Duration(timeoutMS) * time.Millisecond
 }
 
-// fenFromImageByMultipart - posts multipart image+game to python /fen_from_image
-func fenFromImageByMultipart(ctx context.Context, imageBytes []byte, filename, game string) (diagramFenResponse, error) {
+// fenFromImageByMultipart - posts multipart image+game and optional request_id to python /fen_from_image
+func fenFromImageByMultipart(ctx context.Context, imageBytes []byte, filename, game, requestID string) (diagramFenResponse, error) {
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
 	part, err := writer.CreateFormFile("image", filename)
@@ -57,6 +57,11 @@ func fenFromImageByMultipart(ctx context.Context, imageBytes []byte, filename, g
 	}
 	if err := writer.WriteField("game", game); err != nil {
 		return diagramFenResponse{}, err
+	}
+	if rid := strings.TrimSpace(requestID); rid != "" {
+		if err := writer.WriteField("request_id", rid); err != nil {
+			return diagramFenResponse{}, err
+		}
 	}
 	if err := writer.Close(); err != nil {
 		return diagramFenResponse{}, err
@@ -186,7 +191,9 @@ func (h *Handler) postAPIDiagramFen(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), diagramTimeout())
 	defer cancel()
 
-	result, err := fenFromImageByMultipart(ctx, imageBytes, filename, game)
+	// request_id - optional correlation id forwarded to python and echoed in the json
+	requestID := strings.TrimSpace(r.FormValue("request_id"))
+	result, err := fenFromImageByMultipart(ctx, imageBytes, filename, game, requestID)
 	if err != nil {
 		if proxyErr, ok := err.(*diagramProxyError); ok {
 			status := proxyErr.Status
@@ -199,6 +206,10 @@ func (h *Handler) postAPIDiagramFen(w http.ResponseWriter, r *http.Request) {
 		log.Printf("api diagram fen proxy error: %v", err)
 		writeJSONError(w, http.StatusBadGateway, err.Error())
 		return
+	}
+
+	if result.RequestID == "" && requestID != "" {
+		result.RequestID = requestID
 	}
 
 	w.Header().Set("Content-Type", "application/json")

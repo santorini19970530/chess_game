@@ -299,6 +299,6 @@ def profile_to_uci_options(profile: str) -> tuple[dict, chess.engine.Limit]:
         return {"Skill Level": 5}, chess.engine.Limit(depth=8, time=0.4)
     if p == "advanced":
         return {"Skill Level": 15}, chess.engine.Limit(depth=12, time=0.8)
-    if p == "master":
+    if p == "master" or p == "nnue":
         return {"Skill Level": 20}, chess.engine.Limit(depth=18, time=1.5)
     return {"Skill Level": 5}, chess.engine.Limit(depth=8, time=0.4)

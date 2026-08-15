@@ -72,7 +72,7 @@ func TestFairyStockfish_SetStrengthProfile(t *testing.T) {
 	}
 	defer fs.Close()
 
-	for _, p := range []string{"beginner", "intermediate", "advanced", "master"} {
+	for _, p := range []string{"beginner", "intermediate", "advanced", "master", "nnue"} {
 		if err := fs.SetStrengthProfile(p); err != nil {
 			t.Fatalf("SetStrengthProfile(%s) failed: %v", p, err)
 		}
