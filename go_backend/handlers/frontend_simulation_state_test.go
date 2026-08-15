@@ -212,6 +212,23 @@ func TestFrontendWinProb_EstimatedCaption(t *testing.T) {
 	requireSnippet(t, jsSrc, "source: ${label}")
 }
 
+// TestFrontendPreviewMove_Markers - checks deliberate preview-move ui and restore helpers
+func TestFrontendPreviewMove_Markers(t *testing.T) {
+	indexSrc := loadIndexHandlerSource(t)
+	requireSnippet(t, indexSrc, `id="chess_command_preview"`)
+	requireSnippet(t, indexSrc, `id="chess_command_preview_close"`)
+	requireSnippet(t, indexSrc, "Close preview")
+
+	jsSrc := loadChessCommandSource(t)
+	requireSnippet(t, jsSrc, "/preview-move")
+	requireSnippet(t, jsSrc, "previewCommand")
+	requireSnippet(t, jsSrc, "clearMovePreview")
+	requireSnippet(t, jsSrc, "previewOnly")
+	requireSnippet(t, jsSrc, "Estimated win chance (preview)")
+	requireSnippet(t, jsSrc, "formatPreviewNotes")
+	requireSnippet(t, jsSrc, "live position unchanged")
+}
+
 // TestFrontendSimulationDownload_Step1ButtonMarkers - checks frontend simulation download step1 button markers
 func TestFrontendSimulationDownload_Step1ButtonMarkers(t *testing.T) {
 	source := loadIndexHandlerSource(t)

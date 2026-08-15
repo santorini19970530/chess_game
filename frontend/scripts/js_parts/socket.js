@@ -122,6 +122,7 @@ class SocketClient {
         break;
       case "ready":
         if (!data?.analysis) break;
+        this.app.setup.clearMovePreview({ restore: false });
         this.app.gameInfo.renderGameInfo(
           this.app.state.pendingAnalysisCapturedSnapshot || this.app.state.cachedCapturedSummary,
           data.analysis

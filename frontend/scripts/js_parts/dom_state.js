@@ -22,6 +22,8 @@ class DomState {
     const el = this.app.el;
     el.input = document.getElementById("chess_command");
     el.button = document.getElementById("chess_command_submit");
+    el.previewButton = document.getElementById("chess_command_preview");
+    el.previewCloseButton = document.getElementById("chess_command_preview_close");
     el.flagButton = document.getElementById("chess_flag");
     el.status = document.getElementById("chess_command_status");
     el.whiteColumnCells = document.querySelectorAll(".game_info_col_white");
@@ -33,6 +35,8 @@ class DomState {
     el.winProbWhiteBar = document.getElementById("game_info_winprob_white_bar");
     el.winProbBlackBar = document.getElementById("game_info_winprob_black_bar");
     el.winProbSource = document.getElementById("game_info_winprob_source");
+    el.winProbTitle = document.getElementById("game_info_winprob_title");
+    el.winProbWrapper = document.querySelector(".game_info_winprob_wrapper");
     el.resultWhiteValue = document.getElementById("game_info_result_white");
     el.resultBlackValue = document.getElementById("game_info_result_black");
     el.gameInfoNotesBox = document.getElementById("game_info_notes");
@@ -149,6 +153,9 @@ class DomState {
     state.pendingAnalysisCapturedSnapshot = null;
     state.cachedAnalysis = null;
     state.cachedCapturedSummary = null;
+    state.previewActive = false;
+    state.previewRestore = null;
+    state.isPreviewing = false;
     state.lastExplanationText = "";
     state.lastSuggestionsText = "";
     state.lastThreatSummary = "";

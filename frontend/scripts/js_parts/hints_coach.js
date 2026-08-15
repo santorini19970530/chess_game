@@ -332,6 +332,7 @@ class HintsCoach {
         const latestAnalysis = payload?.latest?.analysis;
         if (!latestAnalysis) return;
         if (latestMoveNumber < target) return;
+        this.app.setup.clearMovePreview({ restore: false });
         this.app.gameInfo.renderGameInfo(
           this.app.state.pendingAnalysisCapturedSnapshot || capturedSnapshot,
           latestAnalysis

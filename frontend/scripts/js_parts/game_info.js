@@ -107,9 +107,12 @@ class GameInfoView {
 
   // endGameUi - disables play controls and shows an ended-game status/notes message
   endGameUi(statusMsg, statusType, notesMsg) {
+    this.app.setup.clearMovePreview({ restore: false });
     this.app.util.setStatus(statusMsg, statusType);
     this.app.el.input.disabled = true;
     this.app.el.button.disabled = true;
+    if (this.app.el.previewButton) this.app.el.previewButton.disabled = true;
+    if (this.app.el.previewCloseButton) this.app.el.previewCloseButton.hidden = true;
     if (this.app.el.flagButton) this.app.el.flagButton.disabled = true;
     this.app.state.gameOver = true;
     this.app.clocks.stopClockTick();
@@ -299,12 +302,28 @@ class GameInfoView {
     return "";
   }
 
+  // setWinProbCaption - toggles preview labelling on the estimated win-chance header
+  setWinProbCaption(isPreview) {
+    if (this.app.el.winProbTitle) {
+      this.app.el.winProbTitle.textContent = isPreview
+        ? "Estimated win chance (preview)"
+        : "Estimated win chance";
+    }
+    if (this.app.el.winProbWrapper) {
+      this.app.el.winProbWrapper.classList.toggle("is-preview", Boolean(isPreview));
+    }
+  }
+
   // renderGameInfo - paints captures, estimated win% bars, and threat notes from analysis
-  renderGameInfo(capturedSummary, analysis) {
+  renderGameInfo(capturedSummary, analysis, opts = {}) {
     if (capturedSummary) this.app.state.cachedCapturedSummary = capturedSummary;
     const effectiveCapturedSummary = capturedSummary || this.app.state.cachedCapturedSummary;
-    const effectiveAnalysis = analysis || this.app.state.cachedAnalysis;
-    if (analysis) this.app.state.cachedAnalysis = analysis;
+    const previewOnly = Boolean(opts.previewOnly);
+    if (analysis && !previewOnly) this.app.state.cachedAnalysis = analysis;
+    const effectiveAnalysis = previewOnly
+      ? analysis
+      : analysis || this.app.state.cachedAnalysis;
+    if (!previewOnly) this.setWinProbCaption(false);
     const normalizedCaptured = this.normalizeCapturedSummary(effectiveCapturedSummary);
     const whiteCaptured = normalizedCaptured.white;
     const blackCaptured = normalizedCaptured.black;
@@ -337,9 +356,12 @@ class GameInfoView {
 
     if (this.app.el.winProbSource) {
       const label = this.evaluationSourceLabel(effectiveAnalysis?.evaluation_source);
-      this.app.el.winProbSource.textContent = label ? `source: ${label}` : "";
-      this.app.el.winProbSource.hidden = !label;
+      const prefix = previewOnly ? "preview · " : "";
+      this.app.el.winProbSource.textContent = label ? `${prefix}source: ${label}` : previewOnly ? "preview" : "";
+      this.app.el.winProbSource.hidden = !this.app.el.winProbSource.textContent;
     }
+
+    if (previewOnly) return;
 
     if (this.app.el.gameInfoNotesBox && effectiveAnalysis && !this.app.state.gameOver) {
       const threatSummary = String(effectiveAnalysis?.threat_summary || "").trim();

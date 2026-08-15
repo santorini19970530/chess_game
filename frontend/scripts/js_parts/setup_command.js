@@ -11,6 +11,12 @@ class SetupCommand {
   // bindFormListeners - wires setup form inputs to preview, sync, and enable/disable updates
   bindFormListeners() {
     this.app.el.button.addEventListener("click", this.submitCommand.bind(this));
+    if (this.app.el.previewButton) {
+      this.app.el.previewButton.addEventListener("click", () => void this.previewCommand());
+    }
+    if (this.app.el.previewCloseButton) {
+      this.app.el.previewCloseButton.addEventListener("click", () => this.clearMovePreview({ restore: true }));
+    }
     if (this.app.el.gameModeSelect) {
       this.app.el.gameModeSelect.addEventListener("change", this.updateSetupControlState.bind(this));
     }
@@ -78,6 +84,14 @@ class SetupCommand {
     if (this.app.el.newGameButton) this.app.el.newGameButton.disabled = simulationBusy;
     if (this.app.el.input) this.app.el.input.disabled = simulationBusy || this.app.state.gameOver;
     if (this.app.el.button) this.app.el.button.disabled = simulationBusy || this.app.state.gameOver;
+    if (this.app.el.previewButton) {
+      this.app.el.previewButton.disabled =
+        simulationBusy || this.app.state.gameOver || this.app.state.isPreviewing;
+    }
+    if (this.app.el.previewCloseButton) {
+      this.app.el.previewCloseButton.disabled = simulationBusy;
+      this.app.el.previewCloseButton.hidden = !this.app.state.previewActive;
+    }
     if (this.app.el.flagButton) this.app.el.flagButton.disabled = simulationBusy || this.app.state.gameOver;
 
     const clockOn = Boolean(this.app.el.clockEnabledInput?.checked);
@@ -129,6 +143,122 @@ class SetupCommand {
     this.updateSetupControlState();
   }
 
+  // formatPreviewNotes - builds a short notes block for a what-if preview result
+  formatPreviewNotes(command, suggestedMoves) {
+    const lines = [`Preview of ${command} (live position unchanged).`];
+    const moves = Array.isArray(suggestedMoves) ? suggestedMoves : [];
+    const labels = [];
+    for (let i = 0; i < moves.length && labels.length < 3; i++) {
+      const sm = moves[i];
+      const lab = String(sm?.san || sm?.uci || sm?.move || "").trim();
+      if (lab) labels.push(lab);
+    }
+    if (labels.length) lines.push(`Suggested replies: ${labels.join(", ")}`);
+    return lines.join("\n");
+  }
+
+  // clearMovePreview - ends preview mode; optionally restores committed analysis and notes
+  clearMovePreview(opts = {}) {
+    const restore = opts.restore !== false;
+    if (!this.app.state.previewActive && !this.app.state.previewRestore) {
+      if (this.app.el.previewCloseButton) this.app.el.previewCloseButton.hidden = true;
+      this.app.gameInfo.setWinProbCaption(false);
+      return;
+    }
+    const snap = this.app.state.previewRestore;
+    this.app.state.previewActive = false;
+    this.app.state.previewRestore = null;
+    this.app.state.isPreviewing = false;
+    if (this.app.el.previewCloseButton) this.app.el.previewCloseButton.hidden = true;
+    this.app.gameInfo.setWinProbCaption(false);
+    this.updateSetupControlState();
+    if (!restore) return;
+    if (snap) {
+      this.app.state.lastSuggestionsText = snap.suggestionsText || "";
+      this.app.state.lastThreatSummary = snap.threatSummary || "";
+      this.app.state.lastExplanationText = snap.explanationText || "";
+      this.app.gameInfo.renderGameInfo(null, snap.analysis || null);
+      this.app.util.refreshNotesBox();
+      return;
+    }
+    this.app.gameInfo.renderGameInfo(null, this.app.state.cachedAnalysis || null);
+    this.app.util.refreshNotesBox();
+  }
+
+  // previewCommand - posts a legal command to preview-move and paints estimated child-position win%
+  async previewCommand(commandText = "") {
+    if (this.app.state.isSubmitting || this.app.state.isPreviewing) return false;
+    if (this.app.state.simulationRequestInFlight || this.app.state.isSimulationPlayback) {
+      this.app.util.setStatus("Simulation is in progress. Please wait for it to finish.", "error");
+      return false;
+    }
+    if (this.app.state.gameOver) {
+      this.app.util.setStatus("Game has ended. Refresh to start a new game.", "error");
+      return false;
+    }
+    const command = String(commandText || this.app.el.input.value).trim();
+    if (!command) {
+      this.app.util.setStatus("Enter a legal move command to preview.", "error");
+      return false;
+    }
+    if (!this.app.state.currentGameId) {
+      this.app.util.setStatus("Missing game session. Start a new game first.", "error");
+      return false;
+    }
+
+    this.app.state.isPreviewing = true;
+    this.updateSetupControlState();
+    try {
+      const response = await fetch(
+        `/api/games/${encodeURIComponent(this.app.state.currentGameId)}/preview-move`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ command }),
+        }
+      );
+      if (!response.ok) {
+        const errorMessage = await this.app.util.readErrorMessage(response, "Preview failed");
+        this.app.util.setStatus(errorMessage || "Preview failed", "error");
+        return false;
+      }
+      const result = await response.json();
+      const previewAnalysis = {
+        win_chance_white: result.win_chance_white,
+        win_chance_black: result.win_chance_black,
+        eval_cp_white: result.eval_cp_white,
+        evaluation_source: result.evaluation_source,
+        suggested_moves: result.suggested_moves,
+        threat_summary: "",
+      };
+      if (!this.app.state.previewActive) {
+        this.app.state.previewRestore = {
+          analysis: this.app.state.cachedAnalysis,
+          suggestionsText: this.app.state.lastSuggestionsText || "",
+          threatSummary: this.app.state.lastThreatSummary || "",
+          explanationText: this.app.state.lastExplanationText || "",
+        };
+      }
+      this.app.state.previewActive = true;
+      this.app.gameInfo.setWinProbCaption(true);
+      this.app.gameInfo.renderGameInfo(null, previewAnalysis, { previewOnly: true });
+      this.app.state.lastSuggestionsText = this.formatPreviewNotes(
+        result.command || command,
+        result.suggested_moves
+      );
+      this.app.util.refreshNotesBox();
+      if (this.app.el.previewCloseButton) this.app.el.previewCloseButton.hidden = false;
+      this.app.util.setStatus(`Previewing ${result.command || command} (not played).`, "success");
+      return true;
+    } catch (error) {
+      this.app.util.setCatchStatus(error);
+      return false;
+    } finally {
+      this.app.state.isPreviewing = false;
+      this.updateSetupControlState();
+    }
+  }
+
   // submitCommand - posts a uci command to the move endpoint and refreshes the ui
   async submitCommand(commandText = "") {
     if (this.app.state.isSubmitting) return false;
@@ -146,6 +276,7 @@ class SetupCommand {
       this.app.util.setStatus("Please enter a chess movement command.", "error");
       return false;
     }
+    this.clearMovePreview({ restore: false });
     this.app.state.isSubmitting = true;
     try {
       if (!this.app.state.currentGameId) {
@@ -257,4 +388,20 @@ class SetupCommand {
   }
 }
 
-window.SetupCommand = SetupCommand;
+if (typeof window !== "undefined") {
+  window.SetupCommand = SetupCommand;
+} else {
+  // self-check: preview notes name the command and list reply labels without claiming the move was played
+  const setup = new SetupCommand({
+    el: { button: { addEventListener() {} } },
+    state: {},
+  });
+  const notes = setup.formatPreviewNotes("e2e4", [
+    { san: "e5", uci: "e7e5" },
+    { uci: "c7c5" },
+  ]);
+  if (!notes.includes("e2e4") || !notes.includes("unchanged") || !notes.includes("e5") || !notes.includes("c7c5")) {
+    throw new Error("formatPreviewNotes self-check failed");
+  }
+  console.log("setup command preview self-check ok");
+}

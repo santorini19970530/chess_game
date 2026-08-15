@@ -23,6 +23,7 @@ class GameApp {
 
   // applyGameSnapshot - paints setup/board/info/clocks from an api game result
   applyGameSnapshot(result, opts = {}) {
+    if (this.setup) this.setup.clearMovePreview({ restore: false });
     this.socket.syncGameIdFromResult(result);
     if (opts.config !== false) {
       this.setup.renderGameConfig(result.game, { syncClockSetup: Boolean(opts.syncClockSetup) });
@@ -89,6 +90,7 @@ class GameApp {
   enablePlayInputs() {
     this.el.input.disabled = false;
     this.el.button.disabled = false;
+    if (this.el.previewButton) this.el.previewButton.disabled = false;
     if (this.el.flagButton) this.el.flagButton.disabled = false;
     this.state.gameOver = false;
   }
