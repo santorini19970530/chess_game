@@ -135,7 +135,7 @@ func normalizeAIProfile(p string) string {
 // ParseAIProfile - accepts a known profile name
 func ParseAIProfile(p string) (string, bool) {
 	switch strings.ToLower(strings.TrimSpace(p)) {
-	case "beginner", "intermediate", "advanced", "master":
+	case "beginner", "intermediate", "advanced", "master", "nnue":
 		return strings.ToLower(strings.TrimSpace(p)), true
 	default:
 		return "", false
@@ -174,12 +174,12 @@ func NormalizeSkillLevel(level string) (string, bool) {
 	}
 }
 
-// SkillLevelFromAIProfile - maps AI strength (4) → explain skill (3). master → advanced
+// SkillLevelFromAIProfile - maps AI strength → explain skill (3). master/nnue → advanced
 func SkillLevelFromAIProfile(profile string) string {
 	switch normalizeAIProfile(profile) {
 	case "beginner", "intermediate", "advanced":
 		return normalizeAIProfile(profile)
-	case "master":
+	case "master", "nnue":
 		return "advanced"
 	default:
 		return "intermediate"

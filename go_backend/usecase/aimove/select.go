@@ -64,6 +64,11 @@ func GetFairyStockfish(side string) (*engine.FairyStockfish, error) {
 	if err := fs.Start(); err != nil {
 		return nil, err
 	}
+	if evErr := engine.EvidenceCheckNNUE(); evErr != nil {
+		log.Printf("warning: NNUE evidence check failed: %v (play may use classical eval)", evErr)
+	} else {
+		log.Printf("NNUE evidence check passed path=%s", engine.ResolveNNUEPath())
+	}
 	fsEngines[key] = fs
 	return fs, nil
 }
@@ -254,7 +259,7 @@ func selectMoveWithFairyStockfish(fen, profile, side string, allowDegrade bool, 
 
 // fsProfileFallbackChain - returns strength profiles from the requested level down to beginner
 func fsProfileFallbackChain(profile string) []string {
-	order := []string{"master", "advanced", "intermediate", "beginner"}
+	order := []string{"nnue", "master", "advanced", "intermediate", "beginner"}
 	start := strings.ToLower(strings.TrimSpace(profile))
 	idx := 0
 	for i, p := range order {
@@ -279,7 +284,7 @@ func fsLimitForProfile(profile string) engine.Limit {
 	case "advanced":
 		limit.Depth = 14
 		limit.MoveTime = 1000 * time.Millisecond
-	case "master":
+	case "master", "nnue":
 		limit.Depth = 20
 		limit.MoveTime = 1200 * time.Millisecond
 	}

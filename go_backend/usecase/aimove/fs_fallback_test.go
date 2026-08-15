@@ -21,4 +21,8 @@ func TestFsProfileFallbackChain(t *testing.T) {
 	if got[0] != "intermediate" || got[len(got)-1] != "beginner" {
 		t.Fatalf("got %v", got)
 	}
+	got = fsProfileFallbackChain("nnue")
+	if got[0] != "nnue" || got[1] != "master" || got[len(got)-1] != "beginner" {
+		t.Fatalf("got %v", got)
+	}
 }

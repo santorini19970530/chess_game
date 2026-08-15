@@ -166,6 +166,7 @@ func TestExplainSkillLevelFromProfile(t *testing.T) {
 		"advanced":     "advanced",
 		"master":       "advanced",
 		"MASTER":       "advanced",
+		"nnue":         "advanced",
 		"n00b":         "intermediate",
 	}
 	for in, want := range cases {
