@@ -308,6 +308,25 @@ func TestExplainByRequest_FallsBackOnError(t *testing.T) {
 	}
 }
 
+// TestAnalyzerResponse_UnmarshalsEvaluationSource - checks evaluation_source survives json decode
+func TestAnalyzerResponse_UnmarshalsEvaluationSource(t *testing.T) {
+	raw := []byte(`{
+		"request_id":"e1","status":"ok","source":"fairy-stockfish",
+		"evaluation_source":"fairy-stockfish","fen":"x",
+		"evaluated_for_color":"white","health_summary":{},
+		"eval_cp_white":12,"win_chance_white":0.6,"win_chance_black":0.4,
+		"threat_summary":"","best_move_uci":"e2e4","suggested_moves":[],
+		"latency_ms":1
+	}`)
+	var parsed analyzerResponse
+	if err := json.Unmarshal(raw, &parsed); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if parsed.EvaluationSource != "fairy-stockfish" {
+		t.Fatalf("evaluation_source=%q", parsed.EvaluationSource)
+	}
+}
+
 // TestEnqueueCurrentPositionAnalysis_PassesXiangqiGameType - checks enqueue current position analysis passes xiangqi game type
 func TestEnqueueCurrentPositionAnalysis_PassesXiangqiGameType(t *testing.T) {
 	got := make(chan map[string]interface{}, 1)
@@ -323,6 +342,7 @@ func TestEnqueueCurrentPositionAnalysis_PassesXiangqiGameType(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
 			"request_id":"xq","status":"ok","source":"fairy-stockfish",
+			"evaluation_source":"fairy-stockfish",
 			"fen":"","evaluated_for_color":"white","health_summary":{},
 			"eval_cp_white":0,"win_chance_white":0.5,"win_chance_black":0.5,
 			"threat_summary":"ok","best_move_uci":"h2e2","suggested_moves":[],

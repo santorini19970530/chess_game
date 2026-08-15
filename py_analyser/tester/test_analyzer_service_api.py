@@ -49,6 +49,7 @@ class TestAnalyzerServiceAPI(unittest.TestCase):
             "request_id",
             "status",
             "source",
+            "evaluation_source",
             "fen",
             "evaluated_for_color",
             "health_summary",

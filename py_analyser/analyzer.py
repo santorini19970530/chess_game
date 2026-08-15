@@ -513,6 +513,7 @@ def _analyze_position_variant(
     eval_cp_white = 0
     suggestions: List[MoveSuggestion] = []
     source = "fairy-stockfish"
+    evaluation_source = "fairy-stockfish"
     # leave empty on success — a stub threat line looked like fs endorsed the llm
     threat = ""
 
@@ -533,6 +534,7 @@ def _analyze_position_variant(
     except Exception:
         # fs down / timeout: keep service up with empty suggestions
         source = "fallback"
+        evaluation_source = "unavailable"
         threat = "Fairy-Stockfish unavailable; variant analysis fallback."
         suggestions = []
         eval_cp_white = 0
@@ -549,6 +551,7 @@ def _analyze_position_variant(
         "request_id": request_id or str(uuid.uuid4()),
         "status": "ok",
         "source": source,
+        "evaluation_source": evaluation_source,
         "fen": fen,
         "evaluated_for_color": "white" if requested_color == chess.WHITE else "black",
         "health_summary": {
@@ -588,16 +591,42 @@ def analyze_position(
             fen, color, top_k, request_id, gt, profile=profile
         )
 
-    from move_suggest import HeuristicSuggest, MoveSuggestContext
+    from move_suggest import (
+        FairyStockfishSuggest,
+        HeuristicSuggest,
+        MoveSuggestContext,
+    )
 
     started_at = time.perf_counter()
     board = chess.Board(fen)
     requested_color = parse_color(color)
-    suggestions = HeuristicSuggest().suggest(
-        MoveSuggestContext(fen=fen, color=color, top_k=top_k, game_type="chess")
-    )
+    source = "fairy-stockfish"
+    evaluation_source = "fairy-stockfish"
+    suggestions: List[MoveSuggestion] = []
+    eval_cp_white = 0
 
-    eval_cp_white = evaluate_position(board, chess.WHITE)
+    try:
+        suggestions, score = FairyStockfishSuggest().suggest_with_eval(
+            MoveSuggestContext(
+                fen=fen,
+                color=color,
+                top_k=top_k,
+                profile=profile,
+                game_type="chess",
+            )
+        )
+        if not suggestions or score is None:
+            raise RuntimeError("fairy-stockfish soft miss")
+        eval_cp_white = score
+    except Exception:
+        # fs down / empty: keep service up with heuristic eval + suggestions
+        source = "heuristic"
+        evaluation_source = "heuristic-fallback"
+        suggestions = HeuristicSuggest().suggest(
+            MoveSuggestContext(fen=fen, color=color, top_k=top_k, game_type="chess")
+        )
+        eval_cp_white = evaluate_position(board, chess.WHITE)
+
     win_chance_white = cp_to_win_chance(eval_cp_white)
     win_chance_black = 1.0 - win_chance_white
     best_move_uci = suggestions[0].uci if suggestions else None
@@ -606,7 +635,8 @@ def analyze_position(
     return {
         "request_id": request_id or str(uuid.uuid4()),
         "status": "ok",
-        "source": "heuristic",
+        "source": source,
+        "evaluation_source": evaluation_source,
         "fen": fen,
         "evaluated_for_color": "white" if requested_color == chess.WHITE else "black",
         "health_summary": build_health_summary(board),

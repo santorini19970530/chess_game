@@ -73,12 +73,16 @@ class GameApp {
     if (targetMoveNumber > 0) this.coach.startAnalysisPolling(targetMoveNumber, result.captured);
   }
 
-  // resetWinProbBars - resets win% labels and bars to a neutral 50/50
+  // resetWinProbBars - resets estimated win% labels and bars to a neutral 50/50
   resetWinProbBars() {
     if (this.el.winProbWhiteValue) this.el.winProbWhiteValue.textContent = "50.0%";
     if (this.el.winProbBlackValue) this.el.winProbBlackValue.textContent = "50.0%";
     if (this.el.winProbWhiteBar) this.el.winProbWhiteBar.style.width = "50%";
     if (this.el.winProbBlackBar) this.el.winProbBlackBar.style.width = "50%";
+    if (this.el.winProbSource) {
+      this.el.winProbSource.textContent = "";
+      this.el.winProbSource.hidden = true;
+    }
   }
 
   // enablePlayInputs - re-enables command and flag controls for a live game

@@ -4,7 +4,11 @@
 {{define "game_info"}}
 <div class="game_panel_right_top" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;">
   <div class="game_info_table" role="table" aria-label="Game information table">
-    <div class="game_info_winprob_wrapper" role="presentation">
+    <div class="game_info_winprob_wrapper" role="group" aria-label="Estimated win chance">
+      <div class="game_info_winprob_caption">
+        <span id="game_info_winprob_title">Estimated win chance</span>
+        <span id="game_info_winprob_source" class="game_info_winprob_source" hidden></span>
+      </div>
       <div class="game_info_winprob_track">
         <div id="game_info_winprob_white_bar" class="game_info_winprob_segment game_info_winprob_segment_white" style="width: 50%;">
           <span id="game_info_winprob_white" class="game_info_winprob_label">50%</span>
