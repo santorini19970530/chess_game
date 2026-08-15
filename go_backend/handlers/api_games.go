@@ -104,6 +104,8 @@ func (h *Handler) APIGameRoutes(w http.ResponseWriter, r *http.Request) {
 			h.getAPIGameLegalMoves(w, r, gameID)
 		case "top-moves":
 			h.getAPIGameTopMoves(w, r, gameID)
+		case "preview-move":
+			h.postAPIGamePreviewMove(w, r, gameID)
 		default:
 			writeJSONError(w, http.StatusNotFound, "API route not found")
 		}
