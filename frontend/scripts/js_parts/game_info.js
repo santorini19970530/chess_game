@@ -290,7 +290,16 @@ class GameInfoView {
     return n <= 1 ? n * 100 : n;
   }
 
-  // renderGameInfo - paints captures, win% bars, and threat notes from analysis
+  // evaluationSourceLabel - short ui label for analysis evaluation_source
+  evaluationSourceLabel(source) {
+    const key = String(source || "").trim().toLowerCase();
+    if (key === "fairy-stockfish") return "Fairy-Stockfish";
+    if (key === "heuristic-fallback") return "heuristic fallback";
+    if (key === "unavailable") return "unavailable";
+    return "";
+  }
+
+  // renderGameInfo - paints captures, estimated win% bars, and threat notes from analysis
   renderGameInfo(capturedSummary, analysis) {
     if (capturedSummary) this.app.state.cachedCapturedSummary = capturedSummary;
     const effectiveCapturedSummary = capturedSummary || this.app.state.cachedCapturedSummary;
@@ -325,6 +334,12 @@ class GameInfoView {
       this.app.el.winProbWhiteBar.classList.toggle("game_info_winprob_segment_tiny", whiteTiny);
     if (this.app.el.winProbBlackBar)
       this.app.el.winProbBlackBar.classList.toggle("game_info_winprob_segment_tiny", blackTiny);
+
+    if (this.app.el.winProbSource) {
+      const label = this.evaluationSourceLabel(effectiveAnalysis?.evaluation_source);
+      this.app.el.winProbSource.textContent = label ? `source: ${label}` : "";
+      this.app.el.winProbSource.hidden = !label;
+    }
 
     if (this.app.el.gameInfoNotesBox && effectiveAnalysis && !this.app.state.gameOver) {
       const threatSummary = String(effectiveAnalysis?.threat_summary || "").trim();

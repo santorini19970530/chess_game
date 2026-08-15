@@ -84,6 +84,31 @@ class TestChessAnalyzeFsEval(unittest.TestCase):
         self.assertEqual(result["eval_cp_white"], -15)
         self.assertEqual(result["win_chance_white"], round(analyzer.cp_to_win_chance(-15), 4))
 
+    # test_analyze_mate_score_stays_bounded - large mate-style cp maps through shared win chance
+    def test_analyze_mate_score_stays_bounded(self) -> None:
+        mate_cp = 100000
+        fake = [MoveSuggestion(rank=1, uci="e7e8q", san="e8=Q#", score=mate_cp)]
+        with mock.patch.object(
+            FairyStockfishSuggest,
+            "suggest_with_eval",
+            return_value=(fake, mate_cp),
+        ):
+            result = analyzer.analyze_position(
+                fen=FEN_START,
+                color="white",
+                top_k=1,
+                request_id="fs-eval-mate",
+                game_type="chess",
+            )
+        self.assertEqual(result["eval_cp_white"], mate_cp)
+        self.assertGreaterEqual(result["win_chance_white"], 0.0)
+        self.assertLessEqual(result["win_chance_white"], 1.0)
+        self.assertAlmostEqual(
+            result["win_chance_white"] + result["win_chance_black"],
+            1.0,
+            places=4,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

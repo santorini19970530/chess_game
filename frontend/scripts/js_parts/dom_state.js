@@ -32,6 +32,7 @@ class DomState {
     el.winProbBlackValue = document.getElementById("game_info_winprob_black");
     el.winProbWhiteBar = document.getElementById("game_info_winprob_white_bar");
     el.winProbBlackBar = document.getElementById("game_info_winprob_black_bar");
+    el.winProbSource = document.getElementById("game_info_winprob_source");
     el.resultWhiteValue = document.getElementById("game_info_result_white");
     el.resultBlackValue = document.getElementById("game_info_result_black");
     el.gameInfoNotesBox = document.getElementById("game_info_notes");

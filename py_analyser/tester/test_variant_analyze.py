@@ -137,6 +137,30 @@ class TestVariantAnalyze(unittest.TestCase):
         self.assertEqual(result["eval_cp_white"], 0)
         self.assertEqual(result["suggested_moves"], [])
 
+    # test_variant_fs_success_sets_evaluation_source - mocked multipv marks fairy-stockfish
+    def test_variant_fs_success_sets_evaluation_source(self) -> None:
+        from unittest import mock
+        from analyzer import MoveSuggestion
+        from move_suggest import FairyStockfishVariantSuggest
+
+        fake = [MoveSuggestion(rank=1, uci="a4a5", san="a4a5", score=33)]
+        with mock.patch.object(
+            FairyStockfishVariantSuggest,
+            "suggest_with_eval",
+            return_value=(fake, 33),
+        ) as mocked:
+            result = analyzer.analyze_position(
+                fen=XIANGQI_START,
+                color="white",
+                top_k=1,
+                request_id="xq-fs-ok",
+                game_type="xianqi",
+            )
+        mocked.assert_called_once()
+        self.assertEqual(result["evaluation_source"], "fairy-stockfish")
+        self.assertEqual(result["eval_cp_white"], 33)
+        self.assertEqual(result["best_move_uci"], "a4a5")
+
 
 if __name__ == "__main__":
     unittest.main()

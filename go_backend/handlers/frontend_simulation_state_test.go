@@ -199,6 +199,19 @@ func TestFrontendSimulationState_BusyGuardMarkers(t *testing.T) {
 	}
 }
 
+// TestFrontendWinProb_EstimatedCaption - checks win bars are labelled estimated, not calibrated probability
+func TestFrontendWinProb_EstimatedCaption(t *testing.T) {
+	indexSrc := loadIndexHandlerSource(t)
+	requireSnippet(t, indexSrc, "Estimated win chance")
+	requireSnippet(t, indexSrc, `id="game_info_winprob_source"`)
+	requireSnippet(t, indexSrc, `aria-label="Estimated win chance"`)
+
+	jsSrc := loadChessCommandSource(t)
+	requireSnippet(t, jsSrc, "evaluationSourceLabel")
+	requireSnippet(t, jsSrc, "evaluation_source")
+	requireSnippet(t, jsSrc, "source: ${label}")
+}
+
 // TestFrontendSimulationDownload_Step1ButtonMarkers - checks frontend simulation download step1 button markers
 func TestFrontendSimulationDownload_Step1ButtonMarkers(t *testing.T) {
 	source := loadIndexHandlerSource(t)
