@@ -52,6 +52,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 		"../frontend/html_puzzles/game_config.html",
 		"../frontend/html_puzzles/game_info.html",
 		"../frontend/html_puzzles/game_play.html",
+		"../frontend/html_puzzles/how_it_works.html",
 	)
 	if err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
@@ -68,7 +69,7 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := indexPageData{
-		PageTitle:      "Chess Game",
+		PageTitle:      "Multi-Variant Board Game Platform with Explainable AI Coaching",
 		BoardHTML:      generateChessBoard(),
 		WhiteTurnClass: whiteTurnClass,
 		BlackTurnClass: blackTurnClass,

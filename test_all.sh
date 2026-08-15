@@ -37,6 +37,9 @@ run_step "FE move history self-check" \
 run_step "FE hints coach self-check" \
   node "${ROOT_DIR}/frontend/scripts/js_parts/hints_coach.js"
 
+run_step "FE how-it-works self-check" \
+  node "${ROOT_DIR}/frontend/scripts/js_parts/how_it_works.js"
+
 echo ""
 if [[ "${FAILED}" -ne 0 ]]; then
   echo "test_all: FAILED"

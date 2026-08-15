@@ -12,6 +12,7 @@
   app.board = new BoardView(app);
   app.interaction = new BoardInteraction(app);
   app.promotion = new PromotionPicker(app);
+  app.howItWorks = new HowItWorksGuide(app);
   app.coach = new HintsCoach(app);
   app.gameInfo = new GameInfoView(app);
   app.moveHistory = new MoveHistoryView(app);
@@ -30,6 +31,7 @@
     }
   });
   app.promotion.initPromotionPicker();
+  app.howItWorks.bind();
   app.interaction.initMouseMoveControls();
   if (typeof ResizeObserver !== "undefined" && app.el.boardElement) {
     const xqGutterRo = new ResizeObserver(() => app.board.syncXiangqiCoordGutters());

@@ -29,6 +29,7 @@ func loadChessCommandSource(t *testing.T) string {
 		"board.js",
 		"interaction.js",
 		"promotion.js",
+		"how_it_works.js",
 		"hints_coach.js",
 		"game_info.js",
 		"move_history.js",
@@ -283,6 +284,44 @@ func TestFrontendLoadMoves_ReviewMarkers(t *testing.T) {
 	requireSnippet(t, jsSrc, "reviewPlaybackMoves")
 }
 
+// TestFrontendHowItWorks_Markers - checks how-to dialog, help control, and open/close wiring
+func TestFrontendHowItWorks_Markers(t *testing.T) {
+	headerSrc := loadFrontendSource(t, []string{
+		filepath.Join("..", "..", "frontend", "html_puzzles", "header.html"),
+		filepath.Join("..", "frontend", "html_puzzles", "header.html"),
+		filepath.Join("frontend", "html_puzzles", "header.html"),
+	}, "header.html")
+	requireSnippet(t, headerSrc, `id="how_it_works_help"`)
+	requireSnippet(t, headerSrc, `aria-label="How it works"`)
+
+	howToSrc := loadFrontendSource(t, []string{
+		filepath.Join("..", "..", "frontend", "html_puzzles", "how_it_works.html"),
+		filepath.Join("..", "frontend", "html_puzzles", "how_it_works.html"),
+		filepath.Join("frontend", "html_puzzles", "how_it_works.html"),
+	}, "how_it_works.html")
+	requireSnippet(t, howToSrc, `id="how_it_works_dialog"`)
+	requireSnippet(t, howToSrc, `role="dialog"`)
+	requireSnippet(t, howToSrc, `id="how_it_works_close"`)
+	requireSnippet(t, howToSrc, `id="how_it_works_title"`)
+	requireSnippet(t, howToSrc, "How it works")
+	requireSnippet(t, howToSrc, "data-how-it-works-dismiss")
+
+	panelSrc := loadFrontendSource(t, []string{
+		filepath.Join("..", "..", "frontend", "html_puzzles", "game_panel.html"),
+		filepath.Join("..", "frontend", "html_puzzles", "game_panel.html"),
+		filepath.Join("frontend", "html_puzzles", "game_panel.html"),
+	}, "game_panel.html")
+	requireSnippet(t, panelSrc, `{{template "how_it_works" .}}`)
+	requireSnippet(t, panelSrc, `/scripts/js_parts/how_it_works.js`)
+
+	jsSrc := loadChessCommandSource(t)
+	requireSnippet(t, jsSrc, "class HowItWorksGuide")
+	requireSnippet(t, jsSrc, "howItWorks.bind")
+	requireSnippet(t, jsSrc, "fyp_how_it_works_seen")
+	requireSnippet(t, jsSrc, "howItWorksDialog")
+	requireSnippet(t, jsSrc, "howItWorksHelp")
+}
+
 // TestFrontendDiagramImport_Markers - checks diagram import confirm-load ui markers
 func TestFrontendDiagramImport_Markers(t *testing.T) {
 	indexSrc := loadIndexHandlerSource(t)
@@ -337,6 +376,7 @@ func TestFrontendGameAppClasses(t *testing.T) {
 		"class BoardView",
 		"class BoardInteraction",
 		"class PromotionPicker",
+		"class HowItWorksGuide",
 		"class HintsCoach",
 		"class GameInfoView",
 		"class SetupCommand",

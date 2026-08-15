@@ -77,6 +77,9 @@ class DomState {
     el.boardElement = document.querySelector(".chess_board");
     el.boardWrapper = document.querySelector(".chess_board_wrapper");
     el.promotionPicker = document.getElementById("promotion_picker");
+    el.howItWorksDialog = document.getElementById("how_it_works_dialog");
+    el.howItWorksHelp = document.getElementById("how_it_works_help");
+    el.howItWorksClose = document.getElementById("how_it_works_close");
     el.simulationSummaryPanel = document.getElementById("simulation_summary_panel");
     el.simulationSummaryGames = document.getElementById("simulation_summary_games");
     el.simulationSummaryWhite = document.getElementById("simulation_summary_white");

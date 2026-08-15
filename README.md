@@ -2,7 +2,20 @@
 
 Multi-variant board game platform with explainable AI coaching (Template 4.1 — orchestrating AI agents).
 
-## Theme lock (issue0052)
+## How to use the app
+
+1. Pick a game: Chess, Xiangqi, or Shogi.
+2. Pick a mode: Human vs Human, Human vs AI, or AI vs AI.
+3. Human vs AI: choose AI strength, move on the board (or type a command), then Fairy-Stockfish replies. AI vs AI: choose strength for each side, set how many games to run, then start the match — Fairy-Stockfish plays both sides.
+4. After moves, notes, estimated win chance, and coach text update (Ollama when available; otherwise a simple fallback).
+
+Optional: import a board diagram (confirm before load), paste a move list, use the clock, or Preview mode to try one what-if move without changing the live game.
+
+In the running app, open **?** (top-right) for the same how-to popup at any time; it does not reset your game.
+
+Install / run / Docker / diagram-vendor steps are below — this section is the user path only.
+
+## Theme lock
 
 **Primary story:** the Go backend **orchestrates** three Fairy-Stockfish **playing agents** at different strengths (Beginner / Intermediate / Master ≈ Easy / Medium / Hard) plus a separate **LLM analyst/coach** (Python `/analyze` + `/explain` via Ollama, with heuristic fallback). Playing and explaining stay separate; Go owns sessions, legality, and routing.
 
@@ -11,7 +24,7 @@ Multi-variant board game platform with explainable AI coaching (Template 4.1 —
 **Demo path:** Human vs AI → select strength profile → make a move → AI replies → notes / win% / explain update.
 
 Locked wording also lives in `IMPLEMENTATION_ISSUES.md` (Main theme lock) and `report/documentation/theme_lock.md`.  
-AI move path (FS vs History/Policy/Value): `report/documentation/fs_vs_hpv_decision_path.md` (issue0055).
+AI move path (FS vs History/Policy/Value): `report/documentation/fs_vs_hpv_decision_path.md`.
 
 ## Project Goal
 
@@ -39,7 +52,7 @@ On-demand image model ([tsoj/Chess_diagram_to_FEN](https://github.com/tsoj/Chess
 | Game | Product stance |
 |------|----------------|
 | **Chess** | Primary path — full recognize → confirm → load → coach. |
-| **Xiangqi** | Supported end-to-end, but recognition is less reliable than Chess; always confirm the board before load. Formal image fixture smoke → `issue0064`. |
+| **Xiangqi** | Supported end-to-end, but recognition is less reliable than Chess; always confirm the board before load. Formal image fixture smoke is documented in the development logs. |
 | **Shogi** | Board from the image model; **hands inferred** from starting inventory minus pieces on the board (heuristic split by side — may differ from diagram komadai). Weaker recognition; confirm carefully. |
 
 **Vendor (not in git — large weights/venv):** keep a local clone next to `chess_game`:
@@ -87,7 +100,7 @@ curl -F "image=@gameplay_capture/chess/chess-08082026.webp" -F "game=chess" \
 
 **After Confirm load (UI):** Go `POST /api/games/{id}/load-fen` enqueues the existing `/analyze` + `/explain` pipe (no new coach API). Win% / threat notes update from analysis; coach text uses Ollama when available, else heuristic fallback (`LLM_PROVIDER=heuristic` / Ollama down).
 
-## Docker Compose (issue0042)
+## Docker Compose
 
 Optional reproducibility / demo aid — **not** a production deployment claim. Prefer local `./run.sh` for day-to-day development.
 
@@ -114,7 +127,7 @@ Same lean Compose on a small Linux host for a permanent marker URL. Still **not*
 **1. Transfer (git — preferred):**
 
 ```bash
-# on your Mac, from chess_game/ after committing issue0042
+# on your Mac, from chess_game/ after committing on this branch
 git push -u origin issue0042
 
 # on the VPS
@@ -130,7 +143,7 @@ docker compose up -d --build
 
 **2. Expose only `:8080`:** Cloudflare Tunnel (easiest HTTPS), or Caddy/nginx reverse proxy with WebSocket upgrade for `/ws/game`. Do **not** publish analyser `:8001`.
 
-**3. Smoke on the public URL:** open the site → Human vs AI → one finished game (same check as local issue0042 smoke).
+**3. Smoke on the public URL:** open the site → Human vs AI → one finished game (same check as the local Compose smoke).
 
 ## Main Phases
 
@@ -160,7 +173,7 @@ Add next variant with same backend pattern.
 Keep feature parity minimal first.
 Stabilize before adding more.
 
-Coach pipe for Xiangqi/Shogi (`/analyze` + `/explain`) is Done (issue0049; logs 129–130), including FS hints, captured icons, and White-POV win%.
+Coach pipe for Xiangqi/Shogi (`/analyze` + `/explain`) is Done (logs 129–130), including FS hints, captured icons, and White-POV win%.
 
 ### Phase 5: Quality and polish
 
