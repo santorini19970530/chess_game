@@ -11,10 +11,19 @@ import (
 	"time"
 )
 
-// DefaultNNUEFilename - Fairy-Stockfish 14 Chess default net (evaluate.h EvalFileDefaultName)
+// Fairy-Stockfish 14 Chess default net (evaluate.h EvalFileDefaultName)
 const DefaultNNUEFilename = "nn-3475407dc199.nnue"
 
-// minNNUEEvidenceBytes - junk/placeholder files are smaller than a real SF14 net (~45 MiB)
+// UCI eval used the neural net
+const EvalModeNNUE = "nnue"
+
+// UCI eval used hand-crafted evaluation
+const EvalModeClassical = "classical"
+
+// UCI eval did not print a verify() mode line
+const EvalModeUnknown = "unknown"
+
+// junk/placeholder files are smaller than a real SF14 net (~45 MiB)
 const minNNUEEvidenceBytes int64 = 1_000_000
 
 // ResolveNNUEPath - returns an existing .nnue path, or empty if none is configured or found
@@ -66,6 +75,63 @@ func (fs *FairyStockfish) ApplyNNUEFromEnv() error {
 		return fmt.Errorf("engine not running")
 	}
 	return fs.applyNNUELocked()
+}
+
+// ClassifyEvalMode - nnue if verify printed NNUE evaluation using, else classical
+func ClassifyEvalMode(lines []string) string {
+	joined := strings.Join(lines, "\n")
+	if strings.Contains(joined, "NNUE evaluation using") {
+		return EvalModeNNUE
+	}
+	if strings.Contains(joined, "classical evaluation enabled") {
+		return EvalModeClassical
+	}
+	return EvalModeUnknown
+}
+
+// EvalProbe - sends UCI eval and returns the verify() mode plus collected lines
+func (fs *FairyStockfish) EvalProbe(fen string) (string, []string, error) {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+	if !fs.running {
+		return "", nil, fmt.Errorf("engine not running")
+	}
+	pos := "position startpos"
+	if strings.TrimSpace(fen) != "" {
+		pos = fmt.Sprintf("position fen %s", fen)
+	}
+	if err := fs.send(pos); err != nil {
+		return "", nil, err
+	}
+	if err := fs.send("eval"); err != nil {
+		return "", nil, err
+	}
+	lines, err := fs.collectEvalLines(8 * time.Second)
+	if err != nil {
+		return "", lines, err
+	}
+	return ClassifyEvalMode(lines), lines, nil
+}
+
+// collectEvalLines - reads stdout until Final evaluation or timeout
+func (fs *FairyStockfish) collectEvalLines(timeout time.Duration) ([]string, error) {
+	deadline := time.Now().Add(timeout)
+	var lines []string
+	for time.Now().Before(deadline) {
+		line, err := fs.stdout.ReadString('\n')
+		if err != nil {
+			return lines, err
+		}
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		lines = append(lines, line)
+		if strings.Contains(line, "Final evaluation") {
+			return lines, nil
+		}
+	}
+	return lines, fmt.Errorf("timeout waiting for Final evaluation")
 }
 
 // applyNNUELocked - UCI EvalFile / Use NNUE while fs.mu is held

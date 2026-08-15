@@ -95,6 +95,69 @@ def apply_nnue_to_simple_engine(engine: chess.engine.SimpleEngine) -> bool:
     return True
 
 
+# classify_eval_mode - nnue if verify printed NNUE evaluation using, else classical
+def classify_eval_mode(text: str) -> str:
+    if "NNUE evaluation using" in text:
+        return "nnue"
+    if "classical evaluation enabled" in text:
+        return "classical"
+    return "unknown"
+
+
+# nnue_eval_probe - one-shot UCI eval; returns verify() mode and collected lines
+def nnue_eval_probe(variant: str = "chess", fen: str = "") -> tuple[str, list[str]]:
+    if not os.path.exists(FS_BINARY_PATH):
+        raise FileNotFoundError(f"Fairy-Stockfish binary not found at {FS_BINARY_PATH}")
+    proc = subprocess.Popen(
+        [FS_BINARY_PATH],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        bufsize=1,
+    )
+    try:
+        raw_uci_write(proc, "uci")
+        raw_uci_wait_for(proc, "uciok", timeout=5.0)
+        apply_nnue_to_raw_uci(proc)
+        if variant and variant != "chess":
+            raw_uci_write(proc, f"setoption name UCI_Variant value {variant}")
+            raw_uci_write(proc, "isready")
+            raw_uci_wait_for(proc, "readyok", timeout=5.0)
+        if fen.strip():
+            raw_uci_write(proc, f"position fen {fen}")
+        else:
+            raw_uci_write(proc, "position startpos")
+        raw_uci_write(proc, "eval")
+        lines = raw_uci_collect_until(proc, "Final evaluation", timeout=8.0)
+        return classify_eval_mode("\n".join(lines)), lines
+    finally:
+        try:
+            raw_uci_write(proc, "quit")
+        except Exception:
+            pass
+        proc.kill()
+        proc.wait(timeout=2.0)
+
+
+# raw_uci_collect_until - reads stdout lines until token appears or timeout
+def raw_uci_collect_until(proc: subprocess.Popen, token: str, timeout: float) -> list[str]:
+    assert proc.stdout is not None
+    deadline = time.monotonic() + timeout
+    lines: list[str] = []
+    while time.monotonic() < deadline:
+        line = proc.stdout.readline()
+        if not line:
+            raise RuntimeError("Fairy-Stockfish exited while waiting for " + token)
+        text = line.strip()
+        if not text:
+            continue
+        lines.append(text)
+        if token in text:
+            return lines
+    raise TimeoutError(f"timeout waiting for {token}")
+
+
 # apply_nnue_to_raw_uci - send the same UCI options to a raw process after uciok
 def apply_nnue_to_raw_uci(proc: subprocess.Popen) -> bool:
     commands = nnue_uci_commands()
