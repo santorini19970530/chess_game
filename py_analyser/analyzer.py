@@ -588,16 +588,40 @@ def analyze_position(
             fen, color, top_k, request_id, gt, profile=profile
         )
 
-    from move_suggest import HeuristicSuggest, MoveSuggestContext
+    from move_suggest import (
+        FairyStockfishSuggest,
+        HeuristicSuggest,
+        MoveSuggestContext,
+    )
 
     started_at = time.perf_counter()
     board = chess.Board(fen)
     requested_color = parse_color(color)
-    suggestions = HeuristicSuggest().suggest(
-        MoveSuggestContext(fen=fen, color=color, top_k=top_k, game_type="chess")
-    )
+    source = "fairy-stockfish"
+    suggestions: List[MoveSuggestion] = []
+    eval_cp_white = 0
 
-    eval_cp_white = evaluate_position(board, chess.WHITE)
+    try:
+        suggestions, score = FairyStockfishSuggest().suggest_with_eval(
+            MoveSuggestContext(
+                fen=fen,
+                color=color,
+                top_k=top_k,
+                profile=profile,
+                game_type="chess",
+            )
+        )
+        if not suggestions or score is None:
+            raise RuntimeError("fairy-stockfish soft miss")
+        eval_cp_white = score
+    except Exception:
+        # fs down / empty: keep service up with heuristic eval + suggestions
+        source = "heuristic"
+        suggestions = HeuristicSuggest().suggest(
+            MoveSuggestContext(fen=fen, color=color, top_k=top_k, game_type="chess")
+        )
+        eval_cp_white = evaluate_position(board, chess.WHITE)
+
     win_chance_white = cp_to_win_chance(eval_cp_white)
     win_chance_black = 1.0 - win_chance_white
     best_move_uci = suggestions[0].uci if suggestions else None
@@ -606,7 +630,7 @@ def analyze_position(
     return {
         "request_id": request_id or str(uuid.uuid4()),
         "status": "ok",
-        "source": "heuristic",
+        "source": source,
         "fen": fen,
         "evaluated_for_color": "white" if requested_color == chess.WHITE else "black",
         "health_summary": build_health_summary(board),

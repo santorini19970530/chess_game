@@ -78,6 +78,54 @@ class FairyStockfishSuggest:
         except Exception:
             return []
 
+    # suggest_with_eval - one analysis-strength multipv call; returns moves plus white-pov cp
+    def suggest_with_eval(
+        self, ctx: MoveSuggestContext
+    ) -> Tuple[List["MoveSuggestion"], Optional[int]]:
+        from analyzer import MoveSuggestion, parse_color
+        from fs_engine import get_engine
+
+        board = chess.Board(ctx.fen)
+        target_color = parse_color(ctx.color)
+        board.turn = target_color
+
+        if board.is_game_over():
+            return [], None
+
+        # fixed analysis settings — not the selected opponent handicap profile
+        _ = ctx.profile
+        engine = get_engine()
+        engine.configure({"Skill Level": 20})
+        limit = chess.engine.Limit(depth=10, time=0.5)
+        multipv = max(1, min(ctx.top_k, 10))
+        analysis = engine.analyse(board, limit, multipv=multipv)
+
+        suggestions: List[MoveSuggestion] = []
+        eval_cp_white: Optional[int] = None
+        for idx, info in enumerate(analysis, start=1):
+            move = info.get("pv", [None])[0]
+            if move is None:
+                continue
+            score = info.get("score")
+            cp = score.white().score(mate_score=100000) if score else 0
+            if idx == 1 and score is not None:
+                eval_cp_white = cp
+            san = board.san(move)
+            suggestions.append(
+                MoveSuggestion(rank=idx, uci=move.uci(), san=san, score=cp)
+            )
+
+        if len(suggestions) < ctx.top_k:
+            for move in list(board.legal_moves)[len(suggestions) : ctx.top_k]:
+                san = board.san(move)
+                suggestions.append(
+                    MoveSuggestion(
+                        rank=len(suggestions) + 1, uci=move.uci(), san=san, score=0
+                    )
+                )
+
+        return suggestions[: ctx.top_k], eval_cp_white
+
     # _suggest - runs fairy-stockfish multipv for chess; raises on engine failure
     def _suggest(self, ctx: MoveSuggestContext) -> List["MoveSuggestion"]:
         from analyzer import MoveSuggestion, parse_color
