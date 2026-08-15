@@ -31,6 +31,7 @@ class LLMProvider(Protocol):
         skill_level: str = "intermediate",
         human_color: str | None = None,
         concept_hints: list[str] | None = None,
+        preview: bool = False,
     ) -> str:
         raise NotImplementedError
 
@@ -63,6 +64,7 @@ class OllamaProvider:
         skill_level: str = "intermediate",
         human_color: str | None = None,
         concept_hints: list[str] | None = None,
+        preview: bool = False,
     ) -> str:
         prompt = build_teacher_prompt(
             fen=fen,
@@ -74,6 +76,7 @@ class OllamaProvider:
             side_to_move=color,
             human_color=human_color,
             concept_hints=concept_hints,
+            preview=preview,
         )
         body = self._request_body(prompt)
         req = urllib.request.Request(
@@ -131,10 +134,12 @@ class HeuristicProvider:
         skill_level: str = "intermediate",
         human_color: str | None = None,
         concept_hints: list[str] | None = None,
+        preview: bool = False,
     ) -> str:
         _ = skill_level
         _ = human_color
         _ = concept_hints
+        _ = preview
         return build_explanation_fallback(
             fen=fen,
             color=color,

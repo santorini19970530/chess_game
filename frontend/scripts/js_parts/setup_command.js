@@ -12,7 +12,7 @@ class SetupCommand {
   bindFormListeners() {
     this.app.el.button.addEventListener("click", this.submitCommand.bind(this));
     if (this.app.el.previewButton) {
-      this.app.el.previewButton.addEventListener("click", () => void this.previewCommand());
+      this.app.el.previewButton.addEventListener("click", () => this.togglePreviewMode());
     }
     if (this.app.el.previewCloseButton) {
       this.app.el.previewCloseButton.addEventListener("click", () => this.clearMovePreview({ restore: true }));
@@ -83,14 +83,19 @@ class SetupCommand {
     if (this.app.el.configApplyButton) this.app.el.configApplyButton.disabled = simulationBusy;
     if (this.app.el.newGameButton) this.app.el.newGameButton.disabled = simulationBusy;
     if (this.app.el.input) this.app.el.input.disabled = simulationBusy || this.app.state.gameOver;
-    if (this.app.el.button) this.app.el.button.disabled = simulationBusy || this.app.state.gameOver;
+    if (this.app.el.button) {
+      this.app.el.button.disabled =
+        simulationBusy || this.app.state.gameOver || this.app.state.previewMode;
+    }
     if (this.app.el.previewButton) {
       this.app.el.previewButton.disabled =
         simulationBusy || this.app.state.gameOver || this.app.state.isPreviewing;
+      this.app.el.previewButton.textContent = this.app.state.previewMode ? "Exit preview mode" : "Preview mode";
     }
     if (this.app.el.previewCloseButton) {
       this.app.el.previewCloseButton.disabled = simulationBusy;
-      this.app.el.previewCloseButton.hidden = !this.app.state.previewActive;
+      this.app.el.previewCloseButton.hidden = !this.app.state.previewMode;
+      this.app.el.previewCloseButton.textContent = "Resume game";
     }
     if (this.app.el.flagButton) this.app.el.flagButton.disabled = simulationBusy || this.app.state.gameOver;
 
@@ -144,8 +149,13 @@ class SetupCommand {
   }
 
   // formatPreviewNotes - builds a short notes block for a what-if preview result
-  formatPreviewNotes(command, suggestedMoves) {
-    const lines = [`Preview of ${command} (live position unchanged).`];
+  formatPreviewNotes(command, suggestedMoves, explanation) {
+    const lines = [
+      "Preview mode — live game unchanged.",
+      `What-if candidate: ${command}`,
+    ];
+    const coach = String(explanation || "").trim();
+    if (coach) lines.push(coach);
     const moves = Array.isArray(suggestedMoves) ? suggestedMoves : [];
     const labels = [];
     for (let i = 0; i < moves.length && labels.length < 3; i++) {
@@ -153,39 +163,77 @@ class SetupCommand {
       const lab = String(sm?.san || sm?.uci || sm?.move || "").trim();
       if (lab) labels.push(lab);
     }
-    if (labels.length) lines.push(`Suggested replies: ${labels.join(", ")}`);
+    if (labels.length) lines.push(`Suggested replies after preview: ${labels.join(", ")}`);
     return lines.join("\n");
   }
 
-  // clearMovePreview - ends preview mode; optionally restores committed analysis and notes
-  clearMovePreview(opts = {}) {
-    const restore = opts.restore !== false;
-    if (!this.app.state.previewActive && !this.app.state.previewRestore) {
-      if (this.app.el.previewCloseButton) this.app.el.previewCloseButton.hidden = true;
-      this.app.gameInfo.setWinProbCaption(false);
+  // togglePreviewMode - enters or leaves preview mode without playing a live move
+  togglePreviewMode() {
+    if (this.app.state.previewMode) {
+      this.clearMovePreview({ restore: true });
       return;
     }
-    const snap = this.app.state.previewRestore;
+    if (this.app.state.gameOver || this.app.state.simulationRequestInFlight || this.app.state.isSimulationPlayback) {
+      this.app.util.setStatus("Cannot enter preview mode right now.", "error");
+      return;
+    }
+    this.app.state.previewMode = true;
+    this.app.state.previewShowing = false;
     this.app.state.previewActive = false;
+    this.app.interaction.clearSelectedSquare();
+    this.updateSetupControlState();
+    this.app.util.setStatus("Preview mode — make a move on the board (not played).", "success");
+  }
+
+  // restoreLiveBoardForPreviewPick - paints the live board again so another candidate can be chosen
+  restoreLiveBoardForPreviewPick() {
+    const snap = this.app.state.previewRestore;
+    if (!snap?.boardState || !this.app.state.previewShowing) return false;
+    this.app.board.renderBoardFromState(snap.boardState);
+    this.app.state.previewShowing = false;
+    this.app.state.previewActive = false;
+    this.app.state.lastSuggestionsText = snap.suggestionsText || "";
+    this.app.state.lastThreatSummary = snap.threatSummary || "";
+    this.app.state.lastExplanationText = snap.explanationText || "";
+    this.app.gameInfo.renderGameInfo(snap.captured || null, snap.analysis || null);
+    this.app.util.refreshNotesBox();
+    this.app.gameInfo.setWinProbCaption(false);
+    this.app.util.setStatus("Preview mode — pick another candidate move.", "success");
+    this.updateSetupControlState();
+    return true;
+  }
+
+  // clearMovePreview - ends preview mode; optionally restores committed analysis and live board
+  clearMovePreview(opts = {}) {
+    const restore = opts.restore !== false;
+    const snap = this.app.state.previewRestore;
+    const wasMode = this.app.state.previewMode || this.app.state.previewActive || Boolean(snap);
+    this.app.state.previewMode = false;
+    this.app.state.previewActive = false;
+    this.app.state.previewShowing = false;
     this.app.state.previewRestore = null;
     this.app.state.isPreviewing = false;
     if (this.app.el.previewCloseButton) this.app.el.previewCloseButton.hidden = true;
     this.app.gameInfo.setWinProbCaption(false);
     this.updateSetupControlState();
+    if (!wasMode) return;
     if (!restore) return;
+    if (snap?.boardState) this.app.board.renderBoardFromState(snap.boardState);
     if (snap) {
       this.app.state.lastSuggestionsText = snap.suggestionsText || "";
       this.app.state.lastThreatSummary = snap.threatSummary || "";
       this.app.state.lastExplanationText = snap.explanationText || "";
-      this.app.gameInfo.renderGameInfo(null, snap.analysis || null);
+      this.app.gameInfo.renderGameInfo(snap.captured || null, snap.analysis || null);
       this.app.util.refreshNotesBox();
-      return;
+    } else {
+      this.app.gameInfo.renderGameInfo(null, this.app.state.cachedAnalysis || null);
+      this.app.util.refreshNotesBox();
     }
-    this.app.gameInfo.renderGameInfo(null, this.app.state.cachedAnalysis || null);
-    this.app.util.refreshNotesBox();
+    this.app.interaction.clearSelectedSquare();
+    this.app.util.setStatus("Resumed live game.", "success");
   }
 
-  // previewCommand - posts a legal command to preview-move and paints estimated child-position win%
+  // previewCommand - posts a legal command to preview-move and paints child board + estimated win%
   async previewCommand(commandText = "") {
     if (this.app.state.isSubmitting || this.app.state.isPreviewing) return false;
     if (this.app.state.simulationRequestInFlight || this.app.state.isSimulationPlayback) {
@@ -196,9 +244,12 @@ class SetupCommand {
       this.app.util.setStatus("Game has ended. Refresh to start a new game.", "error");
       return false;
     }
+    if (!this.app.state.previewMode) {
+      this.togglePreviewMode();
+    }
     const command = String(commandText || this.app.el.input.value).trim();
     if (!command) {
-      this.app.util.setStatus("Enter a legal move command to preview.", "error");
+      this.app.util.setStatus("Preview mode — make a move on the board.", "error");
       return false;
     }
     if (!this.app.state.currentGameId) {
@@ -209,6 +260,18 @@ class SetupCommand {
     this.app.state.isPreviewing = true;
     this.updateSetupControlState();
     try {
+      if (this.app.state.previewShowing) this.restoreLiveBoardForPreviewPick();
+      if (!this.app.state.previewRestore) {
+        const liveSnap = await this.captureLiveBoardSnapshot();
+        this.app.state.previewRestore = {
+          analysis: this.app.state.cachedAnalysis,
+          suggestionsText: this.app.state.lastSuggestionsText || "",
+          threatSummary: this.app.state.lastThreatSummary || "",
+          explanationText: this.app.state.lastExplanationText || "",
+          boardState: liveSnap.state,
+          captured: liveSnap.captured,
+        };
+      }
       const response = await fetch(
         `/api/games/${encodeURIComponent(this.app.state.currentGameId)}/preview-move`,
         {
@@ -231,24 +294,29 @@ class SetupCommand {
         suggested_moves: result.suggested_moves,
         threat_summary: "",
       };
-      if (!this.app.state.previewActive) {
-        this.app.state.previewRestore = {
-          analysis: this.app.state.cachedAnalysis,
-          suggestionsText: this.app.state.lastSuggestionsText || "",
-          threatSummary: this.app.state.lastThreatSummary || "",
-          explanationText: this.app.state.lastExplanationText || "",
-        };
-      }
+      this.app.state.previewMode = true;
       this.app.state.previewActive = true;
+      this.app.state.previewShowing = true;
+      if (Array.isArray(result.state) && result.state.length) {
+        this.app.board.renderBoardFromState(result.state);
+      }
       this.app.gameInfo.setWinProbCaption(true);
-      this.app.gameInfo.renderGameInfo(null, previewAnalysis, { previewOnly: true });
+      this.app.gameInfo.renderGameInfo(result.captured || null, previewAnalysis, { previewOnly: true });
+      const explanation = String(result.explanation || "").trim();
+      this.app.state.lastExplanationText = explanation;
       this.app.state.lastSuggestionsText = this.formatPreviewNotes(
         result.command || command,
-        result.suggested_moves
+        result.suggested_moves,
+        explanation
       );
+      this.app.state.lastThreatSummary = "";
       this.app.util.refreshNotesBox();
       if (this.app.el.previewCloseButton) this.app.el.previewCloseButton.hidden = false;
-      this.app.util.setStatus(`Previewing ${result.command || command} (not played).`, "success");
+      this.app.util.setStatus(
+        `Preview of ${result.command || command} — Resume game to return.`,
+        "success"
+      );
+      this.app.interaction.clearSelectedSquare();
       return true;
     } catch (error) {
       this.app.util.setCatchStatus(error);
@@ -256,6 +324,26 @@ class SetupCommand {
     } finally {
       this.app.state.isPreviewing = false;
       this.updateSetupControlState();
+    }
+  }
+
+  // captureLiveBoardSnapshot - reads current live board pieces from the DOM state cache / server
+  async captureLiveBoardSnapshot() {
+    if (!this.app.state.currentGameId) {
+      return { state: [], captured: this.app.state.cachedCapturedSummary };
+    }
+    try {
+      const response = await fetch(`/api/games/${encodeURIComponent(this.app.state.currentGameId)}`);
+      if (!response.ok) {
+        return { state: [], captured: this.app.state.cachedCapturedSummary };
+      }
+      const result = await response.json();
+      return {
+        state: Array.isArray(result.state) ? result.state : [],
+        captured: result.captured || this.app.state.cachedCapturedSummary,
+      };
+    } catch (_error) {
+      return { state: [], captured: this.app.state.cachedCapturedSummary };
     }
   }
 
@@ -275,6 +363,9 @@ class SetupCommand {
     if (!command) {
       this.app.util.setStatus("Please enter a chess movement command.", "error");
       return false;
+    }
+    if (this.app.state.previewMode) {
+      return this.previewCommand(command);
     }
     this.clearMovePreview({ restore: false });
     this.app.state.isSubmitting = true;
@@ -399,8 +490,13 @@ if (typeof window !== "undefined") {
   const notes = setup.formatPreviewNotes("e2e4", [
     { san: "e5", uci: "e7e5" },
     { uci: "c7c5" },
-  ]);
-  if (!notes.includes("e2e4") || !notes.includes("unchanged") || !notes.includes("e5") || !notes.includes("c7c5")) {
+  ], "Preview mode: if white played e2e4…");
+  if (
+    !notes.includes("Preview mode — live game unchanged") ||
+    !notes.includes("What-if candidate: e2e4") ||
+    !notes.includes("e5") ||
+    !notes.includes("Preview mode: if white played e2e4")
+  ) {
     throw new Error("formatPreviewNotes self-check failed");
   }
   console.log("setup command preview self-check ok");

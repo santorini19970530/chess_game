@@ -1,4 +1,5 @@
 /*! tailwindcss v4.2.2 | MIT License | https://tailwindcss.com */
+@layer properties;
 @layer theme, base, components, utilities;
 @layer theme {
   :root, :host {
@@ -159,7 +160,200 @@
     display: none !important;
   }
 }
-@layer utilities;
+@layer utilities {
+  .collapse {
+    visibility: collapse;
+  }
+  .visible {
+    visibility: visible;
+  }
+  .absolute {
+    position: absolute;
+  }
+  .fixed {
+    position: fixed;
+  }
+  .relative {
+    position: relative;
+  }
+  .static {
+    position: static;
+  }
+  .start {
+    inset-inline-start: var(--spacing);
+  }
+  .end {
+    inset-inline-end: var(--spacing);
+  }
+  .top-3 {
+    top: calc(var(--spacing) * 3);
+  }
+  .container {
+    width: 100%;
+    @media (width >= 40rem) {
+      max-width: 40rem;
+    }
+    @media (width >= 48rem) {
+      max-width: 48rem;
+    }
+    @media (width >= 64rem) {
+      max-width: 64rem;
+    }
+    @media (width >= 80rem) {
+      max-width: 80rem;
+    }
+    @media (width >= 96rem) {
+      max-width: 96rem;
+    }
+  }
+  .block {
+    display: block;
+  }
+  .contents {
+    display: contents;
+  }
+  .grid {
+    display: grid;
+  }
+  .hidden {
+    display: none;
+  }
+  .inline {
+    display: inline;
+  }
+  .inline-block {
+    display: inline-block;
+  }
+  .table {
+    display: table;
+  }
+  .grow {
+    flex-grow: 1;
+  }
+  .transform {
+    transform: var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,);
+  }
+  .truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .capitalize {
+    text-transform: capitalize;
+  }
+  .lowercase {
+    text-transform: lowercase;
+  }
+  .uppercase {
+    text-transform: uppercase;
+  }
+  .ring {
+    --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+  .filter {
+    filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
+  }
+  .\[active\:chess\] {
+    active: chess;
+  }
+  .\[advancedpawn\:chess\] {
+    advancedpawn: chess;
+  }
+  .\[anti-losalamos\:losalamos\] {
+    anti-losalamos: losalamos;
+  }
+  .\[atomic-giveaway-hill\:giveaway\] {
+    atomic-giveaway-hill: giveaway;
+  }
+  .\[atomic-giveaway\:giveaway\] {
+    atomic-giveaway: giveaway;
+  }
+  .\[capture\:chess\] {
+    capture: chess;
+  }
+  .\[captureall\:extinction\] {
+    captureall: extinction;
+  }
+  .\[coffeehouse\:crazyhouse\] {
+    coffeehouse: crazyhouse;
+  }
+  .\[cornerrook\:chess\] {
+    cornerrook: chess;
+  }
+  .\[crossing\:kingofthehill\] {
+    crossing: kingofthehill;
+  }
+  .\[diana\:losalamos\] {
+    diana: losalamos;
+  }
+  .\[doublearmy\:chess\] {
+    doublearmy: chess;
+  }
+  .\[empire\:chess\] {
+    empire: chess;
+  }
+  .\[flipello\:flipersi\] {
+    flipello: flipersi;
+  }
+  .\[gemini\:janus\] {
+    gemini: janus;
+  }
+  .\[gothhouse\:capablanca\] {
+    gothhouse: capablanca;
+  }
+  .\[grandhouse\:grand\] {
+    grandhouse: grand;
+  }
+  .\[janggihouse\:janggi\] {
+    janggihouse: janggi;
+  }
+  .\[makrukhouse\:makruk\] {
+    makrukhouse: makruk;
+  }
+  .\[microchess\:gardner\] {
+    microchess: gardner;
+  }
+  .\[orda\:chess\] {
+    orda: chess;
+  }
+  .\[ordamirror\:chess\] {
+    ordamirror: chess;
+  }
+  .\[pawnsmassacre\:chess\] {
+    pawnsmassacre: chess;
+  }
+  .\[peasant\:chess\] {
+    peasant: chess;
+  }
+  .\[screen\:placement\] {
+    screen: placement;
+  }
+  .\[semitorpedo\:chess\] {
+    semitorpedo: chess;
+  }
+  .\[shinobi\:chess\] {
+    shinobi: chess;
+  }
+  .\[shogun\:crazyhouse\] {
+    shogun: crazyhouse;
+  }
+  .\[synochess\:pocketknight\] {
+    synochess: pocketknight;
+  }
+  .\[upsidedown\:chess\] {
+    upsidedown: chess;
+  }
+  .\[weak\:chess\] {
+    weak: chess;
+  }
+  .\[wildebeest\:chess\] {
+    wildebeest: chess;
+  }
+  .\[xiangqihouse\:xiangqi\] {
+    xiangqihouse: xiangqi;
+  }
+}
 * {
   margin: 0px;
   padding: 0px;
@@ -232,6 +426,28 @@ main {
 @media (min-width: 700px) and (max-width: 1099px) {
   main {
     padding: 10px;
+  }
+}
+@media (min-width: 1100px) and (max-height: 920px) {
+  header, footer {
+    padding: 4px 12px;
+    gap: 0;
+  }
+  h1 {
+    font-size: 1.15rem;
+    line-height: 1.15;
+  }
+  footer {
+    font-size: 0.65rem;
+  }
+  main {
+    padding: 4px 6px;
+  }
+}
+@media (min-width: 1100px) and (max-width: 1599px) {
+  .game_panel_config, .game_panel_right_top, .game_panel_right_bottom {
+    font-size: 0.78rem;
+    line-height: 1.25;
   }
 }
 .game_panel {
@@ -369,10 +585,11 @@ main {
     min-height: 0;
     height: 100%;
     display: grid;
-    grid-template-columns: 280px minmax(0, 1fr) 520px;
-    grid-template-rows: 1.35fr 0.65fr;
+    grid-template-columns: minmax(180px, 220px) minmax(0, 1.4fr) minmax(300px, 360px);
+    grid-template-rows: minmax(0, 1.15fr) minmax(0, 0.85fr);
     grid-template-areas: "config left rightTop" "config left rightBottom";
     overflow: hidden;
+    gap: 10px;
   }
   .game_panel_config {
     grid-area: config;
@@ -393,6 +610,43 @@ main {
   .game_panel_right_bottom {
     grid-area: rightBottom;
     overflow: hidden;
+  }
+}
+@media (min-width: 1100px) and (max-height: 920px) {
+  .game_panel {
+    gap: 6px;
+    grid-template-columns: minmax(160px, 190px) minmax(0, 1.5fr) minmax(300px, 340px);
+    grid-template-rows: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  }
+  .game_panel_left {
+    padding: 4px;
+  }
+}
+@media (min-width: 1100px) and (max-width: 1599px) {
+  .game_panel_config, .game_panel_right_top, .game_panel_right_bottom {
+    padding: 6px 8px;
+  }
+  .game_panel_config {
+    gap: 3px;
+  }
+  .game_panel_config select, .game_panel_config input, .game_panel_config textarea, .game_panel_config button {
+    padding: 3px 5px;
+    font-size: inherit;
+  }
+  .config_panel_title {
+    font-size: 0.9rem;
+    margin-bottom: 2px;
+  }
+  .game_panel_config textarea, #fen_input {
+    min-height: 2.2em;
+  }
+  .game_panel_config label {
+    margin-bottom: 0;
+  }
+}
+@media (min-width: 1600px) {
+  .game_panel {
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr) minmax(420px, 520px);
   }
 }
 .chess_board_wrapper {
@@ -1029,6 +1283,64 @@ span.shogi_hand_piece {
   margin-bottom: 8px;
   font-weight: 600;
 }
+@media (min-width: 1100px) and (max-width: 1599px) {
+  .game_info_winprob_wrapper {
+    padding: 4px 6px 5px;
+  }
+  .game_info_winprob_caption {
+    margin-bottom: 3px;
+    font-size: 0.68rem;
+  }
+  .game_info_winprob_source {
+    font-size: 0.62rem;
+  }
+  .game_info_winprob_track {
+    height: 18px;
+  }
+  .game_info_winprob_label {
+    font-size: 0.78rem;
+  }
+  .game_info_cell {
+    padding: 4px 6px;
+    font-size: 0.72rem;
+  }
+  .game_info_item_value {
+    line-height: 1.2;
+  }
+  .game_info_capture_value {
+    font-size: 1rem;
+  }
+  .game_info_notes_box {
+    margin-top: 4px;
+    padding: 5px 6px;
+    min-height: 48px;
+    font-size: 0.72rem;
+    line-height: 1.3;
+  }
+  .game_panel_right_bottom label {
+    margin-bottom: 3px;
+    font-size: 0.78rem;
+  }
+  .play_chrome {
+    gap: 4px;
+  }
+  .diagram_import_hint, .diagram_import_note {
+    font-size: 0.65rem;
+    line-height: 1.25;
+  }
+  .review_moves_block, .diagram_import_block {
+    gap: 4px;
+    margin: 6px 0 8px;
+  }
+  .review_moves_block label, .diagram_import_block label {
+    font-size: 0.75rem;
+  }
+  #review_moves_input {
+    min-height: 3.2em;
+    font-size: 0.7rem;
+    padding: 4px 5px;
+  }
+}
 .game_info_result_win {
   color: #95f2a4;
   font-weight: 800;
@@ -1081,6 +1393,83 @@ span.shogi_hand_piece {
   .command_row input {
     flex: 1 1 140px;
     max-width: none;
+  }
+}
+@media (min-width: 1100px) and (max-width: 1599px) {
+  .play_chrome .command_row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    align-items: center;
+  }
+  .play_chrome .command_row input {
+    grid-column: 1 / 3;
+    grid-row: 1;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    flex: none;
+  }
+  .play_chrome .command_row #chess_command_submit {
+    grid-column: 3;
+    grid-row: 1;
+    width: 100%;
+  }
+  .play_chrome .command_row #chess_command_preview, .play_chrome .command_row #chess_command_preview_close, .play_chrome .command_row #chess_flag, .play_chrome .command_row #chess_new_game {
+    grid-row: 2;
+    width: 100%;
+  }
+  .play_chrome .command_row #chess_command_preview {
+    grid-column: 1;
+  }
+  .play_chrome .command_row #chess_flag {
+    grid-column: 2;
+  }
+  .play_chrome .command_row #chess_new_game {
+    grid-column: 3;
+  }
+  .play_chrome .command_row:has(#chess_command_preview_close:not([hidden])) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .play_chrome .command_row:has(#chess_command_preview_close:not([hidden])) input {
+    grid-column: 1 / 4;
+  }
+  .play_chrome .command_row:has(#chess_command_preview_close:not([hidden])) #chess_command_submit {
+    grid-column: 4;
+  }
+  .play_chrome .command_row:has(#chess_command_preview_close:not([hidden])) #chess_command_preview {
+    grid-column: 1;
+  }
+  .play_chrome .command_row:has(#chess_command_preview_close:not([hidden])) #chess_command_preview_close {
+    grid-column: 2;
+  }
+  .play_chrome .command_row:has(#chess_command_preview_close:not([hidden])) #chess_flag {
+    grid-column: 3;
+  }
+  .play_chrome .command_row:has(#chess_command_preview_close:not([hidden])) #chess_new_game {
+    grid-column: 4;
+  }
+}
+@media (min-width: 1100px) and (max-height: 920px) {
+  .command_row input {
+    height: 22px;
+  }
+  .command_row button {
+    height: 26px;
+    padding: 2px 6px;
+    font-size: 0.72rem;
+  }
+}
+@media (min-width: 1100px) and (max-width: 1599px) {
+  .command_row input {
+    height: 22px;
+    font-size: 0.78rem;
+    padding: 1px 6px;
+  }
+  .command_row button {
+    height: 26px;
+    padding: 2px 6px;
+    font-size: 0.72rem;
   }
 }
 .command_row input {
@@ -1138,13 +1527,34 @@ span.shogi_hand_piece {
   color: #d0d0d0;
 }
 .game_panel_config .review_moves_row {
+  display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 8px;
+  gap: 6px;
 }
-.game_panel_config .review_moves_row input[type="file"] {
+.game_panel_config .review_moves_row input[type="file"], .game_panel_config .diagram_import_row input[type="file"] {
   width: 100%;
-  text-align: center;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #9a9a9a;
+  font-size: 0.68rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.game_panel_config .review_moves_row input[type="file"]::file-selector-button, .game_panel_config .diagram_import_row input[type="file"]::file-selector-button {
+  width: 100%;
+  margin-inline-end: 0;
+  padding: 5px 8px;
+  border: 1px solid #4a4a4a;
+  background: #262626;
+  color: #f5f5f5;
+  cursor: pointer;
+  font-size: 0.75rem;
 }
 .game_panel_config #review_moves_load {
   width: 100%;
@@ -1154,12 +1564,25 @@ span.shogi_hand_piece {
   text-align: center;
 }
 .game_panel_config .review_playback_row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
   width: 100%;
-  justify-content: center;
+  align-items: center;
 }
 .game_panel_config .review_playback_row button {
-  flex: 1 1 0;
+  width: 100%;
+  min-width: 0;
   justify-content: center;
+  font-size: 0.75rem;
+  padding: 4px 6px;
+  height: auto;
+  white-space: nowrap;
+}
+.game_panel_config .review_moves_ply {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 0.72rem;
 }
 .review_playback_row {
   margin-top: 2px;
@@ -1189,19 +1612,10 @@ span.shogi_hand_piece {
   line-height: 1.35;
 }
 .game_panel_config .diagram_import_row {
+  display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 8px;
-}
-.game_panel_config .diagram_import_row input[type="file"] {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 6px 8px;
-  border: 1px solid #3a3a3a;
-  border-radius: 0;
-  background: #0f0f0f;
-  color: #f5f5f5;
-  text-align: center;
+  gap: 6px;
 }
 .game_panel_config #diagram_import_recognize, .game_panel_config #diagram_import_confirm_btn, .game_panel_config #diagram_import_cancel_btn {
   width: 100%;
@@ -1588,6 +2002,40 @@ span.shogi_hand_piece {
     padding: 2px 3px;
   }
 }
+@media (min-width: 1100px) and (max-width: 1599px) {
+  .chess_move_history_section {
+    margin-top: 4px;
+  }
+  .chess_move_history_title {
+    font-size: 0.72rem;
+    margin-bottom: 2px;
+  }
+  .chess_move_history_side_title {
+    font-size: 0.65rem;
+    margin-bottom: 2px;
+  }
+  .chess_move_history_panels {
+    gap: 4px;
+  }
+  .chess_move_history_list {
+    padding: 3px 4px;
+    line-height: 1.15;
+  }
+  .chess_move_history_list li {
+    padding: 0;
+    font-size: 0.62rem;
+  }
+  .chess_move_history_placeholder {
+    font-size: 0.62rem;
+  }
+  .chess_move_history_piece_icon {
+    font-size: 0.85rem;
+  }
+  .chess_move_history_piece_icon img {
+    width: 0.8rem;
+    height: 0.8rem;
+  }
+}
 .simulation_summary_panel {
   margin: 6px 0 8px;
   border: 1px solid #2d2d2d;
@@ -1651,4 +2099,180 @@ span.shogi_hand_piece {
 #simulation_download_json_btn[disabled], #simulation_download_csv_btn[disabled] {
   opacity: 0.6;
   cursor: not-allowed;
+}
+@property --tw-rotate-x {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-rotate-y {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-rotate-z {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-skew-x {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-skew-y {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-shadow-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+@property --tw-inset-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-inset-shadow-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-inset-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+@property --tw-ring-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-ring-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-inset-ring-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-inset-ring-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-ring-inset {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-ring-offset-width {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --tw-ring-offset-color {
+  syntax: "*";
+  inherits: false;
+  initial-value: #fff;
+}
+@property --tw-ring-offset-shadow {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0 0 #0000;
+}
+@property --tw-blur {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-brightness {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-contrast {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-grayscale {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-hue-rotate {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-invert {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-opacity {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-saturate {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-sepia {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-drop-shadow {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-drop-shadow-color {
+  syntax: "*";
+  inherits: false;
+}
+@property --tw-drop-shadow-alpha {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+@property --tw-drop-shadow-size {
+  syntax: "*";
+  inherits: false;
+}
+@layer properties {
+  @supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))) {
+    *, ::before, ::after, ::backdrop {
+      --tw-rotate-x: initial;
+      --tw-rotate-y: initial;
+      --tw-rotate-z: initial;
+      --tw-skew-x: initial;
+      --tw-skew-y: initial;
+      --tw-shadow: 0 0 #0000;
+      --tw-shadow-color: initial;
+      --tw-shadow-alpha: 100%;
+      --tw-inset-shadow: 0 0 #0000;
+      --tw-inset-shadow-color: initial;
+      --tw-inset-shadow-alpha: 100%;
+      --tw-ring-color: initial;
+      --tw-ring-shadow: 0 0 #0000;
+      --tw-inset-ring-color: initial;
+      --tw-inset-ring-shadow: 0 0 #0000;
+      --tw-ring-inset: initial;
+      --tw-ring-offset-width: 0px;
+      --tw-ring-offset-color: #fff;
+      --tw-ring-offset-shadow: 0 0 #0000;
+      --tw-blur: initial;
+      --tw-brightness: initial;
+      --tw-contrast: initial;
+      --tw-grayscale: initial;
+      --tw-hue-rotate: initial;
+      --tw-invert: initial;
+      --tw-opacity: initial;
+      --tw-saturate: initial;
+      --tw-sepia: initial;
+      --tw-drop-shadow: initial;
+      --tw-drop-shadow-color: initial;
+      --tw-drop-shadow-alpha: 100%;
+      --tw-drop-shadow-size: initial;
+    }
+  }
 }

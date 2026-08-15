@@ -42,8 +42,17 @@ func TestPostAPIGamePreviewMove_ReturnsEvalWithoutMutating(t *testing.T) {
 			}`))
 		case "/explain":
 			explainHits.Add(1)
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"status":"ok","explanation":"nope"}`))
+			var body map[string]interface{}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			if body["preview"] != true {
+				t.Errorf("expected preview=true on explain")
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{
+				"request_id":"preview-e","status":"ok","source":"mock",
+				"explanation":"Preview mode: if white played e2e4, black would move next.",
+				"move_uci":"e2e4","move_san":"e2e4","latency_ms":1
+			}`))
 		default:
 			http.NotFound(w, r)
 		}
@@ -93,8 +102,14 @@ func TestPostAPIGamePreviewMove_ReturnsEvalWithoutMutating(t *testing.T) {
 	if analyzeHits.Load() != 1 {
 		t.Fatalf("analyze hits=%d want 1", analyzeHits.Load())
 	}
-	if explainHits.Load() != 0 {
-		t.Fatalf("explain must not run, hits=%d", explainHits.Load())
+	if explainHits.Load() < 1 {
+		t.Fatalf("explain must run for preview coach, hits=%d", explainHits.Load())
+	}
+	if exp, _ := resp["explanation"].(string); !strings.Contains(exp, "Preview mode") {
+		t.Fatalf("explanation=%v", resp["explanation"])
+	}
+	if _, ok := resp["state"]; !ok {
+		t.Fatal("expected child board state in preview response")
 	}
 	if analyzed, _ := gotFEN.Load().(string); analyzed != fen {
 		t.Fatalf("analyzer fen=%q response fen=%q", analyzed, fen)
@@ -260,6 +275,57 @@ func TestPostAPIGamePreviewMove_ShogiSmoke(t *testing.T) {
 	afterFEN, _ := sessionpkg.CurrentFENByID(game.ID)
 	if afterFEN != beforeFEN {
 		t.Fatalf("shogi session fen mutated")
+	}
+}
+
+// TestPostAPIGamePreviewMove_PromotionSmoke - checks chess promotion preview returns queen child fen without mutation
+func TestPostAPIGamePreviewMove_PromotionSmoke(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"request_id":"promo","status":"ok","source":"mock","evaluation_source":"fairy-stockfish",
+			"fen":"child","evaluated_for_color":"black","health_summary":{},
+			"eval_cp_white":900,"win_chance_white":0.95,"win_chance_black":0.05,
+			"suggested_moves":[],"latency_ms":1
+		}`))
+	}))
+	defer srv.Close()
+	t.Setenv("PY_ANALYSER_URL", srv.URL)
+
+	sessionpkg.ResetGame()
+	fen := "8/4P3/8/8/8/8/8/4K2k w - - 0 1"
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeChess, "white", 1, fen, "")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	beforeFEN, _ := sessionpkg.CurrentFENByID(game.ID)
+
+	h := NewHandler()
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/games/"+game.ID+"/preview-move",
+		strings.NewReader(`{"command":"e7e8q"}`),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.APIGameRoutes(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var resp map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp["command"] != "e7e8q" {
+		t.Fatalf("command=%v", resp["command"])
+	}
+	child, _ := resp["fen"].(string)
+	if !strings.Contains(child, "Q") {
+		t.Fatalf("expected queen in child fen, got %q", child)
+	}
+	afterFEN, _ := sessionpkg.CurrentFENByID(game.ID)
+	if afterFEN != beforeFEN {
+		t.Fatalf("promotion preview mutated live fen")
 	}
 }
 

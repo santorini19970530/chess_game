@@ -32,6 +32,7 @@ class TeacherPrompt:
         side_to_move: str = "white",
         human_color: str | None = None,
         concept_hints: list[str] | None = None,
+        preview: bool = False,
     ) -> str:
         level = self.normalize_skill_level(skill_level)
         terms_file, tone_file = self._terms_tone_filenames(game_type)
@@ -79,16 +80,30 @@ class TeacherPrompt:
         parts = [
             f"You are a {voice} for {game}. Skill: {level}.",
             str(ground.get("summary") or "GROUND TRUTH: unavailable."),
-            f'Only explain {move_text}. {to_move.capitalize()} to move. '
-            f'Open with "{you_or_side} {move_text}." then ONE short idea (≤45 words total).',
+        ]
+        if preview:
+            parts.append(
+                "PREVIEW MODE: this candidate was NOT played in the live game. "
+                "Start with 'Preview mode:' and analyse the what-if resulting position only."
+            )
+            parts.append(
+                f'Only discuss preview candidate {move_text}. {to_move.capitalize()} would move next. '
+                f'Open with "Preview mode: if {last_mover} played {move_text}…" then ONE short idea (≤45 words total).'
+            )
+        else:
+            parts.append(
+                f'Only explain {move_text}. {to_move.capitalize()} to move. '
+                f'Open with "{you_or_side} {move_text}." then ONE short idea (≤45 words total).'
+            )
+        parts.append(
             "Use ONLY GROUND TRUTH + cues. No invented forks/pieces/captures/drops. "
             "No next-move UCI/SAN/drop unless that exact token appears in cues. "
-            "If unsure, one clause pointing at suggested replies — never invent tactics.",
-            f"Recent moves: {history_str}.",
-        ]
+            "If unsure, one clause pointing at suggested replies — never invent tactics."
+        )
+        parts.append(f"Recent moves: {history_str}.")
         if cues:
             parts.append("Cues: " + " | ".join(cues) + ".")
-        if human in {"white", "black"}:
+        if human in {"white", "black"} and not preview:
             if last_mover == human:
                 parts.append(f"Speak as 'you' ({human}).")
             else:
@@ -113,6 +128,7 @@ class TeacherPrompt:
         game_type: str = "chess",
         human_color: str | None = None,
         side_to_move: str = "white",
+        preview: bool = False,
     ) -> str:
         ground = build_move_ground_truth(
             fen=fen,
@@ -150,12 +166,18 @@ class TeacherPrompt:
         else:
             idea = "Watch checks, captures, and loose pieces."
         last_mover = "black" if to_move == "white" else "white"
-        mover = _normalize_side(last_mover)
-        human = _normalize_side(human_color) if human_color else ""
-        if human and mover == human:
-            seed = f"You played {san}. {idea}"
+        if preview:
+            seed = (
+                f"Preview mode: if {last_mover} played {san}, {to_move} would move next "
+                f"(what-if; live game unchanged). {idea}"
+            )
         else:
-            seed = f"{mover.capitalize()} played {san}. {idea}"
+            mover = _normalize_side(last_mover)
+            human = _normalize_side(human_color) if human_color else ""
+            if human and mover == human:
+                seed = f"You played {san}. {idea}"
+            else:
+                seed = f"{mover.capitalize()} played {san}. {idea}"
         return finalize_explanation(
             seed,
             move_san=san,
@@ -264,6 +286,7 @@ def build_teacher_prompt(
     side_to_move: str = "white",
     human_color: str | None = None,
     concept_hints: list[str] | None = None,
+    preview: bool = False,
 ) -> str:
     return _TEACHER.build(
         fen=fen,
@@ -275,6 +298,7 @@ def build_teacher_prompt(
         side_to_move=side_to_move,
         human_color=human_color,
         concept_hints=concept_hints,
+        preview=preview,
     )
 
 
@@ -288,6 +312,7 @@ def build_quick_coach_line(
     game_type: str = "chess",
     human_color: str | None = None,
     side_to_move: str = "white",
+    preview: bool = False,
 ) -> str:
     return _TEACHER.build_quick(
         fen=fen,
@@ -297,4 +322,5 @@ def build_quick_coach_line(
         game_type=game_type,
         human_color=human_color,
         side_to_move=side_to_move,
+        preview=preview,
     )

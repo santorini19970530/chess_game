@@ -3,18 +3,40 @@
 
 package session
 
-import pieces "go_backend/game/piece"
+import (
+	"go_backend/game/movement"
+	pieces "go_backend/game/piece"
+)
+
+// PreviewChildResult - child position snapshot for preview-move (live session unchanged)
+type PreviewChildResult struct {
+	Command     string
+	FEN         string
+	State       []PieceState
+	Captured    CapturedSummary
+	CurrentTurn string
+	CheckedSide string
+}
 
 // PreviewChildFENByCommandByID - returns normalized command and child fen without committing session, clock, or history
 func PreviewChildFENByCommandByID(gameID, commandText string) (string, string, error) {
-	game, err := lockRuntimeStateByID(gameID)
+	out, err := PreviewChildPositionByCommandByID(gameID, commandText)
 	if err != nil {
 		return "", "", err
+	}
+	return out.Command, out.FEN, nil
+}
+
+// PreviewChildPositionByCommandByID - applies a candidate under lock, snapshots child board, then restores live state
+func PreviewChildPositionByCommandByID(gameID, commandText string) (PreviewChildResult, error) {
+	game, err := lockRuntimeStateByID(gameID)
+	if err != nil {
+		return PreviewChildResult{}, err
 	}
 	defer unlockRuntimeStateByID(game)
 
 	if err := rejectIfGameOverLocked(game); err != nil {
-		return "", "", err
+		return PreviewChildResult{}, err
 	}
 
 	sessionSnap := cloneGameSession(game.Session)
@@ -37,9 +59,28 @@ func PreviewChildFENByCommandByID(gameID, commandText string) (string, string, e
 		normalized, err = applyMoveByCommandCurrentLoaded(commandText)
 	}
 	if err != nil {
-		return "", "", err
+		return PreviewChildResult{}, err
 	}
-	return normalized, CurrentFEN(), nil
+
+	captured := GetCapturedSummary()
+	checked := CheckedSideLabel()
+	switch game.Session.Type {
+	case GameTypeXiangqi:
+		checked = string(movement.XiangqiCheckedColor())
+		captured = GetXiangqiCapturedSummary()
+	case GameTypeShogi:
+		checked = string(movement.ShogiCheckedColor())
+		captured = shogiHandsSummary()
+	}
+
+	return PreviewChildResult{
+		Command:     normalized,
+		FEN:         CurrentFEN(),
+		State:       GetBoardState(),
+		Captured:    captured,
+		CurrentTurn: CurrentTurnLabel(),
+		CheckedSide: checked,
+	}, nil
 }
 
 // cloneGameSession - deep-copies session including clock pointer fields

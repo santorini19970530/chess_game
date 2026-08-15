@@ -154,6 +154,8 @@ class DomState {
     state.cachedAnalysis = null;
     state.cachedCapturedSummary = null;
     state.previewActive = false;
+    state.previewMode = false;
+    state.previewShowing = false;
     state.previewRestore = null;
     state.isPreviewing = false;
     state.lastExplanationText = "";
