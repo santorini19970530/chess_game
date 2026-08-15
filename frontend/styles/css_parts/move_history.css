@@ -104,12 +104,12 @@
   }
 
   .chess_move_history_title {
-    font-size: 0.72rem;
+    font-size: 0.78rem;
     margin-bottom: 2px;
   }
 
   .chess_move_history_side_title {
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     margin-bottom: 2px;
   }
 
@@ -119,24 +119,33 @@
 
   .chess_move_history_list {
     padding: 3px 4px;
-    line-height: 1.15;
+    line-height: 1.25;
   }
 
   .chess_move_history_list li {
     padding: 0;
-    font-size: 0.62rem;
+    font-size: 0.72rem;
   }
 
   .chess_move_history_placeholder {
-    font-size: 0.62rem;
+    font-size: 0.72rem;
   }
 
+  /* icons are unreadable when tiny — show piece words instead */
   .chess_move_history_piece_icon {
-    font-size: 0.85rem;
+    font-size: 0;
+    line-height: 0;
   }
 
   .chess_move_history_piece_icon img {
-    width: 0.8rem;
-    height: 0.8rem;
+    display: none;
+  }
+
+  .chess_move_history_piece_icon::before {
+    content: attr(data-label);
+    font-size: 0.72rem;
+    line-height: 1.25;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: inherit;
   }
 }
