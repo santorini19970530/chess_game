@@ -17,7 +17,7 @@ Install / run / Docker / diagram-vendor steps are below — this section is the 
 
 ## Theme lock
 
-**Primary story:** the Go backend **orchestrates** three Fairy-Stockfish **playing agents** at different strengths (Beginner / Intermediate / Master ≈ Easy / Medium / Hard) plus a separate **LLM analyst/coach** (Python `/analyze` + `/explain` via Ollama, with heuristic fallback). Playing and explaining stay separate; Go owns sessions, legality, and routing.
+**Primary story:** Go **orchestrates three pretrained models** in different domains: Fairy-Stockfish with Chess NNUE `nn-3475407dc199.nnue` (board/search; Xiangqi/Shogi stay classical), Ollama for text coaching (evidence run `llama3.2`; tag is configurable), and Chess_diagram_to_FEN for image→FEN. Beginner / Intermediate / Master are **profiles of one engine**, not three models. Playing and explaining stay separate; Go owns sessions, legality, and routing.
 
 **Supporting tools only (not the “three playing agents”):** History / Policy / Value remain Chess decision helpers / fallback when Fairy-Stockfish is off. Do not describe HPV as the three playing agents.
 
