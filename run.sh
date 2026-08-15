@@ -36,6 +36,17 @@ if lsof -t -nP -iTCP:8001 -sTCP:LISTEN >/dev/null 2>&1; then
   exit 1
 fi
 
+NNUE_DEFAULT="$ROOT_DIR/../_local_nnue/nn-3475407dc199.nnue"
+if [[ -z "${FAIRY_STOCKFISH_NNUE_PATH:-}" && -f "$NNUE_DEFAULT" ]]; then
+  export FAIRY_STOCKFISH_NNUE_PATH="$NNUE_DEFAULT"
+fi
+if [[ -n "${FAIRY_STOCKFISH_NNUE_PATH:-}" && -f "$FAIRY_STOCKFISH_NNUE_PATH" ]]; then
+  echo "Fairy-Stockfish NNUE: $FAIRY_STOCKFISH_NNUE_PATH"
+else
+  echo "Fairy-Stockfish NNUE not set → classical eval (not pretrained-model evidence)"
+  unset FAIRY_STOCKFISH_NNUE_PATH || true
+fi
+
 echo "starting python analyzer server on http://127.0.0.1:8001 ..."
 echo "python: $PY_BIN"
 if lsof -t -nP -iTCP:11434 -sTCP:LISTEN >/dev/null 2>&1; then

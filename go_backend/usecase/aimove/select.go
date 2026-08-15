@@ -64,6 +64,11 @@ func GetFairyStockfish(side string) (*engine.FairyStockfish, error) {
 	if err := fs.Start(); err != nil {
 		return nil, err
 	}
+	if evErr := engine.EvidenceCheckNNUE(); evErr != nil {
+		log.Printf("warning: NNUE evidence check failed: %v (play may use classical eval)", evErr)
+	} else {
+		log.Printf("NNUE evidence check passed path=%s", engine.ResolveNNUEPath())
+	}
 	fsEngines[key] = fs
 	return fs, nil
 }

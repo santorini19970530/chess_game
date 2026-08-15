@@ -94,6 +94,11 @@ func (fs *FairyStockfish) Start() error {
 		return err
 	}
 	fs.variant = "chess" // Fairy-Stockfish default after uci
+	// applyNNUELocked - no-op when no .nnue file; classical eval remains
+	if err := fs.applyNNUELocked(); err != nil {
+		fs.closeLocked()
+		return err
+	}
 	return nil
 }
 
