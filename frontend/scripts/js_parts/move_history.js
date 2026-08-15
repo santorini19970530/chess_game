@@ -57,16 +57,67 @@ class MoveHistoryView {
     return iconMap[color]?.[kind] || kind.slice(0, 1).toUpperCase() || "?";
   }
 
+  // movePieceWord - returns a game-aware piece label for compact history rows
+  movePieceWord(pieceKind) {
+    const kind = String(pieceKind || "").trim().toLowerCase();
+    const game = String(this.app?.state?.boardGameType || "chess").toLowerCase();
+    if (game === "xianqi") {
+      // shared api kinds use xiangqi names (pawn→soldier, rook→chariot, …)
+      const xq = {
+        pawn: "soldier",
+        rook: "chariot",
+        knight: "horse",
+        king: "general",
+        advisor: "advisor",
+        cannon: "cannon",
+        elephant: "elephant",
+        bishop: "elephant",
+      };
+      return xq[kind] || kind.replace(/_/g, " ") || "piece";
+    }
+    if (game === "shogi") {
+      const sg = {
+        pawn: "pawn",
+        lance: "lance",
+        knight: "knight",
+        silver: "silver",
+        gold: "gold",
+        bishop: "bishop",
+        rook: "rook",
+        king: "king",
+        promoted_pawn: "tokin",
+        promoted_lance: "+lance",
+        promoted_knight: "+knight",
+        promoted_silver: "+silver",
+        dragon: "dragon",
+        horse: "horse",
+      };
+      return sg[kind] || kind.replace(/_/g, " ") || "piece";
+    }
+    // chess
+    const chess = {
+      pawn: "pawn",
+      rook: "rook",
+      knight: "knight",
+      bishop: "bishop",
+      queen: "queen",
+      king: "king",
+    };
+    return chess[kind] || kind.replace(/_/g, " ") || "piece";
+  }
+
   // fillHistoryPieceIcon - fills a history list icon from png or unicode fallback
-  fillHistoryPieceIcon(el, side, pieceKind) {
+  fillHistoryPieceIcon(el, side, pieceKind, opts = {}) {
     el.className = "chess_move_history_piece_icon";
+    const word = this.movePieceWord(pieceKind);
+    el.setAttribute("data-label", opts.drop ? `drop ${word}` : word);
     el.replaceChildren();
-    if (this.app.state.boardGameType === "xianqi" || this.app.state.boardGameType === "shogi") {
-      const path = this.app.board.imagePathFromPiece({ kind: pieceKind, color: side });
+    if (this.app.state?.boardGameType === "xianqi" || this.app.state?.boardGameType === "shogi") {
+      const path = this.app.board?.imagePathFromPiece?.({ kind: pieceKind, color: side });
       if (path) {
         const img = document.createElement("img");
         img.src = path;
-        img.alt = String(pieceKind || "");
+        img.alt = opts.drop ? `drop ${word}` : word;
         img.setAttribute("data-color", String(side || "").toLowerCase());
         el.appendChild(img);
         return;
@@ -86,21 +137,51 @@ class MoveHistoryView {
     return match ? match[1] : text;
   }
 
+  // formatHistorySquare - formats a square using the same file/rank style as the board gutters
+  formatHistorySquare(square) {
+    const text = String(square || "").trim().toLowerCase();
+    const m = text.match(/^([a-i])(\d{1,2})$/i);
+    if (!m) return String(square || "").trim();
+    const fileLetter = m[1];
+    const rank = m[2];
+    const fileNum = fileLetter.charCodeAt(0) - "a".charCodeAt(0) + 1;
+    const game = String(this.app?.state?.boardGameType || "chess").toLowerCase();
+    if (game === "shogi") {
+      // board gutters use numeric files 1–9 (not a–i)
+      return `${fileNum}${rank}`;
+    }
+    // chess (a–h) and xiangqi (a–i): letter file + rank, including xiangqi rank 10
+    return `${fileLetter}${rank}`;
+  }
+
+  // isDropCommand - reports whether a command is a shogi drop (piece*square)
+  isDropCommand(command) {
+    return String(command || "").includes("*");
+  }
+
+  // captureMark - returns the compact capture connector for the active game
+  captureMark() {
+    const game = String(this.app?.state?.boardGameType || "chess").toLowerCase();
+    if (game === "xianqi") return "takes";
+    if (game === "shogi") return "x";
+    return "x";
+  }
+
   // opponentSide - returns the opposite color for a history side label
   opponentSide(side) {
     return String(side || "").toLowerCase() === "black" ? "white" : "black";
   }
 
   // appendHistoryMove - appends one move row to a white or black history list
-  appendHistoryMove(listEl, side, pieceKind, toSquare, fallbackText, isCapture, capturedPieceKind) {
+  appendHistoryMove(listEl, side, pieceKind, toSquare, fallbackText, isCapture, capturedPieceKind, command = "") {
     const item = document.createElement("li");
     const iconSpan = document.createElement("span");
-    this.fillHistoryPieceIcon(iconSpan, side, pieceKind);
+    this.fillHistoryPieceIcon(iconSpan, side, pieceKind, { drop: this.isDropCommand(command) });
     const textSpan = document.createElement("span");
     textSpan.className = "chess_move_history_move_text";
-    const moveText = toSquare || fallbackText || "";
+    const moveText = this.formatHistorySquare(toSquare || fallbackText || "");
     if (isCapture) {
-      textSpan.textContent = `${moveText} x `;
+      textSpan.appendChild(document.createTextNode(`${moveText} ${this.captureMark()} `));
       if (capturedPieceKind) {
         const capturedIcon = document.createElement("span");
         this.fillHistoryPieceIcon(capturedIcon, this.opponentSide(side), capturedPieceKind);
@@ -146,7 +227,8 @@ class MoveHistoryView {
         const side = String(move?.side || "white");
         const toSquare = String(move?.to || "");
         const pieceKind = String(move?.pieceKind || "pawn");
-        const fallbackText = this.destinationFromCommand(move?.command);
+        const command = String(move?.command || "");
+        const fallbackText = this.destinationFromCommand(command);
         const isCapture = Boolean(move?.isCapture);
         const capturedPieceKind = String(move?.capturedPieceKind || "");
         if (side.toLowerCase() === "black") {
@@ -157,7 +239,8 @@ class MoveHistoryView {
             toSquare,
             fallbackText,
             isCapture,
-            capturedPieceKind
+            capturedPieceKind,
+            command
           );
         } else {
           this.appendHistoryMove(
@@ -167,7 +250,8 @@ class MoveHistoryView {
             toSquare,
             fallbackText,
             isCapture,
-            capturedPieceKind
+            capturedPieceKind,
+            command
           );
         }
       }
@@ -233,9 +317,34 @@ if (typeof window !== "undefined") {
   window.MoveHistoryView = MoveHistoryView;
 } else {
   // self-check: capture history needs opponentSide (missing helper aborted snapshot paint)
-  const view = new MoveHistoryView({});
+  const view = new MoveHistoryView({ state: { boardGameType: "chess" } });
   if (view.opponentSide("white") !== "black" || view.opponentSide("Black") !== "white") {
     throw new Error("opponentSide self-check failed");
+  }
+  if (view.movePieceWord("knight") !== "knight") {
+    throw new Error("chess movePieceWord self-check failed");
+  }
+  const xq = new MoveHistoryView({ state: { boardGameType: "xianqi" } });
+  if (xq.movePieceWord("pawn") !== "soldier" || xq.movePieceWord("rook") !== "chariot" || xq.movePieceWord("king") !== "general") {
+    throw new Error("xiangqi movePieceWord self-check failed");
+  }
+  const sg = new MoveHistoryView({ state: { boardGameType: "shogi" } });
+  if (sg.movePieceWord("promoted_pawn") !== "tokin" || sg.movePieceWord("dragon") !== "dragon") {
+    throw new Error("shogi movePieceWord self-check failed");
+  }
+  if (!sg.isDropCommand("P*e5") || sg.isDropCommand("c3c4")) {
+    throw new Error("isDropCommand self-check failed");
+  }
+  const chessSq = new MoveHistoryView({ state: { boardGameType: "chess" } });
+  if (chessSq.formatHistorySquare("e4") !== "e4") {
+    throw new Error("chess formatHistorySquare self-check failed");
+  }
+  const xqSq = new MoveHistoryView({ state: { boardGameType: "xianqi" } });
+  if (xqSq.formatHistorySquare("a10") !== "a10") {
+    throw new Error("xiangqi formatHistorySquare self-check failed");
+  }
+  if (sg.formatHistorySquare("c4") !== "34") {
+    throw new Error("shogi formatHistorySquare self-check failed");
   }
   console.log("move history self-check ok");
 }

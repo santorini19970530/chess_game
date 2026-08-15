@@ -421,6 +421,7 @@ def explain() -> tuple:
         move_san = ground.get("uci") or move_uci or None
 
     quick = bool(payload.get("quick")) or str(payload.get("mode", "")).strip().lower() == "quick"
+    preview = bool(payload.get("preview"))
     to_move = side_to_move_from_fen(common["fen"], common["color"])
     last_mover = "black" if to_move == "white" else "white"
 
@@ -435,6 +436,7 @@ def explain() -> tuple:
             game_type=game_type,
             human_color=human_color,
             side_to_move=common["color"],
+            preview=preview,
         )
         source = "quick"
     else:
@@ -451,6 +453,7 @@ def explain() -> tuple:
                 skill_level=skill_level,
                 human_color=human_color,
                 concept_hints=concept_hints or None,
+                preview=preview,
             )
         except Exception:
             # any failure (ollama down, timeout, bad response) falls back to heuristic

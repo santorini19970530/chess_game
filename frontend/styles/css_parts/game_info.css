@@ -41,6 +41,15 @@
   text-transform: none;
 }
 
+.game_info_winprob_wrapper.is-preview {
+  outline: 1px solid #5a6a3a;
+  background: #141810;
+}
+
+.game_info_winprob_wrapper.is-preview .game_info_winprob_caption {
+  color: #c8d59a;
+}
+
 .game_info_winprob_track {
   width: 100%;
   height: 30px;
@@ -176,6 +185,83 @@
   display: block;
   margin-bottom: 8px;
   font-weight: 600;
+}
+
+/* Laptop density: smaller type + tighter stacks in the play rail (board unchanged) */
+@media (min-width: 1100px) and (max-width: 1599px) {
+  .game_info_winprob_wrapper {
+    padding: 4px 6px 5px;
+  }
+
+  .game_info_winprob_caption {
+    margin-bottom: 3px;
+    font-size: 0.68rem;
+  }
+
+  .game_info_winprob_source {
+    font-size: 0.62rem;
+  }
+
+  .game_info_winprob_track {
+    height: 18px;
+  }
+
+  .game_info_winprob_label {
+    font-size: 0.78rem;
+  }
+
+  .game_info_cell {
+    padding: 4px 6px;
+    font-size: 0.72rem;
+  }
+
+  .game_info_item_value {
+    line-height: 1.2;
+  }
+
+  .game_info_capture_value {
+    font-size: 1rem;
+  }
+
+  .game_info_notes_box {
+    margin-top: 4px;
+    padding: 5px 6px;
+    min-height: 48px;
+    font-size: 0.72rem;
+    line-height: 1.3;
+  }
+
+  .game_panel_right_bottom label {
+    margin-bottom: 3px;
+    font-size: 0.78rem;
+  }
+
+  .play_chrome {
+    gap: 4px;
+  }
+
+  .diagram_import_hint,
+  .diagram_import_note {
+    font-size: 0.65rem;
+    line-height: 1.25;
+  }
+
+  .review_moves_block,
+  .diagram_import_block {
+    gap: 4px;
+    margin: 6px 0 8px;
+  }
+
+  .review_moves_block label,
+  .diagram_import_block label {
+    font-size: 0.75rem;
+  }
+
+  #review_moves_input {
+    min-height: 3.2em;
+    font-size: 0.7rem;
+    padding: 4px 5px;
+  }
 }
 
 .game_info_result_win {

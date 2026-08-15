@@ -212,6 +212,26 @@ func TestFrontendWinProb_EstimatedCaption(t *testing.T) {
 	requireSnippet(t, jsSrc, "source: ${label}")
 }
 
+// TestFrontendPreviewMove_Markers - checks deliberate preview-mode ui and restore helpers
+func TestFrontendPreviewMove_Markers(t *testing.T) {
+	indexSrc := loadIndexHandlerSource(t)
+	requireSnippet(t, indexSrc, `id="chess_command_preview"`)
+	requireSnippet(t, indexSrc, `id="chess_command_preview_close"`)
+	requireSnippet(t, indexSrc, "Preview mode")
+	requireSnippet(t, indexSrc, "Resume game")
+
+	jsSrc := loadChessCommandSource(t)
+	requireSnippet(t, jsSrc, "/preview-move")
+	requireSnippet(t, jsSrc, "previewCommand")
+	requireSnippet(t, jsSrc, "togglePreviewMode")
+	requireSnippet(t, jsSrc, "clearMovePreview")
+	requireSnippet(t, jsSrc, "previewOnly")
+	requireSnippet(t, jsSrc, "Estimated win chance (preview)")
+	requireSnippet(t, jsSrc, "formatPreviewNotes")
+	requireSnippet(t, jsSrc, "Preview mode — live game unchanged")
+	requireSnippet(t, jsSrc, "restoreLiveBoardForPreviewPick")
+}
+
 // TestFrontendSimulationDownload_Step1ButtonMarkers - checks frontend simulation download step1 button markers
 func TestFrontendSimulationDownload_Step1ButtonMarkers(t *testing.T) {
 	source := loadIndexHandlerSource(t)
@@ -278,9 +298,9 @@ func TestFrontendDiagramImport_Markers(t *testing.T) {
 	requireSnippet(t, jsSrc, "DiagramImport")
 	requireSnippet(t, jsSrc, "confirmLoad")
 	requireSnippet(t, jsSrc, "analysisMoveNumber")
-	requireSnippet(t, jsSrc, "pieces in hand are not recovered")
+	requireSnippet(t, jsSrc, "hands are inferred from board inventory")
 	requireSnippet(t, jsSrc, "Xiangqi: confirm the board carefully")
-	requireSnippet(t, indexSrc, "pieces in hand are not recovered from the image")
+	requireSnippet(t, indexSrc, "Shogi: hands are inferred from board inventory")
 }
 
 // TestFrontendSimulationDownload_Step2StyleMarkers - checks frontend simulation download step2 style markers

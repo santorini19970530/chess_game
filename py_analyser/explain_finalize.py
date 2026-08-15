@@ -89,23 +89,40 @@ class ExplainFinalizer:
 
         mover = self._normalize_side(last_mover)
         human = self._normalize_side(human_color) if human_color else ""
-        if human and mover == human:
+        preview_open = re.match(
+            r"(?i)^(Preview mode:[^.!?]*[.!?])\s*(.*)$",
+            cleaned,
+            flags=re.S,
+        )
+        if preview_open:
+            # keep what-if framing; do not rewrite into "You played…"
+            opener = re.sub(
+                r"(?i)^preview mode:",
+                "Preview mode:",
+                preview_open.group(1).strip(),
+                count=1,
+            )
+            rest = preview_open.group(2).strip()
+        elif human and mover == human:
             opener = f"You played {san}."
+            rest = ""
         else:
             opener = f"{mover.capitalize()} played {san}."
+            rest = ""
 
-        body = cleaned
-        if re.match(re.escape(opener), body, flags=re.IGNORECASE):
-            rest = body[len(opener) :].lstrip(" \n")
-        else:
-            # multi-word labels e.g. "pawn g7→g6" — do not stop at first token
-            rest = re.sub(
-                r"^(You|Black|White)\s+played\s+[^.]+?\.\s*",
-                "",
-                body,
-                count=1,
-                flags=re.IGNORECASE,
-            ).strip()
+        if not preview_open:
+            body = cleaned
+            if re.match(re.escape(opener), body, flags=re.IGNORECASE):
+                rest = body[len(opener) :].lstrip(" \n")
+            else:
+                # multi-word labels e.g. "pawn g7→g6" — do not stop at first token
+                rest = re.sub(
+                    r"^(You|Black|White)\s+played\s+[^.]+?\.\s*",
+                    "",
+                    body,
+                    count=1,
+                    flags=re.IGNORECASE,
+                ).strip()
 
         allow = (ground_summary or "").lower()
         moved_piece = ""

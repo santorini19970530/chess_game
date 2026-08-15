@@ -41,6 +41,7 @@ type explainRequest struct {
 	MoveSAN      string   `json:"move_san,omitempty"`
 	MoveHistory  []string `json:"move_history,omitempty"`
 	Quick        bool     `json:"quick,omitempty"` // instant ground-truth line (no Ollama)
+	Preview      bool     `json:"preview,omitempty"` // what-if candidate; coach must label as preview
 }
 
 // explainSkillLevelFromProfile - maps AI strength (4 levels) → explain skill_level (3)

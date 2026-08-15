@@ -84,6 +84,11 @@ class BoardInteraction {
   // selectShogiHandPiece - selects a shogi hand piece and loads drop destinations
   async selectShogiHandPiece(side, kind) {
     if (this.app.state.boardGameType !== "shogi" || this.app.state.gameOver || this.app.state.isSubmitting) return;
+    if (this.app.state.previewShowing) {
+      this.app.setup.restoreLiveBoardForPreviewPick();
+      this.clearSelectedSquare();
+      return;
+    }
     if (!this.app.gameInfo.isHandSidePlayable(side)) return;
     if (
       this.app.state.selectedDropKind &&
@@ -131,7 +136,9 @@ class BoardInteraction {
     const ch = this.app.SHOGI_DROP_CHAR[this.app.state.selectedDropKind.kind];
     if (!ch) return false;
     const fileLetter = String.fromCharCode("a".charCodeAt(0) + target.file - 1);
-    return this.app.setup.submitCommand(`${ch}*${fileLetter}${target.rank}`);
+    const command = `${ch}*${fileLetter}${target.rank}`;
+    if (this.app.state.previewMode) return this.app.setup.previewCommand(command);
+    return this.app.setup.submitCommand(command);
   }
 
   // highlightLegalDestinations - paints legal move, capture, and promotion destination squares
@@ -220,6 +227,12 @@ class BoardInteraction {
   // onBoardClick - handles click-to-select and click-to-move on the board
   async onBoardClick(event) {
     if (this.app.state.gameOver || this.app.state.isSubmitting || this.app.state.pendingPromotionResolve) return;
+    if (this.app.state.previewShowing) {
+      // child board nodes are replaced — cancel this click; next click picks on the live board
+      this.app.setup.restoreLiveBoardForPreviewPick();
+      this.clearSelectedSquare();
+      return;
+    }
     const targetSquare = this.getSquareElement(event.target);
     if (!targetSquare) return;
 
@@ -280,6 +293,12 @@ class BoardInteraction {
   // onBoardDragStart - starts a drag from a current-turn piece
   onBoardDragStart(event) {
     if (this.app.state.gameOver || this.app.state.isSubmitting || this.app.state.pendingPromotionResolve) {
+      event.preventDefault();
+      return;
+    }
+    if (this.app.state.previewShowing) {
+      this.app.setup.restoreLiveBoardForPreviewPick();
+      this.clearSelectedSquare();
       event.preventDefault();
       return;
     }

@@ -165,6 +165,35 @@ class TestTeacherPrompt(unittest.TestCase):
             text.startswith("You played") or text.startswith("White played") or text.startswith("Black played")
         )
 
+    # test_quick_coach_preview_framing - checks preview lines open with Preview mode framing
+    def test_quick_coach_preview_framing(self) -> None:
+        fen = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+        text = build_quick_coach_line(
+            fen=fen,
+            move_uci="e2e4",
+            move_san="e4",
+            move_history=["e2e4"],
+            game_type="chess",
+            human_color="white",
+            side_to_move="black",
+            preview=True,
+        )
+        self.assertTrue(text.startswith("Preview mode:"))
+        self.assertIn("what-if", text.lower())
+        prompt = build_teacher_prompt(
+            fen=fen,
+            move_uci="e2e4",
+            move_san="e4",
+            move_history=["e2e4"],
+            game_type="chess",
+            skill_level="intermediate",
+            side_to_move="black",
+            human_color="white",
+            preview=True,
+        )
+        self.assertIn("PREVIEW MODE", prompt)
+        self.assertIn("Preview mode:", prompt)
+
     # test_finalize_drops_retract_pawn_advice - checks undo-style pawn advice is replaced by cue replies
     def test_finalize_drops_retract_pawn_advice(self) -> None:
         raw = (

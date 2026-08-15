@@ -96,3 +96,56 @@
     padding: 2px 3px;
   }
 }
+
+/* Laptop density — must live here (after base rules); game_info.css imports earlier and loses */
+@media (min-width: 1100px) and (max-width: 1599px) {
+  .chess_move_history_section {
+    margin-top: 4px;
+  }
+
+  .chess_move_history_title {
+    font-size: 0.78rem;
+    margin-bottom: 2px;
+  }
+
+  .chess_move_history_side_title {
+    font-size: 0.7rem;
+    margin-bottom: 2px;
+  }
+
+  .chess_move_history_panels {
+    gap: 4px;
+  }
+
+  .chess_move_history_list {
+    padding: 3px 4px;
+    line-height: 1.25;
+  }
+
+  .chess_move_history_list li {
+    padding: 0;
+    font-size: 0.72rem;
+  }
+
+  .chess_move_history_placeholder {
+    font-size: 0.72rem;
+  }
+
+  /* icons are unreadable when tiny — show piece words instead */
+  .chess_move_history_piece_icon {
+    font-size: 0;
+    line-height: 0;
+  }
+
+  .chess_move_history_piece_icon img {
+    display: none;
+  }
+
+  .chess_move_history_piece_icon::before {
+    content: attr(data-label);
+    font-size: 0.72rem;
+    line-height: 1.25;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: inherit;
+  }
+}
