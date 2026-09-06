@@ -28,101 +28,25 @@ func CheckedSideLabel() string {
 	return string(CheckedSideColor())
 }
 
-// EvaluateGameOutcome - evaluates checkmate, stalemate, and draw outcomes for chess
+// EvaluateGameOutcome - runs the Chess GameEndStrategy chain for the current ply
 func EvaluateGameOutcome() GameOutcome {
-	// safety check: if either side has no king left, the game is over
-	whiteKings := 0
-	blackKings := 0
-	for _, p := range pieces.ChessPieces {
-		if p.Kind == pieces.King {
-			if p.Color == pieces.White {
-				whiteKings++
-			} else {
-				blackKings++
-			}
-		}
+	ensureChessGameEndStrategies()
+	ctx := buildChessPlyEndContext()
+	ended, out := runGameEndStrategies(ctx)
+	if ended {
+		return out
 	}
-	if whiteKings == 0 {
+	if ctx.InCheck {
 		return GameOutcome{
-			Status:      "checkmate",
-			Winner:      "black",
-			Loser:       "white",
-			CheckedSide: "white",
-			LegalMoves:  0,
-			Message:     "Checkmate! Black wins (king captured).",
+			Status:      "check",
+			CheckedSide: ctx.SideToMove,
+			LegalMoves:  ctx.LegalMoves,
+			Message:     sideLabelFromText(ctx.SideToMove) + " is in check.",
 		}
 	}
-	if blackKings == 0 {
-		return GameOutcome{
-			Status:      "checkmate",
-			Winner:      "white",
-			Loser:       "black",
-			CheckedSide: "black",
-			LegalMoves:  0,
-			Message:     "Checkmate! White wins (king captured).",
-		}
-	}
-
-	sideToMove := CurrentTurnColor()
-	inCheck := engine.IsInCheck(sideToMove)
-	legalMoves := countLegalMoves(sideToMove)
-	hasLegalMove := legalMoves > 0
-
-	if hasLegalMove {
-		if isInsufficientMaterialDraw() {
-			return GameOutcome{
-				Status:     "draw_insufficient_material",
-				LegalMoves: legalMoves,
-				Message:    "Draw by insufficient material.",
-			}
-		}
-		if isThreefoldRepetitionDraw() {
-			return GameOutcome{
-				Status:     "draw_threefold_repetition",
-				LegalMoves: legalMoves,
-				Message:    "Draw by threefold repetition.",
-			}
-		}
-		if isFiftyMoveDraw() {
-			return GameOutcome{
-				Status:     "draw_fifty_move_rule",
-				LegalMoves: legalMoves,
-				Message:    "Draw by 50-move rule.",
-			}
-		}
-	}
-
-	if hasLegalMove {
-		if inCheck {
-			return GameOutcome{
-				Status:      "check",
-				CheckedSide: string(sideToMove),
-				LegalMoves:  legalMoves,
-				Message:     sideLabel(sideToMove) + " is in check.",
-			}
-		}
-		return GameOutcome{
-			Status:     "in_progress",
-			LegalMoves: legalMoves,
-		}
-	}
-
-	if inCheck {
-		winner := opponentOf(sideToMove)
-		return GameOutcome{
-			Status:      "checkmate",
-			Winner:      string(winner),
-			Loser:       string(sideToMove),
-			CheckedSide: string(sideToMove),
-			LegalMoves:  0,
-			Message:     "Checkmate! " + sideLabel(winner) + " wins.",
-		}
-	}
-
 	return GameOutcome{
-		Status:     "stalemate",
-		LegalMoves: 0,
-		Message:    "Draw by stalemate.",
+		Status:     "in_progress",
+		LegalMoves: ctx.LegalMoves,
 	}
 }
 

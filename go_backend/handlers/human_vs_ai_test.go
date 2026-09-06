@@ -4,6 +4,7 @@
 package handlers
 
 import (
+	"strings"
 	"testing"
 
 	sessionpkg "go_backend/game/session"
@@ -344,5 +345,42 @@ func TestHumanVsAI_ProfileVariation(t *testing.T) {
 		if _, err := sessionpkg.ApplyMoveByCommandByID(game.ID, aiMove); err != nil {
 			t.Fatalf("apply AI move with profile %s failed: %v", p, err)
 		}
+	}
+}
+
+const xiangqiMateFEN = "R3k3R/9/9/9/9/9/9/9/9/4K4 b - - 0 1"
+
+// TestSelectAIMove_XiangqiTerminalSkipsEngine - ended Xiangqi must not ask Fairy-Stockfish
+func TestSelectAIMove_XiangqiTerminalSkipsEngine(t *testing.T) {
+	sessionpkg.ResetGame()
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsAI, sessionpkg.GameTypeXiangqi, "white", 1, xiangqiMateFEN, "beginner")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	move, err := SelectAIMove(game.ID)
+	if err == nil || move != "" {
+		t.Fatalf("ended game must not return an AI move, move=%q err=%v", move, err)
+	}
+	if !strings.Contains(strings.ToLower(err.Error()), "checkmate") && !strings.Contains(strings.ToLower(err.Error()), "ended") {
+		t.Fatalf("want named terminal, got %v", err)
+	}
+}
+
+// TestSelectAIMove_XiangqiNoCaptureDrawSkipsEngine - 60-ply draw still has legal moves; Result must stop FS
+func TestSelectAIMove_XiangqiNoCaptureDrawSkipsEngine(t *testing.T) {
+	sessionpkg.ResetGame()
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsAI, sessionpkg.GameTypeXiangqi, "white", 1, "", "beginner")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if err := sessionpkg.SetXiangqiIdlePlyByID(game.ID, 59); err != nil {
+		t.Fatalf("idle: %v", err)
+	}
+	if _, err := sessionpkg.ApplyMoveByCommandByID(game.ID, "a4a5"); err != nil {
+		t.Fatalf("a4a5: %v", err)
+	}
+	move, err := SelectAIMove(game.ID)
+	if err == nil || move != "" {
+		t.Fatalf("no-capture draw must not call the engine, move=%q err=%v", move, err)
 	}
 }

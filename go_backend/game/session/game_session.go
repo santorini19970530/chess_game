@@ -243,17 +243,17 @@ func RefreshGameSessionOutcome() GameSession {
 		return game.Session
 	}
 
-	outcome := EvaluateGameOutcome()
+	outcome := evaluateOutcomeForGameType(game.Session.Type)
 	game.Session.Outcome = outcome
 	game.Session.Result = gameResultFromOutcome(outcome)
 	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 	return game.Session
 }
 
-// CanAcceptMoves - reports whether accept moves is allowed
+// CanAcceptMoves - reports whether the active session still accepts a ply
 func CanAcceptMoves() bool {
 	game := RefreshGameSessionOutcome()
-	return game.Outcome.Status != "checkmate" && game.Outcome.Status != "stalemate"
+	return game.Result == GameResultInProgress
 }
 
 // resetGameSessionForTest - resets game session for test
@@ -437,7 +437,7 @@ func sideLabelFromText(side string) string {
 // gameResultFromOutcome - performs game result from outcome
 func gameResultFromOutcome(outcome GameOutcome) GameResult {
 	switch outcome.Status {
-	case "checkmate":
+	case "checkmate", "perpetual_check", "perpetual_chase":
 		if outcome.Winner == "white" {
 			return GameResultWhiteWin
 		}
@@ -452,6 +452,8 @@ func gameResultFromOutcome(outcome GameOutcome) GameResult {
 	case "draw_threefold_repetition":
 		return GameResultDraw
 	case "draw_fifty_move_rule":
+		return GameResultDraw
+	case "draw_mutual_repetition", "draw_no_capture":
 		return GameResultDraw
 	default:
 		return GameResultInProgress

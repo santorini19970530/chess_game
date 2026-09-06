@@ -56,6 +56,7 @@ func applyXiangqiUCIMove(commandText string) (string, error) {
 	if destinationOccupied {
 		capturedKind = targetPiece.Kind
 	}
+	beforeChase := xiangqiUnprotectedAttackedKeys(sourcePiece.Color)
 	if err := ApplyMove(fromFile, fromRank, toFile, toRank); err != nil {
 		return "", err
 	}
@@ -63,6 +64,8 @@ func applyXiangqiUCIMove(commandText string) (string, error) {
 	RecordLastMove(fromFile, fromRank, toFile, toRank, sourcePiece.Kind, sourcePiece.Color)
 	SetCurrentTurnColor(OpponentColor(sourcePiece.Color))
 	syncXiangqiBoardFEN()
+	chaseKeys := newStringKeys(beforeChase, xiangqiUnprotectedAttackedKeys(sourcePiece.Color))
+	recordXiangqiPlyAfterMove(sourcePiece.Color, destinationOccupied, chaseKeys)
 	return move, nil
 }
 

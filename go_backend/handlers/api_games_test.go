@@ -384,3 +384,86 @@ func TestAPIGameLatestAnalysisRoute_ReturnsStatusShape(t *testing.T) {
 		t.Fatalf("expected analysis status for game %s, got %s", game.ID, payload.GameID)
 	}
 }
+
+// TestAPIGameMove_XiangqiTerminalConflict - WXF/mate Result must reject /move and skip HvAI
+func TestAPIGameMove_XiangqiTerminalConflict(t *testing.T) {
+	sessionpkg.ResetGame()
+	const mateFEN = "R3k3R/9/9/9/9/9/9/9/9/4K4 b - - 0 1"
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsAI, sessionpkg.GameTypeXiangqi, "white", 1, mateFEN, "beginner")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	h := NewHandler()
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/games/"+game.ID+"/move",
+		strings.NewReader("command=a4a5"),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	h.APIGameRoutes(rec, req)
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status=%d want 409 body=%s", rec.Code, rec.Body.String())
+	}
+	snap, err := sessionpkg.BuildSnapshotByID(game.ID)
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+	if len(snap.History) != 0 {
+		t.Fatalf("ended game must not apply a ply, history=%d", len(snap.History))
+	}
+}
+
+// TestAPIGameMove_XiangqiNoCaptureStopsHvAI - house 60-ply draw names the rule and must not start an AI ply
+func TestAPIGameMove_XiangqiNoCaptureStopsHvAI(t *testing.T) {
+	sessionpkg.ResetGame()
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsAI, sessionpkg.GameTypeXiangqi, "white", 1, "", "beginner")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if err := sessionpkg.SetXiangqiIdlePlyByID(game.ID, 59); err != nil {
+		t.Fatalf("idle: %v", err)
+	}
+	h := NewHandler()
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/games/"+game.ID+"/move",
+		strings.NewReader("command=a4a5"),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	h.APIGameRoutes(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var payload struct {
+		Game sessionpkg.GameSession `json:"game"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("json: %v", err)
+	}
+	if payload.Game.Result != sessionpkg.GameResultDraw || payload.Game.Outcome.Status != "draw_no_capture" {
+		t.Fatalf("result=%q status=%q", payload.Game.Result, payload.Game.Outcome.Status)
+	}
+	if !strings.Contains(strings.ToLower(payload.Game.Outcome.Message), "no capture") {
+		t.Fatalf("message=%q", payload.Game.Outcome.Message)
+	}
+	req2 := httptest.NewRequest(
+		http.MethodPost,
+		"/api/games/"+game.ID+"/move",
+		strings.NewReader("command=a7a6"),
+	)
+	req2.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec2 := httptest.NewRecorder()
+	h.APIGameRoutes(rec2, req2)
+	if rec2.Code != http.StatusConflict {
+		t.Fatalf("next /move status=%d want 409 body=%s", rec2.Code, rec2.Body.String())
+	}
+	snap, err := sessionpkg.BuildSnapshotByID(game.ID)
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+	if len(snap.History) != 1 {
+		t.Fatalf("HvAI must not add a Fairy-Stockfish ply after WXF end, history=%d", len(snap.History))
+	}
+}

@@ -91,6 +91,11 @@ func xiangqiFlyingGeneral(board []pieces.ChessPiece) bool {
 	return true
 }
 
+// XiangqiSquareAttacked - reports whether attacker attacks file/rank on the current board
+func XiangqiSquareAttacked(file, rank int, attacker pieces.PieceColor) bool {
+	return xiangqiSquareAttackedOnBoard(pieces.ChessPieces, file, rank, attacker)
+}
+
 // xiangqiSquareAttackedOnBoard - reports xiangqi square attacked on board
 func xiangqiSquareAttackedOnBoard(board []pieces.ChessPiece, file, rank int, attacker pieces.PieceColor) bool {
 	saved := pieces.ChessPieces

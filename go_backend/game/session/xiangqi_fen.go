@@ -33,6 +33,7 @@ func applyXiangqiFENToCurrentGlobals(fen string) error {
 	boardFEN = strings.TrimSpace(fen)
 	lastAppliedMove = nil
 	resetDrawTracking()
+	recordXiangqiStartPosition()
 	return nil
 }
 
