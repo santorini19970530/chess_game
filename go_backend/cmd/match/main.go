@@ -56,6 +56,8 @@ func main() {
 	type GameResult struct {
 		Result     string `json:"result"`
 		Winner     string `json:"winner,omitempty"`
+		Status     string `json:"status,omitempty"`
+		MaxPlies   bool   `json:"max_plies,omitempty"`
 		Moves      int    `json:"moves"`
 		DurationMs int64  `json:"duration_ms"`
 		AvgMoveMs  int64  `json:"avg_move_ms"`
@@ -80,6 +82,7 @@ func main() {
 
 		start := time.Now()
 		res, err := simulation.RunSingleAIGame(game.ID, aimove.SelectAIMove)
+		maxPlies := false
 		if err != nil {
 			// xiangqi/Shogi can loop past the ply cap; count as draw and keep the batch alive
 			// so -format json still writes a summary (empty file = this Fatal used to fire).
@@ -90,16 +93,21 @@ func main() {
 				}
 				log.Printf("=== Game %d/%d max plies → draw (moves=%d) ===", gameNum, *games, moves)
 				res = simulation.Result{Result: session.GameResultDraw, MoveCount: moves}
+				maxPlies = true
 			} else {
 				log.Fatalf("simulation failed: %v", err)
 			}
+		}
+		status := ""
+		if g, gerr := session.GetGameSessionByID(game.ID); gerr == nil {
+			status = g.Outcome.Status
 		}
 		durationMs := time.Since(start).Milliseconds()
 		avgMoveMs := simulation.ComputeAvgMoveMs(durationMs, res.MoveCount)
 		durations = append(durations, durationMs)
 
-		log.Printf("=== Game %d/%d finished: result=%s winner=%q moves=%d duration_ms=%d ===",
-			gameNum, *games, res.Result, res.Winner, res.MoveCount, durationMs)
+		log.Printf("=== Game %d/%d finished: result=%s winner=%q status=%q max_plies=%v moves=%d duration_ms=%d ===",
+			gameNum, *games, res.Result, res.Winner, status, maxPlies, res.MoveCount, durationMs)
 
 		switch res.Result {
 		case session.GameResultWhiteWin:
@@ -114,6 +122,8 @@ func main() {
 		results = append(results, GameResult{
 			Result:     string(res.Result),
 			Winner:     res.Winner,
+			Status:     status,
+			MaxPlies:   maxPlies,
 			Moves:      res.MoveCount,
 			DurationMs: durationMs,
 			AvgMoveMs:  avgMoveMs,

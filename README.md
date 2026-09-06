@@ -318,6 +318,12 @@ Examples from start:
 
 **Simulate / match:** `POST /api/simulate` / `cmd/match -game xianqi` (alias `xiangqi`).
 
+**Endings (Go, World Xiangqi Federation):** mate and stalemate-as-loss; perpetual check (the checker loses); perpetual chase of one unprotected piece other than the general (the chaser loses); king/soldier-only chase is not a chase loss; mutual threefold repetition is a draw. Fairy-Stockfish does not judge these.
+
+**House rule:** 60 ply with no capture is a draw. Do not call this the Chess 50-move rule.
+
+**Safety net:** `cmd/match` still stops at 600 ply if no WXF or house ending fired.
+
 ---
 
 ## Shogi (`game=shogi`)
