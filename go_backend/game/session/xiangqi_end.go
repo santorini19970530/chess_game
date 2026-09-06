@@ -180,10 +180,10 @@ func classifyXiangqiRepeatCycle(ctx *plyEndContext) {
 			break
 		}
 	}
-	if prev < 0 || prev+1 > len(xiangqiPlyFacts) {
+	if prev < 0 || prev > len(xiangqiPlyFacts) {
 		return
 	}
-	facts := xiangqiPlyFacts[prev+1:]
+	facts := xiangqiPlyFacts[prev:]
 	whiteFacts, blackFacts := splitXiangqiFactsBySide(facts)
 	whiteAllCheck := xiangqiAllGaveCheck(whiteFacts)
 	blackAllCheck := xiangqiAllGaveCheck(blackFacts)

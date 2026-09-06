@@ -70,6 +70,8 @@ class GameInfoView {
         return "draw by no capture";
       case "draw_max_plies":
         return "draw by ply limit";
+      case "draw_sennichite":
+        return "draw by sennichite";
       default:
         return "draw";
     }
@@ -159,6 +161,16 @@ class GameInfoView {
         );
         return;
       }
+      case "continuous_check": {
+        const winner = this.capitalize(outcome?.winner);
+        const loser = this.capitalize(outcome?.loser);
+        this.endGameUi(
+          outcome?.message || `Continuous check. ${winner} wins. ${loser} loses.`,
+          "error",
+          outcome?.message || `Game has ended. Continuous check — ${winner} wins.`
+        );
+        return;
+      }
       case "stalemate":
         this.endGameUi("Draw by stalemate.", "success", "Game has ended. Draw by stalemate.");
         return;
@@ -168,6 +180,7 @@ class GameInfoView {
       case "draw_mutual_repetition":
       case "draw_no_capture":
       case "draw_max_plies":
+      case "draw_sennichite":
         this.endGameUi(outcome?.message || "Game drawn.", "success", outcome?.message || "Game has ended. Draw.");
         return;
       case "resigned":

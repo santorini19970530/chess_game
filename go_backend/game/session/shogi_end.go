@@ -23,6 +23,8 @@ var shogiPlyFacts []shogiPlyFact
 func shogiGameEndStrategies() []GameEndStrategy {
 	return []GameEndStrategy{
 		ShogiMateOrStalemateStrategy{},
+		ShogiContinuousCheckStrategy{},
+		ShogiSennichiteStrategy{},
 		maxPlyStrategy(),
 	}
 }
@@ -94,6 +96,7 @@ func buildShogiPlyEndContext() *plyEndContext {
 		ctx.LegalMoves = len(legal)
 	}
 	ctx.InCheck = movement.ShogiCheckedColor() == side
+	classifyShogiRepeatCycle(ctx)
 	return ctx
 }
 
@@ -137,4 +140,64 @@ func recordShogiPlyAfterMove(mover pieces.PieceColor) {
 	key := shogiPositionKey()
 	shogiPositionKeys = append(shogiPositionKeys, key)
 	shogiPositionCounts[key]++
+}
+
+// classifyShogiRepeatCycle - sets check-loop / sennichite fields when this position is at least fourfold
+func classifyShogiRepeatCycle(ctx *plyEndContext) {
+	if ctx.PositionCount < 4 {
+		return
+	}
+	ctx.CycleRepeat = true
+	n := len(shogiPositionKeys)
+	if n == 0 {
+		return
+	}
+	key := shogiPositionKeys[n-1]
+	prev := -1
+	for i := n - 2; i >= 0; i-- {
+		if shogiPositionKeys[i] == key {
+			prev = i
+			break
+		}
+	}
+	if prev < 0 || prev > len(shogiPlyFacts) {
+		return
+	}
+	facts := shogiPlyFacts[prev:]
+	whiteFacts, blackFacts := splitShogiFactsBySide(facts)
+	whiteAllCheck := shogiAllGaveCheck(whiteFacts)
+	blackAllCheck := shogiAllGaveCheck(blackFacts)
+	if whiteAllCheck && blackAllCheck {
+		return
+	}
+	if whiteAllCheck {
+		ctx.PerpetualCheckLoser = "white"
+	} else if blackAllCheck {
+		ctx.PerpetualCheckLoser = "black"
+	}
+}
+
+// splitShogiFactsBySide - splits cycle plies into white and black
+func splitShogiFactsBySide(facts []shogiPlyFact) (white, black []shogiPlyFact) {
+	for _, f := range facts {
+		if f.Side == "black" {
+			black = append(black, f)
+		} else {
+			white = append(white, f)
+		}
+	}
+	return white, black
+}
+
+// shogiAllGaveCheck - reports whether every ply in the list gave check
+func shogiAllGaveCheck(facts []shogiPlyFact) bool {
+	if len(facts) == 0 {
+		return false
+	}
+	for _, f := range facts {
+		if !f.GaveCheck {
+			return false
+		}
+	}
+	return true
 }

@@ -1,5 +1,5 @@
 // CM3070 FP code
-// shogi_end_test.go - tests for shogi ply-end context (board + hands + side)
+// shogi_end_test.go - tests for shogi ply-end context, sennichite, and continuous check
 
 package session
 
@@ -106,10 +106,190 @@ func TestShogiPlyContext_ReturnToStartIsSecondOccurrence(t *testing.T) {
 		t.Fatalf("after reversing the pawn pair, key=%q want start %q", ctx.PositionKey, startKey)
 	}
 	if ctx.PositionCount != 2 {
-		t.Fatalf("second visit count=%d want 2 (sennichite still later)", ctx.PositionCount)
+		t.Fatalf("second visit count=%d want 2", ctx.PositionCount)
 	}
 	if EvaluateShogiGameOutcome().Status == "draw_sennichite" {
-		t.Fatal("step 3 only records; fourfold draw is not this step")
+		t.Fatal("twofold must not be sennichite")
+	}
+}
+
+func TestShogiContinuousCheckStrategy_CheckerLoses(t *testing.T) {
+	ended, out := (ShogiContinuousCheckStrategy{}).AfterPly(&plyEndContext{
+		GameType:            GameTypeShogi,
+		LegalMoves:          4,
+		PerpetualCheckLoser: "white",
+	})
+	if !ended {
+		t.Fatal("expected continuous check to end the ply")
+	}
+	if out.Status != "continuous_check" {
+		t.Fatalf("status=%q", out.Status)
+	}
+	if out.Loser != "white" || out.Winner != "black" {
+		t.Fatalf("winner=%q loser=%q", out.Winner, out.Loser)
+	}
+}
+
+func TestShogiSennichiteStrategy_FourfoldDraw(t *testing.T) {
+	s := ShogiSennichiteStrategy{}
+	ended, _ := s.AfterPly(&plyEndContext{GameType: GameTypeShogi, CycleRepeat: false, PositionCount: 3})
+	if ended {
+		t.Fatal("threefold must not be sennichite")
+	}
+	ended, out := s.AfterPly(&plyEndContext{GameType: GameTypeShogi, CycleRepeat: true, LegalMoves: 8})
+	if !ended || out.Status != "draw_sennichite" {
+		t.Fatalf("ended=%v status=%q", ended, out.Status)
+	}
+}
+
+func TestClassifyShogiRepeatCycle_IncludesFirstPlyOfCycle(t *testing.T) {
+	// keys[0] is start (no fact). facts[i] produced keys[i+1]. fourfold START at 0,4,8,12.
+	shogiPositionKeys = []string{
+		"START", "p1", "p2", "p3",
+		"START", "p1", "p2", "p3",
+		"START", "p1", "p2", "p3",
+		"START",
+	}
+	shogiPositionCounts = map[string]int{"START": 4}
+	shogiPlyFacts = make([]shogiPlyFact, 12)
+	for i := range shogiPlyFacts {
+		side := "white"
+		if i%2 == 1 {
+			side = "black"
+		}
+		shogiPlyFacts[i] = shogiPlyFact{Side: side, GaveCheck: false}
+	}
+	shogiPlyFacts[10].GaveCheck = true
+	ctx := &plyEndContext{PositionCount: 4}
+	classifyShogiRepeatCycle(ctx)
+	if !ctx.CycleRepeat {
+		t.Fatal("fourfold must set CycleRepeat")
+	}
+	if ctx.PerpetualCheckLoser != "" {
+		t.Fatalf("a cycle with a quiet white ply must be sennichite, loser=%q", ctx.PerpetualCheckLoser)
+	}
+}
+
+func TestClassifyShogiRepeatCycle_BothSidesCheckingIsDraw(t *testing.T) {
+	shogiPositionKeys = []string{
+		"START", "p1", "p2", "p3",
+		"START", "p1", "p2", "p3",
+		"START", "p1", "p2", "p3",
+		"START",
+	}
+	shogiPositionCounts = map[string]int{"START": 4}
+	shogiPlyFacts = make([]shogiPlyFact, 12)
+	for i := range shogiPlyFacts {
+		side := "white"
+		if i%2 == 1 {
+			side = "black"
+		}
+		shogiPlyFacts[i] = shogiPlyFact{Side: side, GaveCheck: true}
+	}
+	ctx := &plyEndContext{PositionCount: 4}
+	classifyShogiRepeatCycle(ctx)
+	if !ctx.CycleRepeat {
+		t.Fatal("fourfold must set CycleRepeat")
+	}
+	if ctx.PerpetualCheckLoser != "" {
+		t.Fatalf("both sides checking must not name a loser, got %q", ctx.PerpetualCheckLoser)
+	}
+}
+
+func TestShogiGameEndChain_MateBeforeCheckBeforeSennichite(t *testing.T) {
+	clearGameEndStrategiesForTest()
+	registerGameEndStrategies(GameTypeShogi, shogiGameEndStrategies()...)
+
+	ended, out := runGameEndStrategies(&plyEndContext{
+		GameType:            GameTypeShogi,
+		LegalMoves:          0,
+		SideToMove:          "black",
+		InCheck:             true,
+		PerpetualCheckLoser: "white",
+		CycleRepeat:         true,
+	})
+	if !ended || out.Status != "checkmate" {
+		t.Fatalf("mate must win the chain, ended=%v status=%q", ended, out.Status)
+	}
+
+	ended, out = runGameEndStrategies(&plyEndContext{
+		GameType:            GameTypeShogi,
+		LegalMoves:          5,
+		PerpetualCheckLoser: "white",
+		CycleRepeat:         true,
+	})
+	if !ended || out.Status != "continuous_check" {
+		t.Fatalf("continuous check must beat sennichite, ended=%v status=%q", ended, out.Status)
+	}
+}
+
+func TestShogiSennichite_FourfoldStartIsDraw(t *testing.T) {
+	resetGameSessionForTest()
+	ResetGame()
+	game, err := CreateGame(GameModeHumanVsHuman, GameTypeShogi, "white", 1, "", "")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	cycle := []string{"d1d2", "d9d8", "d2d1", "d8d9"}
+	for i := 0; i < 2; i++ {
+		for _, mv := range cycle {
+			if _, err := ApplyMoveByCommandByID(game.ID, mv); err != nil {
+				t.Fatalf("cycle %d %s: %v", i, mv, err)
+			}
+		}
+	}
+	mid, err := GetGameSessionByID(game.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if mid.Outcome.Status == "draw_sennichite" {
+		t.Fatal("third visit of start must not draw")
+	}
+	for _, mv := range cycle {
+		if _, err := ApplyMoveByCommandByID(game.ID, mv); err != nil {
+			t.Fatalf("fourth %s: %v", mv, err)
+		}
+	}
+	ended, err := GetGameSessionByID(game.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if ended.Result != GameResultDraw || ended.Outcome.Status != "draw_sennichite" {
+		t.Fatalf("result=%q status=%q count=%d", ended.Result, ended.Outcome.Status, buildShogiPlyEndContext().PositionCount)
+	}
+	if _, err := ApplyMoveByCommandByID(game.ID, "c3c4"); err == nil {
+		t.Fatal("next /move must be rejected after sennichite")
+	}
+}
+
+func TestShogiContinuousCheck_RookShuttleLoses(t *testing.T) {
+	resetGameSessionForTest()
+	ResetGame()
+	fen := "4k4/9/9/9/4R4/9/9/9/4K4[] w - - 0 1"
+	game, err := CreateGame(GameModeHumanVsHuman, GameTypeShogi, "white", 1, fen, "")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if _, err := ApplyMoveByCommandByID(game.ID, "e5e8"); err != nil {
+		t.Fatalf("e5e8: %v", err)
+	}
+	cycle := []string{"e9d9", "e8d8", "d9e9", "d8e8"}
+	for i := 0; i < 3; i++ {
+		for _, mv := range cycle {
+			if _, err := ApplyMoveByCommandByID(game.ID, mv); err != nil {
+				t.Fatalf("cycle %d %s: %v", i, mv, err)
+			}
+		}
+	}
+	ended, err := GetGameSessionByID(game.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if ended.Outcome.Status != "continuous_check" {
+		t.Fatalf("status=%q want continuous_check (count=%d)", ended.Outcome.Status, buildShogiPlyEndContext().PositionCount)
+	}
+	if ended.Result != GameResultBlackWin || ended.Outcome.Loser != "white" {
+		t.Fatalf("result=%q loser=%q", ended.Result, ended.Outcome.Loser)
 	}
 }
 

@@ -150,3 +150,29 @@ func TestXiangqiWXFEnd_StopsFurtherMoves(t *testing.T) {
 		t.Fatal("CanAcceptMoves must be false after WXF end")
 	}
 }
+
+func TestClassifyXiangqiRepeatCycle_IncludesFirstPlyOfCycle(t *testing.T) {
+	xiangqiPositionKeys = []string{
+		"START", "p1", "p2", "p3",
+		"START", "p1", "p2", "p3",
+		"START",
+	}
+	xiangqiPositionCounts = map[string]int{"START": 3}
+	xiangqiPlyFacts = make([]xiangqiPlyFact, 8)
+	for i := range xiangqiPlyFacts {
+		side := "white"
+		if i%2 == 1 {
+			side = "black"
+		}
+		xiangqiPlyFacts[i] = xiangqiPlyFact{Side: side, GaveCheck: false}
+	}
+	xiangqiPlyFacts[6].GaveCheck = true
+	ctx := &plyEndContext{PositionCount: 3}
+	classifyXiangqiRepeatCycle(ctx)
+	if !ctx.CycleRepeat {
+		t.Fatal("threefold must set CycleRepeat")
+	}
+	if ctx.PerpetualCheckLoser != "" {
+		t.Fatalf("a cycle with a quiet white ply must be mutual draw, loser=%q", ctx.PerpetualCheckLoser)
+	}
+}
