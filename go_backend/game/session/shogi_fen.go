@@ -62,6 +62,7 @@ func applyShogiFENToCurrentGlobals(fen string) error {
 	boardFEN = strings.TrimSpace(fen)
 	lastAppliedMove = nil
 	resetDrawTracking()
+	recordShogiStartPosition()
 	return nil
 }
 

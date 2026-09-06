@@ -32,6 +32,9 @@ type RuntimeState struct {
 	XiangqiPositionCounts map[string]int
 	XiangqiPositionKeys   []string
 	XiangqiPlyFacts       []xiangqiPlyFact
+	ShogiPositionCounts   map[string]int
+	ShogiPositionKeys     []string
+	ShogiPlyFacts         []shogiPlyFact
 }
 
 // runtime game for the game
@@ -101,6 +104,7 @@ func newInitialRuntimeState() RuntimeState {
 		Pieces:                append([]pieces.ChessPiece(nil), initialPiecesSnapshot...),
 		PositionCounts:        make(map[string]int),
 		XiangqiPositionCounts: make(map[string]int),
+		ShogiPositionCounts:   make(map[string]int),
 	}
 }
 
@@ -135,6 +139,9 @@ func (g *RuntimeGame) bindToGlobals() {
 	xiangqiPositionCounts = copyStringIntMap(g.State.XiangqiPositionCounts)
 	xiangqiPositionKeys = append([]string(nil), g.State.XiangqiPositionKeys...)
 	xiangqiPlyFacts = copyXiangqiPlyFacts(g.State.XiangqiPlyFacts)
+	shogiPositionCounts = copyStringIntMap(g.State.ShogiPositionCounts)
+	shogiPositionKeys = append([]string(nil), g.State.ShogiPositionKeys...)
+	shogiPlyFacts = copyShogiPlyFacts(g.State.ShogiPlyFacts)
 }
 
 // syncFromGlobals - syncs from globals
@@ -168,6 +175,9 @@ func (g *RuntimeGame) syncFromGlobals() {
 	g.State.XiangqiPositionCounts = copyStringIntMap(xiangqiPositionCounts)
 	g.State.XiangqiPositionKeys = append([]string(nil), xiangqiPositionKeys...)
 	g.State.XiangqiPlyFacts = copyXiangqiPlyFacts(xiangqiPlyFacts)
+	g.State.ShogiPositionCounts = copyStringIntMap(shogiPositionCounts)
+	g.State.ShogiPositionKeys = append([]string(nil), shogiPositionKeys...)
+	g.State.ShogiPlyFacts = copyShogiPlyFacts(shogiPlyFacts)
 }
 
 // copyStringIntMap - returns copy string int map
@@ -195,5 +205,15 @@ func copyXiangqiPlyFacts(in []xiangqiPlyFact) []xiangqiPlyFact {
 			ChaseKeys: append([]string(nil), fact.ChaseKeys...),
 		}
 	}
+	return out
+}
+
+// copyShogiPlyFacts - copies shogi ply facts
+func copyShogiPlyFacts(in []shogiPlyFact) []shogiPlyFact {
+	if in == nil {
+		return nil
+	}
+	out := make([]shogiPlyFact, len(in))
+	copy(out, in)
 	return out
 }

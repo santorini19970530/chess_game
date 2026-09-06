@@ -96,6 +96,7 @@ func applyShogiBoardMove(move string) (string, error) {
 	RecordLastMove(fromFile, fromRank, toFile, toRank, sourcePiece.Kind, sourcePiece.Color)
 	SetCurrentTurnColor(OpponentColor(sourcePiece.Color))
 	syncShogiBoardFEN()
+	recordShogiPlyAfterMove(sourcePiece.Color)
 	return move, nil
 }
 
@@ -131,6 +132,7 @@ func applyShogiDrop(raw string) (string, error) {
 	RecordLastMove(0, 0, toFile, toRank, kind, color)
 	SetCurrentTurnColor(OpponentColor(color))
 	syncShogiBoardFEN()
+	recordShogiPlyAfterMove(color)
 	return move, nil
 }
 
