@@ -64,6 +64,10 @@ class GameInfoView {
         return "draw by threefold repetition";
       case "draw_fifty_move_rule":
         return "draw by 50-move rule";
+      case "draw_mutual_repetition":
+        return "draw by repetition";
+      case "draw_no_capture":
+        return "draw by no capture";
       default:
         return "draw";
     }
@@ -133,12 +137,34 @@ class GameInfoView {
         );
         return;
       }
+      case "perpetual_check": {
+        const winner = this.capitalize(outcome?.winner);
+        const loser = this.capitalize(outcome?.loser);
+        this.endGameUi(
+          outcome?.message || `Perpetual check. ${winner} wins. ${loser} loses.`,
+          "error",
+          outcome?.message || `Game has ended. Perpetual check — ${winner} wins.`
+        );
+        return;
+      }
+      case "perpetual_chase": {
+        const winner = this.capitalize(outcome?.winner);
+        const loser = this.capitalize(outcome?.loser);
+        this.endGameUi(
+          outcome?.message || `Perpetual chase. ${winner} wins. ${loser} loses.`,
+          "error",
+          outcome?.message || `Game has ended. Perpetual chase — ${winner} wins.`
+        );
+        return;
+      }
       case "stalemate":
         this.endGameUi("Draw by stalemate.", "success", "Game has ended. Draw by stalemate.");
         return;
       case "draw_insufficient_material":
       case "draw_threefold_repetition":
       case "draw_fifty_move_rule":
+      case "draw_mutual_repetition":
+      case "draw_no_capture":
         this.endGameUi(outcome?.message || "Game drawn.", "success", outcome?.message || "Game has ended. Draw.");
         return;
       case "resigned":

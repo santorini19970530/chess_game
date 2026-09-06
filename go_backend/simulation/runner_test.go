@@ -60,3 +60,26 @@ func TestRunSingleAIGame_MaxPliesGuard(t *testing.T) {
 		t.Fatalf("expected maxPlies error, got %T %v", err, err)
 	}
 }
+
+// TestRunSingleAIGame_StopsWhenXiangqiAlreadyEnded - ended Result must return without picking a ply
+func TestRunSingleAIGame_StopsWhenXiangqiAlreadyEnded(t *testing.T) {
+	const mateFEN = "R3k3R/9/9/9/9/9/9/9/9/4K4 b - - 0 1"
+	game, err := session.CreateGame(session.GameModeAIVsAI, session.GameTypeXiangqi, "white", 1, mateFEN, "beginner")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	picks := 0
+	res, err := RunSingleAIGame(game.ID, func(string) (string, error) {
+		picks++
+		return "a4a5", nil
+	})
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if picks != 0 {
+		t.Fatalf("ended game must not call Fairy-Stockfish pick, picks=%d", picks)
+	}
+	if res.Result == session.GameResultInProgress {
+		t.Fatalf("result=%q", res.Result)
+	}
+}

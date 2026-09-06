@@ -98,6 +98,17 @@ func GetGameSessionByID(gameID string) (GameSession, error) {
 	return game.Session, nil
 }
 
+// SetXiangqiIdlePlyByID - sets the house-rule idle ply on a Xiangqi session
+func SetXiangqiIdlePlyByID(gameID string, n int) error {
+	game, err := lockRuntimeStateByID(gameID)
+	if err != nil {
+		return err
+	}
+	defer unlockRuntimeStateByID(game)
+	xiangqiIdlePly = n
+	return nil
+}
+
 // UpdateGameConfigByID - updates game config by id
 func UpdateGameConfigByID(gameID string, mode GameMode, gameType GameType, humanColor string, aiGameCount int, startFEN string, aiProfile string) (GameSession, error) {
 	normalizedCount, err := validateGameConfig(mode, gameType, humanColor, aiGameCount, startFEN)

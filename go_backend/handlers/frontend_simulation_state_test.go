@@ -233,6 +233,19 @@ func TestFrontendPreviewMove_Markers(t *testing.T) {
 	requireSnippet(t, jsSrc, "restoreLiveBoardForPreviewPick")
 }
 
+// TestFrontendXiangqiWXFOutcomeLabels - named WXF statuses must end the ui, not fall through to play
+func TestFrontendXiangqiWXFOutcomeLabels(t *testing.T) {
+	source := loadChessCommandSource(t)
+	requireSnippet(t, source, `case "perpetual_check"`)
+	requireSnippet(t, source, `case "perpetual_chase"`)
+	requireSnippet(t, source, `case "draw_mutual_repetition"`)
+	requireSnippet(t, source, `case "draw_no_capture"`)
+	requireSnippet(t, source, "Perpetual check")
+	requireSnippet(t, source, "Perpetual chase")
+	requireSnippet(t, source, "draw by repetition")
+	requireSnippet(t, source, "draw by no capture")
+}
+
 // TestFrontendSimulationDownload_Step1ButtonMarkers - checks frontend simulation download step1 button markers
 func TestFrontendSimulationDownload_Step1ButtonMarkers(t *testing.T) {
 	source := loadIndexHandlerSource(t)

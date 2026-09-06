@@ -90,6 +90,17 @@ func resetFairyStockfish(side string) (*engine.FairyStockfish, error) {
 
 // SelectAIMove - builds move context then runs aiMoveStrategies until a go-legal move is accepted
 func SelectAIMove(gameID string) (string, error) {
+	game, err := sessionpkg.GetGameSessionByID(gameID)
+	if err != nil {
+		return "", err
+	}
+	if game.Result != sessionpkg.GameResultInProgress {
+		msg := strings.TrimSpace(game.Outcome.Message)
+		if msg == "" {
+			msg = "game already ended"
+		}
+		return "", fmt.Errorf("%s", msg)
+	}
 	fen, err := sessionpkg.CurrentFENByID(gameID)
 	if err != nil {
 		return "", err

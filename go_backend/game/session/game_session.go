@@ -243,17 +243,17 @@ func RefreshGameSessionOutcome() GameSession {
 		return game.Session
 	}
 
-	outcome := EvaluateGameOutcome()
+	outcome := evaluateOutcomeForGameType(game.Session.Type)
 	game.Session.Outcome = outcome
 	game.Session.Result = gameResultFromOutcome(outcome)
 	game.Session.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 	return game.Session
 }
 
-// CanAcceptMoves - reports whether accept moves is allowed
+// CanAcceptMoves - reports whether the active session still accepts a ply
 func CanAcceptMoves() bool {
 	game := RefreshGameSessionOutcome()
-	return game.Outcome.Status != "checkmate" && game.Outcome.Status != "stalemate"
+	return game.Result == GameResultInProgress
 }
 
 // resetGameSessionForTest - resets game session for test

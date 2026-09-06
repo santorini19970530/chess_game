@@ -118,3 +118,35 @@ func TestApplyXiangqiUCIMove_IdlePlyIncrementsAndResets(t *testing.T) {
 		t.Fatalf("idle after quiet ply=%d", xiangqiIdlePly)
 	}
 }
+
+// TestXiangqiWXFEnd_StopsFurtherMoves - 60-ply idle draw must stop /move, HvAI, and CanAcceptMoves
+func TestXiangqiWXFEnd_StopsFurtherMoves(t *testing.T) {
+	resetGameSessionForTest()
+	ResetGame()
+	game, err := CreateGame(GameModeHumanVsAI, GameTypeXiangqi, "white", 1, "", "beginner")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if err := SetXiangqiIdlePlyByID(game.ID, 59); err != nil {
+		t.Fatalf("idle: %v", err)
+	}
+	if _, err := ApplyMoveByCommandByID(game.ID, "a4a5"); err != nil {
+		t.Fatalf("a4a5: %v", err)
+	}
+	ended, err := GetGameSessionByID(game.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if ended.Result != GameResultDraw || ended.Outcome.Status != "draw_no_capture" {
+		t.Fatalf("result=%q status=%q", ended.Result, ended.Outcome.Status)
+	}
+	if ended.Mode != GameModeHumanVsAI {
+		t.Fatalf("mode=%q", ended.Mode)
+	}
+	if _, err := ApplyMoveByCommandByID(game.ID, "a7a6"); err == nil {
+		t.Fatal("next /move must be rejected after WXF end")
+	}
+	if CanAcceptMoves() {
+		t.Fatal("CanAcceptMoves must be false after WXF end")
+	}
+}
