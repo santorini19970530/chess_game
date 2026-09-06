@@ -29,6 +29,7 @@ type plyEndContext struct {
 	WhiteKings               int
 	BlackKings               int
 	InsufficientMaterial     bool
+	PlyCount                 int
 }
 
 var gameEndByType = map[GameType][]GameEndStrategy{}

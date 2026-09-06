@@ -55,9 +55,6 @@ type simulateResponse struct {
 	Results       []gameResult `json:"results,omitempty"`
 }
 
-// maximum number of plies to simulate in a single game
-const maxSimulationPlies = 600
-
 // global variables for the simulation
 var (
 	simulationRunMu       sync.Mutex
@@ -215,7 +212,7 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 		// run game move-by-move for live streaming
 		moveCount := 0
 		var runErr error
-		for ply := 0; ply < maxSimulationPlies; ply++ {
+		for ply := 0; ply < session.DefaultMaxPlies; ply++ {
 			if ctxErr := r.Context().Err(); ctxErr != nil {
 				runErr = ctxErr
 				break
@@ -254,7 +251,7 @@ func (h *Handler) APISimulate(w http.ResponseWriter, r *http.Request) {
 			if refreshErr != nil {
 				runErr = fmt.Errorf("failed to refresh game outcome: %w", refreshErr)
 			} else if currentGame.Result == session.GameResultInProgress {
-				runErr = fmt.Errorf("simulation exceeded max plies (%d)", maxSimulationPlies)
+				runErr = fmt.Errorf("simulation exceeded max plies (%d)", session.DefaultMaxPlies)
 			}
 		}
 		if runErr != nil {

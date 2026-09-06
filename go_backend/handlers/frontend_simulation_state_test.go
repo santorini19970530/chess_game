@@ -240,10 +240,12 @@ func TestFrontendXiangqiWXFOutcomeLabels(t *testing.T) {
 	requireSnippet(t, source, `case "perpetual_chase"`)
 	requireSnippet(t, source, `case "draw_mutual_repetition"`)
 	requireSnippet(t, source, `case "draw_no_capture"`)
+	requireSnippet(t, source, `case "draw_max_plies"`)
 	requireSnippet(t, source, "Perpetual check")
 	requireSnippet(t, source, "Perpetual chase")
 	requireSnippet(t, source, "draw by repetition")
 	requireSnippet(t, source, "draw by no capture")
+	requireSnippet(t, source, "draw by ply limit")
 }
 
 // TestFrontendSimulationDownload_Step1ButtonMarkers - checks frontend simulation download step1 button markers

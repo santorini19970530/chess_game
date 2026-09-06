@@ -453,7 +453,7 @@ func gameResultFromOutcome(outcome GameOutcome) GameResult {
 		return GameResultDraw
 	case "draw_fifty_move_rule":
 		return GameResultDraw
-	case "draw_mutual_repetition", "draw_no_capture":
+	case "draw_mutual_repetition", "draw_no_capture", "draw_max_plies":
 		return GameResultDraw
 	default:
 		return GameResultInProgress

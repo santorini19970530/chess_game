@@ -7,13 +7,10 @@ import (
 	session "go_backend/game/session"
 )
 
-// maximum number of plies to simulate in a single game
-var maxPlies = 600
-
-// function to select a move for the game
+// MoveSelector - picks the next ai move for one ply
 type MoveSelector func(gameID string) (string, error)
 
-// result of a single game simulation
+// Result - summary of one finished ai-vs-ai game
 type Result struct {
 	Result          session.GameResult
 	Winner          string
@@ -21,21 +18,16 @@ type Result struct {
 	HistoryDetailed []session.MoveHistoryEntry
 }
 
-// RunSingleAIGame - plays one ai-vs-ai game to completion using the move picker function
+// RunSingleAIGame - plays one ai-vs-ai game until GameEndStrategy sets Result
 func RunSingleAIGame(gameID string, pick MoveSelector) (Result, error) {
-	for i := 0; i < maxPlies; i++ {
+	limit := session.DefaultMaxPlies
+	for i := 0; i < limit; i++ {
 		g, err := session.RefreshGameSessionOutcomeByID(gameID)
 		if err != nil {
 			return Result{}, err
 		}
 		if g.Result != session.GameResultInProgress {
-			snap, _ := session.BuildSnapshotByID(gameID)
-			return Result{
-				Result:          g.Result,
-				Winner:          g.Outcome.Winner,
-				MoveCount:       len(snap.History),
-				HistoryDetailed: snap.HistoryDetailed,
-			}, nil
+			return endedSimulationResult(gameID, g)
 		}
 		move, err := pick(gameID)
 		if err != nil || move == "" {
@@ -45,16 +37,32 @@ func RunSingleAIGame(gameID string, pick MoveSelector) (Result, error) {
 			return Result{}, err
 		}
 	}
+	g, err := session.RefreshGameSessionOutcomeByID(gameID)
+	if err != nil {
+		return Result{}, err
+	}
+	if g.Result != session.GameResultInProgress {
+		return endedSimulationResult(gameID, g)
+	}
 	return Result{}, ErrMaxPliesReached
 }
 
-// error when the maximum number of plies is reached
+// endedSimulationResult - snapshots an already-ended session as a simulation result
+func endedSimulationResult(gameID string, g session.GameSession) (Result, error) {
+	snap, _ := session.BuildSnapshotByID(gameID)
+	return Result{
+		Result:          g.Result,
+		Winner:          g.Outcome.Winner,
+		MoveCount:       len(snap.History),
+		HistoryDetailed: snap.HistoryDetailed,
+	}, nil
+}
+
+// ErrMaxPliesReached - backup if the ply-limit strategy did not set Result
 var ErrMaxPliesReached = &maxPliesError{}
 
-// error when the maximum number of plies is reached
 type maxPliesError struct{}
 
-// Error - returns the error message
 func (e *maxPliesError) Error() string { return "max plies reached" }
 
 // sessionMoveHistoryLen - returns the length of the move history for the game

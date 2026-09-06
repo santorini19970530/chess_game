@@ -32,6 +32,7 @@ func xiangqiGameEndStrategies() []GameEndStrategy {
 		XiangqiPerpetualChaseStrategy{},
 		XiangqiMutualRepetitionStrategy{},
 		XiangqiNoCaptureStrategy{},
+		maxPlyStrategy(),
 	}
 }
 
@@ -68,6 +69,7 @@ func buildXiangqiPlyEndContext() *plyEndContext {
 		SideToMove:    string(side),
 		PositionKey:   xiangqiPositionKey(),
 		PositionCount: xiangqiPositionCounts[xiangqiPositionKey()],
+		PlyCount:      currentPlyCount(),
 	}
 	if len(xiangqiPlyFacts) > 0 {
 		last := xiangqiPlyFacts[len(xiangqiPlyFacts)-1]

@@ -16,6 +16,7 @@ func chessGameEndStrategies() []GameEndStrategy {
 		ChessInsufficientMaterialStrategy{},
 		ChessThreefoldStrategy{},
 		ChessFiftyMoveStrategy{},
+		maxPlyStrategy(),
 	}
 }
 
@@ -42,12 +43,13 @@ func buildChessPlyEndContext() *plyEndContext {
 	return &plyEndContext{
 		GameType:             GameTypeChess,
 		IdlePly:              GetHalfmoveClock(),
-		PositionCount:       GetCurrentPositionRepetitionCount(),
+		PositionCount:        GetCurrentPositionRepetitionCount(),
 		LegalMoves:           legal,
 		InCheck:              engine.IsInCheck(side),
 		SideToMove:           string(side),
 		WhiteKings:           whiteKings,
 		BlackKings:           blackKings,
 		InsufficientMaterial: isInsufficientMaterialDraw(),
+		PlyCount:             currentPlyCount(),
 	}
 }

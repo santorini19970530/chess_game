@@ -68,6 +68,8 @@ class GameInfoView {
         return "draw by repetition";
       case "draw_no_capture":
         return "draw by no capture";
+      case "draw_max_plies":
+        return "draw by ply limit";
       default:
         return "draw";
     }
@@ -165,6 +167,7 @@ class GameInfoView {
       case "draw_fifty_move_rule":
       case "draw_mutual_repetition":
       case "draw_no_capture":
+      case "draw_max_plies":
         this.endGameUi(outcome?.message || "Game drawn.", "success", outcome?.message || "Game has ended. Draw.");
         return;
       case "resigned":

@@ -322,7 +322,7 @@ Examples from start:
 
 **House rule:** 60 ply with no capture is a draw. Do not call this the Chess 50-move rule.
 
-**Safety net:** `cmd/match` still stops at 600 ply if no WXF or house ending fired.
+**Ply limit:** after 600 plies with no other ending, Go draws (`draw_max_plies`). Same cap for Chess and Shogi. Fairy-Stockfish does not judge this.
 
 ---
 
@@ -378,6 +378,8 @@ Hands field `[Ppg]` = White has Pawn; Black has Pawn and Gold (uppercase = White
 | Promote (optional `+`, forced on last ranks for P/L/N) | `e8e9` becomes `e8e9+` |
 | Drop pawn from hand onto e5 | `P*e5` or `p*e5` (also `@` accepted) |
 
+Go rejects *nifu* (two unpromoted pawns on one file) and *uchifuzume* (FESA 3.11c: pawn drop that is immediate mate). Other piece-drop mates stay legal.
+
 **Relife:** capture → piece goes to your **hand** (unpromoted); later **drop** with `P*e5`.
 
 Snapshot field `captured` for shogi = **hands** (White/Black counts).
@@ -388,7 +390,7 @@ Examples:
 2. Move the c-file pawn forward → **`c3c4`**.  
 3. After you capture a pawn, hand shows `pawn: 1`; drop with **`P*e5`**.
 
-**Simulate / match:** `POST /api/simulate` / `cmd/match -game shogi`.
+**Simulate / match:** `POST /api/simulate` / `cmd/match -game shogi`. After 600 plies with no mate or other ending, Go draws (`draw_max_plies`).
 
 ### Quick API create
 

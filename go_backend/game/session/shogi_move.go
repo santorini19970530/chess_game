@@ -149,11 +149,43 @@ func validateShogiDrop(kind pieces.PieceKind, color pieces.PieceColor, file, ran
 	if kind == pieces.Pawn && shogiHasUnpromotedPawnOnFile(color, file) {
 		return fmt.Errorf("nifu: two unpromoted pawns on the same file")
 	}
-	// mVP: uchifuzume (pawn-drop mate) not enforced yet.
 	if movement.ShogiWouldLeaveKingInCheckAfterDrop(kind, color, file, rank) {
 		return fmt.Errorf("illegal drop: king would be in check")
 	}
+	if kind == pieces.Pawn && !skipShogiUchifuzume && shogiPawnDropIsMate(color, file, rank) {
+		return fmt.Errorf("uchifuzume: cannot drop pawn to mate")
+	}
 	return nil
+}
+
+// skipShogiUchifuzume avoids re-entering FESA 3.11c while probing whether a pawn drop is mate
+var skipShogiUchifuzume bool
+
+// shogiPawnDropIsMate - reports whether dropping a pawn at file/rank is immediate mate
+func shogiPawnDropIsMate(color pieces.PieceColor, file, rank int) bool {
+	savedBoard := append([]pieces.ChessPiece(nil), pieces.ChessPieces...)
+	savedPinned := currentTurnPinned
+	probe := make([]pieces.ChessPiece, len(savedBoard), len(savedBoard)+1)
+	copy(probe, savedBoard)
+	probe = append(probe, pieces.ChessPiece{Color: color, Kind: pieces.Pawn, File: file, Rank: rank})
+	pieces.ChessPieces = probe
+	// FEN games pin the turn; an unpinned override is cleared when history is empty.
+	SetCurrentTurnColorPinned(OpponentColor(color))
+	skipShogiUchifuzume = true
+	defer func() {
+		skipShogiUchifuzume = false
+		pieces.ChessPieces = savedBoard
+		if savedPinned {
+			SetCurrentTurnColorPinned(color)
+		} else {
+			SetCurrentTurnColor(color)
+		}
+	}()
+	if movement.ShogiCheckedColor() != OpponentColor(color) {
+		return false
+	}
+	moves, err := shogiAllLegalUCIMoves()
+	return err == nil && len(moves) == 0
 }
 
 // shogiPromotePieceAt - returns shogi promote piece at

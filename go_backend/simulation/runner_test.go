@@ -42,22 +42,32 @@ func toUCIMove(ff, fr, tf, tr int, promo bool) string {
 	return m
 }
 
-// TestRunSingleAIGame_MaxPliesGuard - checks run single ai game max plies guard
+// TestRunSingleAIGame_MaxPliesGuard - ply limit ends as a named draw, not a runner error
 func TestRunSingleAIGame_MaxPliesGuard(t *testing.T) {
-	old := maxPlies
-	maxPlies = 3
-	defer func() { maxPlies = old }()
+	old := session.DefaultMaxPlies
+	session.DefaultMaxPlies = 3
+	defer func() { session.DefaultMaxPlies = old }()
 
 	game, err := session.CreateGame(session.GameModeAIVsAI, session.GameTypeChess, "white", 1, "", "beginner")
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	_, err = RunSingleAIGame(game.ID, firstLegalMove)
-	if err == nil {
-		t.Fatalf("expected ErrMaxPliesReached, got nil")
+	res, err := RunSingleAIGame(game.ID, firstLegalMove)
+	if err != nil {
+		t.Fatalf("run: %v", err)
 	}
-	if err != ErrMaxPliesReached {
-		t.Fatalf("expected maxPlies error, got %T %v", err, err)
+	if res.Result != session.GameResultDraw {
+		t.Fatalf("result=%q want draw", res.Result)
+	}
+	ended, err := session.GetGameSessionByID(game.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if ended.Outcome.Status != "draw_max_plies" {
+		t.Fatalf("status=%q", ended.Outcome.Status)
+	}
+	if res.MoveCount != 3 {
+		t.Fatalf("moves=%d want 3", res.MoveCount)
 	}
 }
 

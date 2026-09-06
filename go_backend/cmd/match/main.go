@@ -84,8 +84,6 @@ func main() {
 		res, err := simulation.RunSingleAIGame(game.ID, aimove.SelectAIMove)
 		maxPlies := false
 		if err != nil {
-			// xiangqi/Shogi can loop past the ply cap; count as draw and keep the batch alive
-			// so -format json still writes a summary (empty file = this Fatal used to fire).
 			if errors.Is(err, simulation.ErrMaxPliesReached) {
 				moves := 0
 				if hist, hErr := session.MoveHistoryByID(game.ID); hErr == nil {
@@ -101,6 +99,9 @@ func main() {
 		status := ""
 		if g, gerr := session.GetGameSessionByID(game.ID); gerr == nil {
 			status = g.Outcome.Status
+			if status == "draw_max_plies" {
+				maxPlies = true
+			}
 		}
 		durationMs := time.Since(start).Milliseconds()
 		avgMoveMs := simulation.ComputeAvgMoveMs(durationMs, res.MoveCount)
