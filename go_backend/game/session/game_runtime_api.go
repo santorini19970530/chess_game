@@ -196,7 +196,7 @@ func RefreshGameSessionOutcomeByID(gameID string) (GameSession, error) {
 		return GameSession{}, err
 	}
 	defer unlockRuntimeStateByID(game)
-	if game.Session.Outcome.Status == "resigned" && game.Session.Result != GameResultInProgress {
+	if gameEndedWithoutBoardPly(game.Session) {
 		return game.Session, nil
 	}
 	outcome := evaluateOutcomeForGameType(game.Session.Type)
@@ -260,6 +260,50 @@ func FlagCurrentTurnByID(gameID string) (GameSession, error) {
 	defer unlockRuntimeStateByID(game)
 	applyFlagLossLocked(game, string(CurrentTurnColor()))
 	return game.Session, nil
+}
+
+// DeclareShogiImpasseByID - FESA 5.3 declaration: pass wins, fail loses
+func DeclareShogiImpasseByID(gameID string) (GameSession, error) {
+	game, err := lockRuntimeStateByID(gameID)
+	if err != nil {
+		return GameSession{}, err
+	}
+	defer unlockRuntimeStateByID(game)
+	if game.Session.Type != GameTypeShogi {
+		return game.Session, fmt.Errorf("impasse only for shogi")
+	}
+	if err := rejectIfGameOverLocked(game); err != nil {
+		return game.Session, err
+	}
+	now := time.Now().UTC()
+	if err := settleClockOrFlagLocked(game, now); err != nil {
+		return game.Session, err
+	}
+	applyShogiImpasseDeclarationLocked(game)
+	game.Session.UpdatedAt = now.Format(time.RFC3339)
+	return game.Session, nil
+}
+
+// TryShogiImpasseDeclarationByID - match path: declare only when the FESA 5.3 checklist passes
+func TryShogiImpasseDeclarationByID(gameID string) (bool, GameSession, error) {
+	game, err := lockRuntimeStateByID(gameID)
+	if err != nil {
+		return false, GameSession{}, err
+	}
+	defer unlockRuntimeStateByID(game)
+	if game.Session.Type != GameTypeShogi || game.Session.Result != GameResultInProgress {
+		return false, game.Session, nil
+	}
+	now := time.Now().UTC()
+	if err := settleClockOrFlagLocked(game, now); err != nil {
+		return false, game.Session, nil
+	}
+	if !shogiImpasseMeetsFESA(CurrentTurnColor()) {
+		return false, game.Session, nil
+	}
+	applyShogiImpasseDeclarationLocked(game)
+	game.Session.UpdatedAt = now.Format(time.RFC3339)
+	return true, game.Session, nil
 }
 
 // rejectIfGameOverLocked - rejects if game over locked

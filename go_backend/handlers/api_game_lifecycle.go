@@ -113,6 +113,73 @@ func (h *Handler) postAPIGameFlag(w http.ResponseWriter, r *http.Request, gameID
 	}
 }
 
+// postAPIGameDeclare - shogi FESA 5.3 declaration on the side to move
+func (h *Handler) postAPIGameDeclare(w http.ResponseWriter, r *http.Request, gameID string) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		writeJSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	currentGame, err := sessionpkg.RefreshGameSessionOutcomeByID(gameID)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "Game session not found")
+		return
+	}
+	if currentGame.Result != sessionpkg.GameResultInProgress {
+		message := currentGame.Outcome.Message
+		if message == "" {
+			message = "Game already ended."
+		}
+		writeJSONError(w, http.StatusConflict, message)
+		return
+	}
+	game, err := sessionpkg.DeclareShogiImpasseByID(gameID)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := sessionpkg.ArchiveGameIfNeededByID(gameID); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Failed to archive declared game")
+		return
+	}
+	snapshot, err := sessionpkg.BuildSnapshotByID(gameID)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Failed to load game state")
+		return
+	}
+	response := gameStateResponse{
+		CurrentTurn:     snapshot.CurrentTurn,
+		CheckedSide:     snapshot.CheckedSide,
+		Game:            snapshot.Game,
+		Captured:        snapshot.Captured,
+		History:         snapshot.History,
+		HistoryDetailed: snapshot.HistoryDetailed,
+		State:           snapshot.State,
+	}
+	declareTurn := map[string]interface{}{
+		"current_turn": response.CurrentTurn,
+		"checked_side": response.CheckedSide,
+	}
+	attachClockFields(declareTurn, gameID, response.Game.Clock)
+	gameSocketHub.Broadcast(gameID, socketEventTurnChanged, declareTurn)
+	gameSocketHub.Broadcast(gameID, socketEventGameOutcome, map[string]interface{}{
+		"result": game.Result,
+		"outcome": map[string]interface{}{
+			"status":       game.Outcome.Status,
+			"winner":       game.Outcome.Winner,
+			"loser":        game.Outcome.Loser,
+			"checked_side": game.Outcome.CheckedSide,
+			"message":      game.Outcome.Message,
+		},
+	})
+	enqueueCurrentPositionAnalysis(gameID, "declare")
+	exportGameAnalysisIfNeeded(game)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "Response encode error")
+	}
+}
+
 // postAPIGameNew - creates a new game session from the posted setup
 func (h *Handler) postAPIGameNew(w http.ResponseWriter, r *http.Request, gameID string) {
 	if r.Method != http.MethodPost {

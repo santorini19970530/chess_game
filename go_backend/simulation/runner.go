@@ -29,6 +29,15 @@ func RunSingleAIGame(gameID string, pick MoveSelector) (Result, error) {
 		if g.Result != session.GameResultInProgress {
 			return endedSimulationResult(gameID, g)
 		}
+		if g.Type == session.GameTypeShogi {
+			_, g, err = session.TryShogiImpasseDeclarationByID(gameID)
+			if err != nil {
+				return Result{}, err
+			}
+			if g.Result != session.GameResultInProgress {
+				return endedSimulationResult(gameID, g)
+			}
+		}
 		move, err := pick(gameID)
 		if err != nil || move == "" {
 			return Result{}, err

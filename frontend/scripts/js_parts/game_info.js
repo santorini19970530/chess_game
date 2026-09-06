@@ -171,6 +171,26 @@ class GameInfoView {
         );
         return;
       }
+      case "impasse": {
+        const winner = this.capitalize(outcome?.winner);
+        const loser = this.capitalize(outcome?.loser);
+        this.endGameUi(
+          outcome?.message || `Impasse declared. ${winner} wins. ${loser} loses.`,
+          "error",
+          outcome?.message || `Game has ended. Impasse — ${winner} wins.`
+        );
+        return;
+      }
+      case "impasse_failed": {
+        const winner = this.capitalize(outcome?.winner);
+        const loser = this.capitalize(outcome?.loser);
+        this.endGameUi(
+          outcome?.message || `Impasse declaration failed. ${winner} wins. ${loser} loses.`,
+          "error",
+          outcome?.message || `Game has ended. Impasse declaration failed — ${winner} wins.`
+        );
+        return;
+      }
       case "stalemate":
         this.endGameUi("Draw by stalemate.", "success", "Game has ended. Draw by stalemate.");
         return;

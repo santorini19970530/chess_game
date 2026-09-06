@@ -380,7 +380,7 @@ Hands field `[Ppg]` = White has Pawn; Black has Pawn and Gold (uppercase = White
 
 Go rejects *nifu* (two unpromoted pawns on one file) and *uchifuzume* (FESA 3.11c: pawn drop that is immediate mate). Other piece-drop mates stay legal.
 
-**Endings (Go, FESA):** mate / no-move is a loss. Same board + hands + side **four** times is *sennichite* (draw). If that fourfold is one side checking every ply, the checker loses (FESA 3.12). Fairy-Stockfish does not judge these.
+**Endings (Go, FESA):** mate / no-move is a loss. Same board + hands + side **four** times is *sennichite* (draw). If that fourfold is one side checking every ply, the checker loses (FESA 3.12). Impasse / 入玉宣言 (FESA 5.3) is a **declaration** (`POST /api/games/{id}/declare`): king in the promotion zone, not in check, ≥10 pieces in the opponent’s camp besides the king, Sente 28 / Gote 27 points (camp + hand; rook/bishop 5). Pass wins; fail loses. Fairy-Stockfish does not judge these.
 
 **Relife:** capture → piece goes to your **hand** (unpromoted); later **drop** with `P*e5`.
 

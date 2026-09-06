@@ -93,3 +93,33 @@ func TestRunSingleAIGame_StopsWhenXiangqiAlreadyEnded(t *testing.T) {
 		t.Fatalf("result=%q", res.Result)
 	}
 }
+
+// TestRunSingleAIGame_ShogiImpasseDeclaresBeforePick - match path: winning FESA 5.3 is declared, not a ply
+func TestRunSingleAIGame_ShogiImpasseDeclaresBeforePick(t *testing.T) {
+	const fen = "9/G3K4/PPPPPPPPP/9/9/9/9/9/4k4[RRBB] w - - 0 1"
+	game, err := session.CreateGame(session.GameModeAIVsAI, session.GameTypeShogi, "white", 1, fen, "beginner")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	picks := 0
+	res, err := RunSingleAIGame(game.ID, func(string) (string, error) {
+		picks++
+		return "e8e9", nil
+	})
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if picks != 0 {
+		t.Fatalf("impasse must not pick a ply, picks=%d", picks)
+	}
+	if res.Result != session.GameResultWhiteWin {
+		t.Fatalf("result=%q", res.Result)
+	}
+	ended, err := session.GetGameSessionByID(game.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if ended.Outcome.Status != "impasse" {
+		t.Fatalf("status=%q want impasse", ended.Outcome.Status)
+	}
+}

@@ -243,6 +243,8 @@ func TestFrontendXiangqiWXFOutcomeLabels(t *testing.T) {
 	requireSnippet(t, source, `case "draw_max_plies"`)
 	requireSnippet(t, source, `case "continuous_check"`)
 	requireSnippet(t, source, `case "draw_sennichite"`)
+	requireSnippet(t, source, `case "impasse"`)
+	requireSnippet(t, source, `case "impasse_failed"`)
 	requireSnippet(t, source, "Perpetual check")
 	requireSnippet(t, source, "Perpetual chase")
 	requireSnippet(t, source, "draw by repetition")
@@ -250,6 +252,7 @@ func TestFrontendXiangqiWXFOutcomeLabels(t *testing.T) {
 	requireSnippet(t, source, "draw by ply limit")
 	requireSnippet(t, source, "Continuous check")
 	requireSnippet(t, source, "draw by sennichite")
+	requireSnippet(t, source, "Impasse declared")
 }
 
 // TestFrontendSimulationDownload_Step1ButtonMarkers - checks frontend simulation download step1 button markers
