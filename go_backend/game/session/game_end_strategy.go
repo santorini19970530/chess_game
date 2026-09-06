@@ -26,6 +26,9 @@ type plyEndContext struct {
 	PerpetualChaseLoser      string
 	ChaseIsKingOrSoldierOnly bool
 	CycleRepeat              bool
+	WhiteKings               int
+	BlackKings               int
+	InsufficientMaterial     bool
 }
 
 var gameEndByType = map[GameType][]GameEndStrategy{}
