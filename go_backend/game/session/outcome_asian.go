@@ -84,21 +84,6 @@ func evaluateAsianGameOutcome(h asianOutcomeHooks) GameOutcome {
 	}
 }
 
-// EvaluateXiangqiGameOutcome - Xiangqi outcome: no legal moves is always a loss (mate or stalemate)
-func EvaluateXiangqiGameOutcome() GameOutcome {
-	return evaluateAsianGameOutcome(asianOutcomeHooks{
-		missingPieceNoun: "general",
-		allLegalMoves:    xiangqiAllLegalUCIMoves,
-		checkedColor:     movement.XiangqiCheckedColor,
-		zeroLegalMessage: func(inCheck bool, winner pieces.PieceColor) string {
-			if inCheck {
-				return "Checkmate! " + sideLabel(winner) + " wins."
-			}
-			return "Stalemate! " + sideLabel(winner) + " wins (Xiangqi rule)."
-		},
-	})
-}
-
 // EvaluateShogiGameOutcome - Shogi outcome: no legal moves (board + drops) is a loss
 func EvaluateShogiGameOutcome() GameOutcome {
 	return evaluateAsianGameOutcome(asianOutcomeHooks{

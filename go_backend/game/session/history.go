@@ -258,6 +258,7 @@ func resetDrawTracking() {
 	halfmoveClock = 0
 	positionCounts = make(map[string]int)
 	recordCurrentPosition()
+	resetXiangqiPlyTracking()
 }
 
 // recordDrawStateAfterMove - records draw state after move

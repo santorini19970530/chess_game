@@ -27,7 +27,11 @@ type RuntimeState struct {
 	BlackRookAMoved     bool
 	BlackRookHMoved     bool
 	// boardFEN is source of truth for non-chess variants (e.g. xiangqi). empty for chess.
-	BoardFEN string
+	BoardFEN              string
+	XiangqiIdlePly        int
+	XiangqiPositionCounts map[string]int
+	XiangqiPositionKeys   []string
+	XiangqiPlyFacts       []xiangqiPlyFact
 }
 
 // runtime game for the game
@@ -94,8 +98,9 @@ func (s *SessionStore) Delete(gameID string) bool {
 // newInitialRuntimeState - creates initial runtime state
 func newInitialRuntimeState() RuntimeState {
 	return RuntimeState{
-		Pieces:        append([]pieces.ChessPiece(nil), initialPiecesSnapshot...),
-		PositionCounts: make(map[string]int),
+		Pieces:                append([]pieces.ChessPiece(nil), initialPiecesSnapshot...),
+		PositionCounts:        make(map[string]int),
+		XiangqiPositionCounts: make(map[string]int),
 	}
 }
 
@@ -126,6 +131,10 @@ func (g *RuntimeGame) bindToGlobals() {
 	blackRookAMoved = g.State.BlackRookAMoved
 	blackRookHMoved = g.State.BlackRookHMoved
 	boardFEN = g.State.BoardFEN
+	xiangqiIdlePly = g.State.XiangqiIdlePly
+	xiangqiPositionCounts = copyStringIntMap(g.State.XiangqiPositionCounts)
+	xiangqiPositionKeys = append([]string(nil), g.State.XiangqiPositionKeys...)
+	xiangqiPlyFacts = copyXiangqiPlyFacts(g.State.XiangqiPlyFacts)
 }
 
 // syncFromGlobals - syncs from globals
@@ -155,6 +164,10 @@ func (g *RuntimeGame) syncFromGlobals() {
 	g.State.BlackRookAMoved = blackRookAMoved
 	g.State.BlackRookHMoved = blackRookHMoved
 	g.State.BoardFEN = boardFEN
+	g.State.XiangqiIdlePly = xiangqiIdlePly
+	g.State.XiangqiPositionCounts = copyStringIntMap(xiangqiPositionCounts)
+	g.State.XiangqiPositionKeys = append([]string(nil), xiangqiPositionKeys...)
+	g.State.XiangqiPlyFacts = copyXiangqiPlyFacts(xiangqiPlyFacts)
 }
 
 // copyStringIntMap - returns copy string int map
@@ -165,6 +178,22 @@ func copyStringIntMap(in map[string]int) map[string]int {
 	out := make(map[string]int, len(in))
 	for key, value := range in {
 		out[key] = value
+	}
+	return out
+}
+
+// copyXiangqiPlyFacts - copies xiangqi ply facts
+func copyXiangqiPlyFacts(in []xiangqiPlyFact) []xiangqiPlyFact {
+	if in == nil {
+		return nil
+	}
+	out := make([]xiangqiPlyFact, len(in))
+	for i, fact := range in {
+		out[i] = xiangqiPlyFact{
+			Side:      fact.Side,
+			GaveCheck: fact.GaveCheck,
+			ChaseKeys: append([]string(nil), fact.ChaseKeys...),
+		}
 	}
 	return out
 }

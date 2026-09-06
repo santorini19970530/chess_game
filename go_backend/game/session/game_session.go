@@ -437,7 +437,7 @@ func sideLabelFromText(side string) string {
 // gameResultFromOutcome - performs game result from outcome
 func gameResultFromOutcome(outcome GameOutcome) GameResult {
 	switch outcome.Status {
-	case "checkmate":
+	case "checkmate", "perpetual_check", "perpetual_chase":
 		if outcome.Winner == "white" {
 			return GameResultWhiteWin
 		}
@@ -452,6 +452,8 @@ func gameResultFromOutcome(outcome GameOutcome) GameResult {
 	case "draw_threefold_repetition":
 		return GameResultDraw
 	case "draw_fifty_move_rule":
+		return GameResultDraw
+	case "draw_mutual_repetition", "draw_no_capture":
 		return GameResultDraw
 	default:
 		return GameResultInProgress

@@ -12,15 +12,20 @@ type GameEndStrategy interface {
 
 // plyEndContext - facts from the ply just applied; strategies must not mutate the board
 type plyEndContext struct {
-	GameType      GameType
-	IdlePly       int
-	PositionKey   string
-	PositionCount int
-	GaveCheck     bool
-	IsCapture     bool
-	LegalMoves    int
-	InCheck       bool
-	SideJustMoved string
+	GameType                 GameType
+	IdlePly                  int
+	PositionKey              string
+	PositionCount            int
+	GaveCheck                bool
+	IsCapture                bool
+	LegalMoves               int
+	InCheck                  bool
+	SideJustMoved            string
+	SideToMove               string
+	PerpetualCheckLoser      string
+	PerpetualChaseLoser      string
+	ChaseIsKingOrSoldierOnly bool
+	CycleRepeat              bool
 }
 
 var gameEndByType = map[GameType][]GameEndStrategy{}
