@@ -239,7 +239,7 @@ func RefreshGameSessionOutcome() GameSession {
 	}
 	defer unlockActiveRuntimeState(game)
 
-	if game.Session.Outcome.Status == "resigned" && game.Session.Result != GameResultInProgress {
+	if gameEndedWithoutBoardPly(game.Session) {
 		return game.Session
 	}
 
@@ -437,7 +437,7 @@ func sideLabelFromText(side string) string {
 // gameResultFromOutcome - performs game result from outcome
 func gameResultFromOutcome(outcome GameOutcome) GameResult {
 	switch outcome.Status {
-	case "checkmate", "perpetual_check", "perpetual_chase":
+	case "checkmate", "perpetual_check", "perpetual_chase", "continuous_check", "impasse", "impasse_failed":
 		if outcome.Winner == "white" {
 			return GameResultWhiteWin
 		}
@@ -453,10 +453,23 @@ func gameResultFromOutcome(outcome GameOutcome) GameResult {
 		return GameResultDraw
 	case "draw_fifty_move_rule":
 		return GameResultDraw
-	case "draw_mutual_repetition", "draw_no_capture":
+	case "draw_mutual_repetition", "draw_no_capture", "draw_max_plies", "draw_sennichite":
 		return GameResultDraw
 	default:
 		return GameResultInProgress
+	}
+}
+
+// gameEndedWithoutBoardPly - flag and shogi declaration are not AfterPly results
+func gameEndedWithoutBoardPly(s GameSession) bool {
+	if s.Result == GameResultInProgress {
+		return false
+	}
+	switch s.Outcome.Status {
+	case "resigned", "impasse", "impasse_failed":
+		return true
+	default:
+		return false
 	}
 }
 

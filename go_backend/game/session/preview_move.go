@@ -108,6 +108,12 @@ func cloneRuntimeState(in RuntimeState) RuntimeState {
 		mv := *in.LastAppliedMove
 		out.LastAppliedMove = &mv
 	}
+	out.XiangqiPositionCounts = copyStringIntMap(in.XiangqiPositionCounts)
+	out.XiangqiPositionKeys = append([]string(nil), in.XiangqiPositionKeys...)
+	out.XiangqiPlyFacts = copyXiangqiPlyFacts(in.XiangqiPlyFacts)
+	out.ShogiPositionCounts = copyStringIntMap(in.ShogiPositionCounts)
+	out.ShogiPositionKeys = append([]string(nil), in.ShogiPositionKeys...)
+	out.ShogiPlyFacts = copyShogiPlyFacts(in.ShogiPlyFacts)
 	return out
 }
 

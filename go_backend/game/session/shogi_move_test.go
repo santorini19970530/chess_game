@@ -197,6 +197,98 @@ func TestShogiPromotion_OptionalWithPlus(t *testing.T) {
 	}
 }
 
+// TestShogiDrop_UchifuzumeRejected - FESA 3.11c: pawn drop that is immediate mate is illegal
+func TestShogiDrop_UchifuzumeRejected(t *testing.T) {
+	resetGameSessionForTest()
+	ResetGame()
+
+	// King i9; golds g8 and i7 cover escapes; P*i8 would mate.
+	const fen = "8k/6G2/8G/9/9/9/9/9/4K4[P] w - - 0 1"
+	game, err := CreateGame(GameModeHumanVsHuman, GameTypeShogi, "white", 1, fen, "")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	moves, err := AllLegalUCIMovesByID(game.ID)
+	if err != nil {
+		t.Fatalf("legal: %v", err)
+	}
+	for _, mv := range moves {
+		if strings.EqualFold(mv, "p*i8") {
+			t.Fatalf("uchifuzume P*i8 must not be in the legal set, got %v", moves)
+		}
+	}
+	dests, err := LegalDropsForKindByID(game.ID, "pawn")
+	if err != nil {
+		t.Fatalf("legal drops: %v", err)
+	}
+	for _, d := range dests {
+		if d.File == 9 && d.Rank == 8 {
+			t.Fatalf("uchifuzume i8 must not be a pawn drop destination, got %+v", dests)
+		}
+	}
+	if _, err := ApplyMoveByCommandByID(game.ID, "P*i8"); err == nil {
+		t.Fatal("uchifuzume P*i8 must be rejected")
+	}
+	if shogiHands.white["pawn"] != 1 {
+		t.Fatalf("hand should restore after failed drop, got %+v", shogiHands.white)
+	}
+}
+
+// TestShogiDrop_GoldDropMateAllowed - gold-drop mate is legal; uchifuzume is pawn-only
+func TestShogiDrop_GoldDropMateAllowed(t *testing.T) {
+	resetGameSessionForTest()
+	ResetGame()
+
+	const fen = "8k/6G2/8G/9/9/9/9/9/4K4[G] w - - 0 1"
+	game, err := CreateGame(GameModeHumanVsHuman, GameTypeShogi, "white", 1, fen, "")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	moves, err := AllLegalUCIMovesByID(game.ID)
+	if err != nil {
+		t.Fatalf("legal: %v", err)
+	}
+	found := false
+	for _, mv := range moves {
+		if strings.EqualFold(mv, "g*i8") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected gold-drop mate G*i8 in legal set, got %v", moves)
+	}
+	if _, err := ApplyMoveByCommandByID(game.ID, "G*i8"); err != nil {
+		t.Fatalf("G*i8: %v", err)
+	}
+}
+
+// TestShogiDrop_CheckingPawnNotMateAllowed - a checking pawn drop that is not mate stays legal
+func TestShogiDrop_CheckingPawnNotMateAllowed(t *testing.T) {
+	resetGameSessionForTest()
+	ResetGame()
+
+	const fen = "8k/9/9/9/9/9/9/9/4K4[P] w - - 0 1"
+	game, err := CreateGame(GameModeHumanVsHuman, GameTypeShogi, "white", 1, fen, "")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	moves, err := AllLegalUCIMovesByID(game.ID)
+	if err != nil {
+		t.Fatalf("legal: %v", err)
+	}
+	found := false
+	for _, mv := range moves {
+		if strings.EqualFold(mv, "p*i8") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("checking non-mate P*i8 should be legal, got %v", moves)
+	}
+}
+
 // TestShogiLegalMoves_IncludesDrops - checks shogi legal moves includes drops
 func TestShogiLegalMoves_IncludesDrops(t *testing.T) {
 	resetGameSessionForTest()

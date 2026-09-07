@@ -94,6 +94,8 @@ func (h *Handler) APIGameRoutes(w http.ResponseWriter, r *http.Request) {
 			h.postAPIGameConfig(w, r, gameID)
 		case "flag":
 			h.postAPIGameFlag(w, r, gameID)
+		case "declare":
+			h.postAPIGameDeclare(w, r, gameID)
 		case "new":
 			h.postAPIGameNew(w, r, gameID)
 		case "load-moves":

@@ -259,6 +259,7 @@ func resetDrawTracking() {
 	positionCounts = make(map[string]int)
 	recordCurrentPosition()
 	resetXiangqiPlyTracking()
+	resetShogiPlyTracking()
 }
 
 // recordDrawStateAfterMove - records draw state after move

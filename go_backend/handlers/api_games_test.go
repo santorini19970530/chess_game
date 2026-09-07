@@ -199,6 +199,79 @@ func TestAPIGameFlagRoute_SetsTerminalResult(t *testing.T) {
 	}
 }
 
+// TestAPIGameDeclareRoute_ShogiImpasseWins - FESA 5.3 pass ends via POST /declare
+func TestAPIGameDeclareRoute_ShogiImpasseWins(t *testing.T) {
+	h := NewHandler()
+	const fen = "9/G3K4/PPPPPPPPP/9/9/9/9/9/4k4[RRBB] w - - 0 1"
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeShogi, "white", 1, fen, "")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/api/games/"+game.ID+"/declare", nil)
+	rec := httptest.NewRecorder()
+	h.APIGameRoutes(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	var payload struct {
+		Game struct {
+			Result  string `json:"result"`
+			Outcome struct {
+				Status string `json:"status"`
+				Winner string `json:"winner"`
+			} `json:"outcome"`
+		} `json:"game"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("json: %v", err)
+	}
+	if payload.Game.Outcome.Status != "impasse" || payload.Game.Result != "white_win" {
+		t.Fatalf("status=%q result=%q", payload.Game.Outcome.Status, payload.Game.Result)
+	}
+}
+
+// TestAPIGameDeclareRoute_ShogiImpasseShortPointsLoses - failed FESA 5.3 claim is a loss, not 400
+func TestAPIGameDeclareRoute_ShogiImpasseShortPointsLoses(t *testing.T) {
+	h := NewHandler()
+	const fen = "9/G3K4/PPPPPPPPP/9/9/9/9/9/4k4[] w - - 0 1"
+	game, err := sessionpkg.CreateGame(sessionpkg.GameModeHumanVsHuman, sessionpkg.GameTypeShogi, "white", 1, fen, "")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/api/games/"+game.ID+"/declare", nil)
+	rec := httptest.NewRecorder()
+	h.APIGameRoutes(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	var payload struct {
+		Game struct {
+			Result  string `json:"result"`
+			Outcome struct {
+				Status string `json:"status"`
+				Loser  string `json:"loser"`
+			} `json:"outcome"`
+		} `json:"game"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("json: %v", err)
+	}
+	if payload.Game.Outcome.Status != "impasse_failed" || payload.Game.Result != "black_win" {
+		t.Fatalf("status=%q result=%q", payload.Game.Outcome.Status, payload.Game.Result)
+	}
+	req2 := httptest.NewRequest(
+		http.MethodPost,
+		"/api/games/"+game.ID+"/move",
+		strings.NewReader("command=e8e9"),
+	)
+	req2.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec2 := httptest.NewRecorder()
+	h.APIGameRoutes(rec2, req2)
+	if rec2.Code != http.StatusConflict {
+		t.Fatalf("next /move status=%d want 409 body=%s", rec2.Code, rec2.Body.String())
+	}
+}
+
 // TestAPIGameMove_XiangqiAcceptsFileI - checks api game move xiangqi accepts file i
 func TestAPIGameMove_XiangqiAcceptsFileI(t *testing.T) {
 	// Chess UCI parser is a-h/1-8 only; i4i5 must still reach Xiangqi apply.

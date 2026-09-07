@@ -42,22 +42,32 @@ func toUCIMove(ff, fr, tf, tr int, promo bool) string {
 	return m
 }
 
-// TestRunSingleAIGame_MaxPliesGuard - checks run single ai game max plies guard
+// TestRunSingleAIGame_MaxPliesGuard - ply limit ends as a named draw, not a runner error
 func TestRunSingleAIGame_MaxPliesGuard(t *testing.T) {
-	old := maxPlies
-	maxPlies = 3
-	defer func() { maxPlies = old }()
+	old := session.DefaultMaxPlies
+	session.DefaultMaxPlies = 3
+	defer func() { session.DefaultMaxPlies = old }()
 
 	game, err := session.CreateGame(session.GameModeAIVsAI, session.GameTypeChess, "white", 1, "", "beginner")
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	_, err = RunSingleAIGame(game.ID, firstLegalMove)
-	if err == nil {
-		t.Fatalf("expected ErrMaxPliesReached, got nil")
+	res, err := RunSingleAIGame(game.ID, firstLegalMove)
+	if err != nil {
+		t.Fatalf("run: %v", err)
 	}
-	if err != ErrMaxPliesReached {
-		t.Fatalf("expected maxPlies error, got %T %v", err, err)
+	if res.Result != session.GameResultDraw {
+		t.Fatalf("result=%q want draw", res.Result)
+	}
+	ended, err := session.GetGameSessionByID(game.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if ended.Outcome.Status != "draw_max_plies" {
+		t.Fatalf("status=%q", ended.Outcome.Status)
+	}
+	if res.MoveCount != 3 {
+		t.Fatalf("moves=%d want 3", res.MoveCount)
 	}
 }
 
@@ -81,5 +91,35 @@ func TestRunSingleAIGame_StopsWhenXiangqiAlreadyEnded(t *testing.T) {
 	}
 	if res.Result == session.GameResultInProgress {
 		t.Fatalf("result=%q", res.Result)
+	}
+}
+
+// TestRunSingleAIGame_ShogiImpasseDeclaresBeforePick - match path: winning FESA 5.3 is declared, not a ply
+func TestRunSingleAIGame_ShogiImpasseDeclaresBeforePick(t *testing.T) {
+	const fen = "9/G3K4/PPPPPPPPP/9/9/9/9/9/4k4[RRBB] w - - 0 1"
+	game, err := session.CreateGame(session.GameModeAIVsAI, session.GameTypeShogi, "white", 1, fen, "beginner")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	picks := 0
+	res, err := RunSingleAIGame(game.ID, func(string) (string, error) {
+		picks++
+		return "e8e9", nil
+	})
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if picks != 0 {
+		t.Fatalf("impasse must not pick a ply, picks=%d", picks)
+	}
+	if res.Result != session.GameResultWhiteWin {
+		t.Fatalf("result=%q", res.Result)
+	}
+	ended, err := session.GetGameSessionByID(game.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if ended.Outcome.Status != "impasse" {
+		t.Fatalf("status=%q want impasse", ended.Outcome.Status)
 	}
 }

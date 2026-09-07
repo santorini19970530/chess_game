@@ -32,6 +32,7 @@ func xiangqiGameEndStrategies() []GameEndStrategy {
 		XiangqiPerpetualChaseStrategy{},
 		XiangqiMutualRepetitionStrategy{},
 		XiangqiNoCaptureStrategy{},
+		maxPlyStrategy(),
 	}
 }
 
@@ -68,6 +69,7 @@ func buildXiangqiPlyEndContext() *plyEndContext {
 		SideToMove:    string(side),
 		PositionKey:   xiangqiPositionKey(),
 		PositionCount: xiangqiPositionCounts[xiangqiPositionKey()],
+		PlyCount:      currentPlyCount(),
 	}
 	if len(xiangqiPlyFacts) > 0 {
 		last := xiangqiPlyFacts[len(xiangqiPlyFacts)-1]
@@ -178,10 +180,10 @@ func classifyXiangqiRepeatCycle(ctx *plyEndContext) {
 			break
 		}
 	}
-	if prev < 0 || prev+1 > len(xiangqiPlyFacts) {
+	if prev < 0 || prev > len(xiangqiPlyFacts) {
 		return
 	}
-	facts := xiangqiPlyFacts[prev+1:]
+	facts := xiangqiPlyFacts[prev:]
 	whiteFacts, blackFacts := splitXiangqiFactsBySide(facts)
 	whiteAllCheck := xiangqiAllGaveCheck(whiteFacts)
 	blackAllCheck := xiangqiAllGaveCheck(blackFacts)
