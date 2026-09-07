@@ -132,3 +132,71 @@ func TestShogiImpasse_Sente28Gote27(t *testing.T) {
 		t.Fatalf("gote need=%d", shogiImpassePointsNeeded(pieces.Black))
 	}
 }
+
+// TestShogiImpasse_KingNotInZoneLoses - start-position declare fails FESA 5.3
+func TestShogiImpasse_KingNotInZoneLoses(t *testing.T) {
+	resetGameSessionForTest()
+	ResetGame()
+	game, err := CreateGame(GameModeHumanVsHuman, GameTypeShogi, "white", 1, "", "")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	ended, err := DeclareShogiImpasseByID(game.ID)
+	if err != nil {
+		t.Fatalf("declare: %v", err)
+	}
+	if ended.Outcome.Status != "impasse_failed" || ended.Outcome.Loser != "white" {
+		t.Fatalf("status=%q loser=%q", ended.Outcome.Status, ended.Outcome.Loser)
+	}
+}
+
+// TestShogiImpasse_InCheckLoses - king in zone with enough points still fails if in check
+func TestShogiImpasse_InCheckLoses(t *testing.T) {
+	resetGameSessionForTest()
+	ResetGame()
+	const fen = "4r4/G3K4/PPPPPPPPP/9/9/9/9/9/4k4[RRBB] w - - 0 1"
+	game, err := CreateGame(GameModeHumanVsHuman, GameTypeShogi, "white", 1, fen, "")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	ended, err := DeclareShogiImpasseByID(game.ID)
+	if err != nil {
+		t.Fatalf("declare: %v", err)
+	}
+	if ended.Outcome.Status != "impasse_failed" || ended.Outcome.Loser != "white" {
+		t.Fatalf("in check must fail, status=%q loser=%q", ended.Outcome.Status, ended.Outcome.Loser)
+	}
+}
+
+// TestShogiImpasse_Gote27PassesAnd26Fails - gote 27 on a black-to-move board wins; 26 loses
+func TestShogiImpasse_Gote27PassesAnd26Fails(t *testing.T) {
+	const pass = "4K4/9/9/9/9/9/ppppppppp/g3k4/9[rrbpp] b - - 0 1"
+	resetGameSessionForTest()
+	ResetGame()
+	game, err := CreateGame(GameModeHumanVsHuman, GameTypeShogi, "white", 1, pass, "")
+	if err != nil {
+		t.Fatalf("create pass: %v", err)
+	}
+	ended, err := DeclareShogiImpasseByID(game.ID)
+	if err != nil {
+		t.Fatalf("declare pass: %v", err)
+	}
+	if ended.Outcome.Status != "impasse" || ended.Outcome.Winner != "black" {
+		t.Fatalf("gote 27 must win, status=%q winner=%q", ended.Outcome.Status, ended.Outcome.Winner)
+	}
+
+	const fail = "4K4/9/9/9/9/9/ppppppppp/g3k4/9[rrbp] b - - 0 1"
+	resetGameSessionForTest()
+	ResetGame()
+	game, err = CreateGame(GameModeHumanVsHuman, GameTypeShogi, "white", 1, fail, "")
+	if err != nil {
+		t.Fatalf("create fail: %v", err)
+	}
+	ended, err = DeclareShogiImpasseByID(game.ID)
+	if err != nil {
+		t.Fatalf("declare fail: %v", err)
+	}
+	if ended.Outcome.Status != "impasse_failed" || ended.Outcome.Loser != "black" {
+		t.Fatalf("gote 26 must lose, status=%q loser=%q", ended.Outcome.Status, ended.Outcome.Loser)
+	}
+}

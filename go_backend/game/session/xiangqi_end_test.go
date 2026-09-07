@@ -176,3 +176,45 @@ func TestClassifyXiangqiRepeatCycle_IncludesFirstPlyOfCycle(t *testing.T) {
 		t.Fatalf("a cycle with a quiet white ply must be mutual draw, loser=%q", ctx.PerpetualCheckLoser)
 	}
 }
+
+// TestXiangqiPerpetualCheck_ChariotShuttleLoses - played 長將 shuttle is a loss for the checker, not a mutual draw
+func TestXiangqiPerpetualCheck_ChariotShuttleLoses(t *testing.T) {
+	resetGameSessionForTest()
+	ResetGame()
+	fen := "4k4/9/4R4/9/9/9/9/9/9/K8 b - - 0 1"
+	game, err := CreateGame(GameModeHumanVsHuman, GameTypeXiangqi, "white", 1, fen, "")
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	cycle := []string{"e10d10", "e8d8", "d10e10", "d8e8"}
+	for _, mv := range cycle {
+		if _, err := ApplyMoveByCommandByID(game.ID, mv); err != nil {
+			t.Fatalf("first %s: %v", mv, err)
+		}
+	}
+	mid, err := GetGameSessionByID(game.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if mid.Outcome.Status == "perpetual_check" {
+		t.Fatal("twofold must not be perpetual check")
+	}
+	for _, mv := range cycle {
+		if _, err := ApplyMoveByCommandByID(game.ID, mv); err != nil {
+			t.Fatalf("second %s: %v", mv, err)
+		}
+	}
+	ended, err := GetGameSessionByID(game.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if ended.Outcome.Status != "perpetual_check" {
+		t.Fatalf("status=%q want perpetual_check (count=%d)", ended.Outcome.Status, buildXiangqiPlyEndContext().PositionCount)
+	}
+	if ended.Result != GameResultBlackWin || ended.Outcome.Loser != "white" {
+		t.Fatalf("result=%q loser=%q", ended.Result, ended.Outcome.Loser)
+	}
+	if _, err := ApplyMoveByCommandByID(game.ID, "e10f10"); err == nil {
+		t.Fatal("next /move must be rejected after perpetual check")
+	}
+}
