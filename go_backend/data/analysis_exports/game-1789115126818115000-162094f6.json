@@ -1,0 +1,3605 @@
+{
+  "game_id": "game-1789115126818115000-162094f6",
+  "result": "white_win",
+  "game": {
+    "id": "game-1789115126818115000-162094f6",
+    "mode": "human_vs_ai",
+    "type": "chess",
+    "config": {
+      "humanColor": "white",
+      "aiGameCount": 1,
+      "startFen": "",
+      "aiProfile": "intermediate",
+      "whiteAIProfile": "intermediate",
+      "blackAIProfile": "intermediate",
+      "skillLevel": "intermediate"
+    },
+    "clock": {
+      "enabled": false,
+      "mode": "fischer",
+      "whiteInitialMs": 0,
+      "blackInitialMs": 0,
+      "whiteRemainingMs": 0,
+      "blackRemainingMs": 0,
+      "incrementMs": 0,
+      "active": ""
+    },
+    "result": "white_win",
+    "outcome": {
+      "status": "checkmate",
+      "winner": "white",
+      "loser": "black",
+      "checkedSide": "black",
+      "legalMoves": 0,
+      "message": "Checkmate! White wins."
+    },
+    "createdAt": "2026-09-11T08:25:26Z",
+    "updatedAt": "2026-09-11T08:26:58Z"
+  },
+  "history": [
+    "White: e2e4",
+    "Black: d7d5",
+    "White: e4d5",
+    "Black: c7c6",
+    "White: d5c6",
+    "Black: h7h5",
+    "White: c6b7",
+    "Black: c8b7",
+    "White: g1f3",
+    "Black: b8d7",
+    "White: d2d4",
+    "Black: g8f6",
+    "White: f1d3",
+    "Black: e7e5",
+    "White: d4e5",
+    "Black: d7e5",
+    "White: d1e2",
+    "Black: f8b4",
+    "White: c1d2",
+    "Black: b4d2",
+    "White: b1d2",
+    "Black: d8c7",
+    "White: f3e5",
+    "Black: e8g8",
+    "White: e1c1",
+    "Black: a8d8",
+    "White: d1e1",
+    "Black: g7g6",
+    "White: e2e3",
+    "Black: f6g4",
+    "White: e5g4",
+    "Black: h5g4",
+    "White: h2h3",
+    "Black: f8e8",
+    "White: e3h6",
+    "Black: b7g2",
+    "White: h3g4",
+    "Black: g2h1",
+    "White: e1h1",
+    "Black: c7e5",
+    "White: d2e4",
+    "Black: d8d3",
+    "White: c2d3",
+    "Black: e8e6",
+    "White: g4g5",
+    "Black: e5g7",
+    "White: h6h4",
+    "Black: g8f8",
+    "White: e4f6",
+    "Black: g7g8",
+    "White: h4d4",
+    "Black: e6d6",
+    "White: d4d6",
+    "Black: f8g7",
+    "White: f6g8",
+    "Black: f7f5",
+    "White: d6f6",
+    "Black: g7g8",
+    "White: h1h8"
+  ],
+  "move_analysis": [
+    {
+      "move_number": 1,
+      "command": "e2e4",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-1",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 4000,
+          "material_white": 4000,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 27,
+        "win_chance_white": 0.5225,
+        "win_chance_black": 0.4775,
+        "threat_summary": "Position is roughly balanced.",
+        "best_move_uci": "e7e5",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e7e5",
+            "san": "e5",
+            "score": 27
+          },
+          {
+            "rank": 2,
+            "uci": "e7e6",
+            "san": "e6",
+            "score": 31
+          },
+          {
+            "rank": 3,
+            "uci": "c7c5",
+            "san": "c5",
+            "score": 38
+          },
+          {
+            "rank": 4,
+            "uci": "c7c6",
+            "san": "c6",
+            "score": 61
+          },
+          {
+            "rank": 5,
+            "uci": "a7a6",
+            "san": "a6",
+            "score": 76
+          }
+        ],
+        "latency_ms": 277
+      }
+    },
+    {
+      "move_number": 2,
+      "command": "d7d5",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-2",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 0,
+          "material_black": 4000,
+          "material_white": 4000,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 82,
+        "win_chance_white": 0.5679,
+        "win_chance_black": 0.4321,
+        "threat_summary": "Position is roughly balanced.",
+        "best_move_uci": "e4d5",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e4d5",
+            "san": "exd5",
+            "score": 82
+          },
+          {
+            "rank": 2,
+            "uci": "e4e5",
+            "san": "e5",
+            "score": 0
+          },
+          {
+            "rank": 3,
+            "uci": "d2d3",
+            "san": "d3",
+            "score": -30
+          },
+          {
+            "rank": 4,
+            "uci": "b1c3",
+            "san": "Nc3",
+            "score": -33
+          },
+          {
+            "rank": 5,
+            "uci": "d1e2",
+            "san": "Qe2",
+            "score": -50
+          }
+        ],
+        "latency_ms": 170
+      }
+    },
+    {
+      "move_number": 3,
+      "command": "e4d5",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-3",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "rnbqkbnr/ppp1pppp/8/3P4/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 100,
+          "material_black": 3900,
+          "material_white": 4000,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 66,
+        "win_chance_white": 0.5548,
+        "win_chance_black": 0.4452,
+        "threat_summary": "Position is roughly balanced.",
+        "best_move_uci": "d8d5",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d8d5",
+            "san": "Qxd5",
+            "score": 66
+          },
+          {
+            "rank": 2,
+            "uci": "g8f6",
+            "san": "Nf6",
+            "score": 77
+          },
+          {
+            "rank": 3,
+            "uci": "a7a6",
+            "san": "a6",
+            "score": 131
+          },
+          {
+            "rank": 4,
+            "uci": "c7c6",
+            "san": "c6",
+            "score": 131
+          },
+          {
+            "rank": 5,
+            "uci": "g7g6",
+            "san": "g6",
+            "score": 152
+          }
+        ],
+        "latency_ms": 89
+      }
+    },
+    {
+      "move_number": 4,
+      "command": "c7c6",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-4",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "rnbqkbnr/pp2pppp/2p5/3P4/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 3",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 100,
+          "material_black": 3900,
+          "material_white": 4000,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 129,
+        "win_chance_white": 0.6059,
+        "win_chance_black": 0.3941,
+        "threat_summary": "Position is roughly balanced.",
+        "best_move_uci": "d5c6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d5c6",
+            "san": "dxc6",
+            "score": 129
+          },
+          {
+            "rank": 2,
+            "uci": "g1f3",
+            "san": "Nf3",
+            "score": 18
+          },
+          {
+            "rank": 3,
+            "uci": "d2d4",
+            "san": "d4",
+            "score": 18
+          },
+          {
+            "rank": 4,
+            "uci": "c2c4",
+            "san": "c4",
+            "score": 14
+          },
+          {
+            "rank": 5,
+            "uci": "c2c3",
+            "san": "c3",
+            "score": -6
+          }
+        ],
+        "latency_ms": 139
+      }
+    },
+    {
+      "move_number": 5,
+      "command": "d5c6",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-5",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "rnbqkbnr/pp2pppp/2P5/8/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 3",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 200,
+          "material_black": 3800,
+          "material_white": 4000,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 129,
+        "win_chance_white": 0.6059,
+        "win_chance_black": 0.3941,
+        "threat_summary": "Position is roughly balanced.",
+        "best_move_uci": "b8c6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "b8c6",
+            "san": "Nxc6",
+            "score": 129
+          },
+          {
+            "rank": 2,
+            "uci": "e7e5",
+            "san": "e5",
+            "score": 243
+          },
+          {
+            "rank": 3,
+            "uci": "b7c6",
+            "san": "bxc6",
+            "score": 271
+          },
+          {
+            "rank": 4,
+            "uci": "g8f6",
+            "san": "Nf6",
+            "score": 283
+          },
+          {
+            "rank": 5,
+            "uci": "b7b6",
+            "san": "b6",
+            "score": 283
+          }
+        ],
+        "latency_ms": 106
+      }
+    },
+    {
+      "move_number": 6,
+      "command": "h7h5",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-6",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "rnbqkbnr/pp2ppp1/2P5/7p/8/8/PPPP1PPP/RNBQKBNR w KQkq h6 0 4",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 200,
+          "material_black": 3800,
+          "material_white": 4000,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 446,
+        "win_chance_white": 0.8156,
+        "win_chance_black": 0.1844,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "c6b7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "c6b7",
+            "san": "cxb7",
+            "score": 446
+          },
+          {
+            "rank": 2,
+            "uci": "d2d4",
+            "san": "d4",
+            "score": 410
+          },
+          {
+            "rank": 3,
+            "uci": "g1f3",
+            "san": "Nf3",
+            "score": 287
+          },
+          {
+            "rank": 4,
+            "uci": "b1c3",
+            "san": "Nc3",
+            "score": 269
+          },
+          {
+            "rank": 5,
+            "uci": "f1b5",
+            "san": "Bb5",
+            "score": 236
+          }
+        ],
+        "latency_ms": 141
+      }
+    },
+    {
+      "move_number": 7,
+      "command": "c6b7",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-7",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "rnbqkbnr/pP2ppp1/8/7p/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 4",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 300,
+          "material_black": 3700,
+          "material_white": 4000,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 394,
+        "win_chance_white": 0.7881,
+        "win_chance_black": 0.2119,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "c8b7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "c8b7",
+            "san": "Bxb7",
+            "score": 394
+          },
+          {
+            "rank": 2,
+            "uci": "c8g4",
+            "san": "Bg4",
+            "score": 1394
+          },
+          {
+            "rank": 3,
+            "uci": "d8d2",
+            "san": "Qxd2+",
+            "score": 2011
+          },
+          {
+            "rank": 4,
+            "uci": "a7a6",
+            "san": "a6",
+            "score": 2337
+          },
+          {
+            "rank": 5,
+            "uci": "d8c7",
+            "san": "Qc7",
+            "score": 2450
+          }
+        ],
+        "latency_ms": 110
+      }
+    },
+    {
+      "move_number": 8,
+      "command": "c8b7",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-8",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "rn1qkbnr/pb2ppp1/8/7p/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 5",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 200,
+          "material_black": 3700,
+          "material_white": 3900,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 358,
+        "win_chance_white": 0.7673,
+        "win_chance_black": 0.2327,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "g1f3",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "g1f3",
+            "san": "Nf3",
+            "score": 358
+          },
+          {
+            "rank": 2,
+            "uci": "b1c3",
+            "san": "Nc3",
+            "score": 358
+          },
+          {
+            "rank": 3,
+            "uci": "d2d4",
+            "san": "d4",
+            "score": 355
+          },
+          {
+            "rank": 4,
+            "uci": "c2c3",
+            "san": "c3",
+            "score": 310
+          },
+          {
+            "rank": 5,
+            "uci": "f1b5",
+            "san": "Bb5+",
+            "score": 272
+          }
+        ],
+        "latency_ms": 131
+      }
+    },
+    {
+      "move_number": 9,
+      "command": "g1f3",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-9",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "rn1qkbnr/pb2ppp1/8/7p/8/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 5",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 200,
+          "material_black": 3700,
+          "material_white": 3900,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 350,
+        "win_chance_white": 0.7625,
+        "win_chance_black": 0.2375,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "g8f6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "g8f6",
+            "san": "Nf6",
+            "score": 350
+          },
+          {
+            "rank": 2,
+            "uci": "b8c6",
+            "san": "Nc6",
+            "score": 363
+          },
+          {
+            "rank": 3,
+            "uci": "g7g6",
+            "san": "g6",
+            "score": 419
+          },
+          {
+            "rank": 4,
+            "uci": "e7e6",
+            "san": "e6",
+            "score": 425
+          },
+          {
+            "rank": 5,
+            "uci": "b8d7",
+            "san": "Nd7",
+            "score": 430
+          }
+        ],
+        "latency_ms": 79
+      }
+    },
+    {
+      "move_number": 10,
+      "command": "b8d7",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-10",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "r2qkbnr/pb1nppp1/8/7p/8/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 6",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 200,
+          "material_black": 3700,
+          "material_white": 3900,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 413,
+        "win_chance_white": 0.7985,
+        "win_chance_black": 0.2015,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "f1e2",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "f1e2",
+            "san": "Be2",
+            "score": 413
+          },
+          {
+            "rank": 2,
+            "uci": "d2d4",
+            "san": "d4",
+            "score": 400
+          },
+          {
+            "rank": 3,
+            "uci": "f1b5",
+            "san": "Bb5",
+            "score": 395
+          },
+          {
+            "rank": 4,
+            "uci": "c2c3",
+            "san": "c3",
+            "score": 366
+          },
+          {
+            "rank": 5,
+            "uci": "b1c3",
+            "san": "Nc3",
+            "score": 357
+          }
+        ],
+        "latency_ms": 119
+      }
+    },
+    {
+      "move_number": 11,
+      "command": "d2d4",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-11",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "r2qkbnr/pb1nppp1/8/7p/3P4/5N2/PPP2PPP/RNBQKB1R b KQkq d3 0 6",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 200,
+          "material_black": 3700,
+          "material_white": 3900,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 388,
+        "win_chance_white": 0.7847,
+        "win_chance_black": 0.2153,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "g8f6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "g8f6",
+            "san": "Ngf6",
+            "score": 388
+          },
+          {
+            "rank": 2,
+            "uci": "d8c7",
+            "san": "Qc7",
+            "score": 412
+          },
+          {
+            "rank": 3,
+            "uci": "a8c8",
+            "san": "Rc8",
+            "score": 430
+          },
+          {
+            "rank": 4,
+            "uci": "e7e5",
+            "san": "e5",
+            "score": 435
+          },
+          {
+            "rank": 5,
+            "uci": "e7e6",
+            "san": "e6",
+            "score": 446
+          }
+        ],
+        "latency_ms": 121
+      }
+    },
+    {
+      "move_number": 12,
+      "command": "g8f6",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-12",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "r2qkb1r/pb1nppp1/5n2/7p/3P4/5N2/PPP2PPP/RNBQKB1R w KQkq - 1 7",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 200,
+          "material_black": 3700,
+          "material_white": 3900,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 410,
+        "win_chance_white": 0.7968,
+        "win_chance_black": 0.2032,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "f1e2",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "f1e2",
+            "san": "Be2",
+            "score": 410
+          },
+          {
+            "rank": 2,
+            "uci": "a2a4",
+            "san": "a4",
+            "score": 360
+          },
+          {
+            "rank": 3,
+            "uci": "f1d3",
+            "san": "Bd3",
+            "score": 342
+          },
+          {
+            "rank": 4,
+            "uci": "b1c3",
+            "san": "Nc3",
+            "score": 339
+          },
+          {
+            "rank": 5,
+            "uci": "f1b5",
+            "san": "Bb5",
+            "score": 337
+          }
+        ],
+        "latency_ms": 225
+      }
+    },
+    {
+      "move_number": 13,
+      "command": "f1d3",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-13",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "r2qkb1r/pb1nppp1/5n2/7p/3P4/3B1N2/PPP2PPP/RNBQK2R b KQkq - 2 7",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 200,
+          "material_black": 3700,
+          "material_white": 3900,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 301,
+        "win_chance_white": 0.7317,
+        "win_chance_black": 0.2683,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "e7e5",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e7e5",
+            "san": "e5",
+            "score": 301
+          },
+          {
+            "rank": 2,
+            "uci": "h5h4",
+            "san": "h4",
+            "score": 372
+          },
+          {
+            "rank": 3,
+            "uci": "a8c8",
+            "san": "Rc8",
+            "score": 425
+          },
+          {
+            "rank": 4,
+            "uci": "e7e6",
+            "san": "e6",
+            "score": 433
+          },
+          {
+            "rank": 5,
+            "uci": "g7g6",
+            "san": "g6",
+            "score": 440
+          }
+        ],
+        "latency_ms": 61
+      }
+    },
+    {
+      "move_number": 14,
+      "command": "e7e5",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-14",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "r2qkb1r/pb1n1pp1/5n2/4p2p/3P4/3B1N2/PPP2PPP/RNBQK2R w KQkq e6 0 8",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 200,
+          "material_black": 3700,
+          "material_white": 3900,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 402,
+        "win_chance_white": 0.7925,
+        "win_chance_black": 0.2075,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "d4e5",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d4e5",
+            "san": "dxe5",
+            "score": 402
+          },
+          {
+            "rank": 2,
+            "uci": "d1e2",
+            "san": "Qe2",
+            "score": 349
+          },
+          {
+            "rank": 3,
+            "uci": "f3e5",
+            "san": "Nxe5",
+            "score": 320
+          },
+          {
+            "rank": 4,
+            "uci": "b1d2",
+            "san": "Nbd2",
+            "score": 247
+          },
+          {
+            "rank": 5,
+            "uci": "d3e2",
+            "san": "Be2",
+            "score": 188
+          }
+        ],
+        "latency_ms": 160
+      }
+    },
+    {
+      "move_number": 15,
+      "command": "d4e5",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-15",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "r2qkb1r/pb1n1pp1/5n2/4P2p/8/3B1N2/PPP2PPP/RNBQK2R b KQkq - 0 8",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 300,
+          "material_black": 3600,
+          "material_white": 3900,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 287,
+        "win_chance_white": 0.7225,
+        "win_chance_black": 0.2775,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "b7f3",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "b7f3",
+            "san": "Bxf3",
+            "score": 287
+          },
+          {
+            "rank": 2,
+            "uci": "f6g4",
+            "san": "Ng4",
+            "score": 345
+          },
+          {
+            "rank": 3,
+            "uci": "d7e5",
+            "san": "Nxe5",
+            "score": 368
+          },
+          {
+            "rank": 4,
+            "uci": "f8b4",
+            "san": "Bb4+",
+            "score": 392
+          },
+          {
+            "rank": 5,
+            "uci": "f6e4",
+            "san": "Ne4",
+            "score": 494
+          }
+        ],
+        "latency_ms": 82
+      }
+    },
+    {
+      "move_number": 16,
+      "command": "d7e5",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-16",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "r2qkb1r/pb3pp1/5n2/4n2p/8/3B1N2/PPP2PPP/RNBQK2R w KQkq - 0 9",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 200,
+          "material_black": 3600,
+          "material_white": 3800,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 396,
+        "win_chance_white": 0.7892,
+        "win_chance_black": 0.2108,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "d1e2",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d1e2",
+            "san": "Qe2",
+            "score": 396
+          },
+          {
+            "rank": 2,
+            "uci": "f3e5",
+            "san": "Nxe5",
+            "score": 371
+          },
+          {
+            "rank": 3,
+            "uci": "d3b5",
+            "san": "Bb5+",
+            "score": 349
+          },
+          {
+            "rank": 4,
+            "uci": "b1c3",
+            "san": "Nc3",
+            "score": 188
+          },
+          {
+            "rank": 5,
+            "uci": "d3e2",
+            "san": "Be2",
+            "score": 55
+          }
+        ],
+        "latency_ms": 213
+      }
+    },
+    {
+      "move_number": 17,
+      "command": "d1e2",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-17",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "r2qkb1r/pb3pp1/5n2/4n2p/8/3B1N2/PPP1QPPP/RNB1K2R b KQkq - 1 9",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 200,
+          "material_black": 3600,
+          "material_white": 3800,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 298,
+        "win_chance_white": 0.7297,
+        "win_chance_black": 0.2703,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "f8b4",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "f8b4",
+            "san": "Bb4+",
+            "score": 298
+          },
+          {
+            "rank": 2,
+            "uci": "f8d6",
+            "san": "Bd6",
+            "score": 376
+          },
+          {
+            "rank": 3,
+            "uci": "f6d7",
+            "san": "Nd7",
+            "score": 509
+          },
+          {
+            "rank": 4,
+            "uci": "f8e7",
+            "san": "Be7",
+            "score": 743
+          },
+          {
+            "rank": 5,
+            "uci": "d8c7",
+            "san": "Qc7",
+            "score": 794
+          }
+        ],
+        "latency_ms": 151
+      }
+    },
+    {
+      "move_number": 18,
+      "command": "f8b4",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-18",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "r2qk2r/pb3pp1/5n2/4n2p/1b6/3B1N2/PPP1QPPP/RNB1K2R w KQkq - 2 10",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 200,
+          "material_black": 3600,
+          "material_white": 3800,
+          "side_to_move": "white",
+          "white_in_check": true
+        },
+        "is_check": true,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 372,
+        "win_chance_white": 0.7756,
+        "win_chance_black": 0.2244,
+        "threat_summary": "white king is in check.",
+        "best_move_uci": "b1d2",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "b1d2",
+            "san": "Nbd2",
+            "score": 372
+          },
+          {
+            "rank": 2,
+            "uci": "c1d2",
+            "san": "Bd2",
+            "score": 362
+          },
+          {
+            "rank": 3,
+            "uci": "b1c3",
+            "san": "Nc3",
+            "score": 328
+          },
+          {
+            "rank": 4,
+            "uci": "e1f1",
+            "san": "Kf1",
+            "score": 229
+          },
+          {
+            "rank": 5,
+            "uci": "c2c3",
+            "san": "c3",
+            "score": 67
+          }
+        ],
+        "latency_ms": 94
+      }
+    },
+    {
+      "move_number": 19,
+      "command": "c1d2",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-19",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "r2qk2r/pb3pp1/5n2/4n2p/1b6/3B1N2/PPPBQPPP/RN2K2R b KQkq - 3 10",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 200,
+          "material_black": 3600,
+          "material_white": 3800,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 352,
+        "win_chance_white": 0.7637,
+        "win_chance_black": 0.2363,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "e8g8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e8g8",
+            "san": "O-O",
+            "score": 352
+          },
+          {
+            "rank": 2,
+            "uci": "f6d7",
+            "san": "Nd7",
+            "score": 550
+          },
+          {
+            "rank": 3,
+            "uci": "b4d6",
+            "san": "Bd6",
+            "score": 593
+          },
+          {
+            "rank": 4,
+            "uci": "b4d2",
+            "san": "Bxd2+",
+            "score": 611
+          },
+          {
+            "rank": 5,
+            "uci": "d8d5",
+            "san": "Qd5",
+            "score": 857
+          }
+        ],
+        "latency_ms": 163
+      }
+    },
+    {
+      "move_number": 20,
+      "command": "b4d2",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-20",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "r2qk2r/pb3pp1/5n2/4n2p/8/3B1N2/PPPbQPPP/RN2K2R w KQkq - 0 11",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": -130,
+          "material_black": 3600,
+          "material_white": 3470,
+          "side_to_move": "white",
+          "white_in_check": true
+        },
+        "is_check": true,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 657,
+        "win_chance_white": 0.8993,
+        "win_chance_black": 0.1007,
+        "threat_summary": "white king is in check.",
+        "best_move_uci": "b1d2",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "b1d2",
+            "san": "Nbxd2",
+            "score": 657
+          },
+          {
+            "rank": 2,
+            "uci": "e1d2",
+            "san": "Kxd2",
+            "score": 115
+          },
+          {
+            "rank": 3,
+            "uci": "f3d2",
+            "san": "Nfxd2",
+            "score": -36
+          },
+          {
+            "rank": 4,
+            "uci": "e2d2",
+            "san": "Qxd2",
+            "score": -362
+          },
+          {
+            "rank": 5,
+            "uci": "e1f1",
+            "san": "Kf1",
+            "score": -554
+          }
+        ],
+        "latency_ms": 95
+      }
+    },
+    {
+      "move_number": 21,
+      "command": "b1d2",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-21",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "r2qk2r/pb3pp1/5n2/4n2p/8/3B1N2/PPPNQPPP/R3K2R b KQkq - 0 11",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 200,
+          "material_black": 3270,
+          "material_white": 3470,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 712,
+        "win_chance_white": 0.9148,
+        "win_chance_black": 0.0852,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "f6d7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "f6d7",
+            "san": "Nd7",
+            "score": 712
+          },
+          {
+            "rank": 2,
+            "uci": "e8g8",
+            "san": "O-O",
+            "score": 871
+          },
+          {
+            "rank": 3,
+            "uci": "f6g4",
+            "san": "Ng4",
+            "score": 881
+          },
+          {
+            "rank": 4,
+            "uci": "d8c7",
+            "san": "Qc7",
+            "score": 945
+          },
+          {
+            "rank": 5,
+            "uci": "d8a5",
+            "san": "Qa5",
+            "score": 969
+          }
+        ],
+        "latency_ms": 103
+      }
+    },
+    {
+      "move_number": 22,
+      "command": "d8c7",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-22",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "r3k2r/pbq2pp1/5n2/4n2p/8/3B1N2/PPPNQPPP/R3K2R w KQkq - 1 12",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 200,
+          "material_black": 3270,
+          "material_white": 3470,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 969,
+        "win_chance_white": 0.9619,
+        "win_chance_black": 0.0381,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "e2e5",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e2e5",
+            "san": "Qxe5+",
+            "score": 969
+          },
+          {
+            "rank": 2,
+            "uci": "d3b5",
+            "san": "Bb5+",
+            "score": 944
+          },
+          {
+            "rank": 3,
+            "uci": "f3e5",
+            "san": "Nxe5",
+            "score": 880
+          },
+          {
+            "rank": 4,
+            "uci": "e1c1",
+            "san": "O-O-O",
+            "score": 880
+          },
+          {
+            "rank": 5,
+            "uci": "e1g1",
+            "san": "O-O",
+            "score": 831
+          }
+        ],
+        "latency_ms": 60
+      }
+    },
+    {
+      "move_number": 23,
+      "command": "f3e5",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-23",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "r3k2r/pbq2pp1/5n2/4N2p/8/3B4/PPPNQPPP/R3K2R b KQkq - 0 12",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 2950,
+          "material_white": 3470,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 696,
+        "win_chance_white": 0.9105,
+        "win_chance_black": 0.0895,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "e8f8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e8f8",
+            "san": "Kf8",
+            "score": 696
+          },
+          {
+            "rank": 2,
+            "uci": "e8g8",
+            "san": "O-O",
+            "score": 780
+          },
+          {
+            "rank": 3,
+            "uci": "e8c8",
+            "san": "O-O-O",
+            "score": 892
+          },
+          {
+            "rank": 4,
+            "uci": "h5h4",
+            "san": "h4",
+            "score": 950
+          },
+          {
+            "rank": 5,
+            "uci": "a8c8",
+            "san": "Rc8",
+            "score": 958
+          }
+        ],
+        "latency_ms": 79
+      }
+    },
+    {
+      "move_number": 24,
+      "command": "e8g8",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-24",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "r4rk1/pbq2pp1/5n2/4N2p/8/3B4/PPPNQPPP/R3K2R w KQ - 1 13",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 2950,
+          "material_white": 3470,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 804,
+        "win_chance_white": 0.9358,
+        "win_chance_black": 0.0642,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "f2f4",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "f2f4",
+            "san": "f4",
+            "score": 804
+          },
+          {
+            "rank": 2,
+            "uci": "d2c4",
+            "san": "Ndc4",
+            "score": 780
+          },
+          {
+            "rank": 3,
+            "uci": "e1c1",
+            "san": "O-O-O",
+            "score": 761
+          },
+          {
+            "rank": 4,
+            "uci": "e5c4",
+            "san": "Nec4",
+            "score": 537
+          },
+          {
+            "rank": 5,
+            "uci": "e1g1",
+            "san": "O-O",
+            "score": 504
+          }
+        ],
+        "latency_ms": 255
+      }
+    },
+    {
+      "move_number": 25,
+      "command": "e1c1",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-25",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "r4rk1/pbq2pp1/5n2/4N2p/8/3B4/PPPNQPPP/2KR3R b - - 2 13",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 2950,
+          "material_white": 3470,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 808,
+        "win_chance_white": 0.9366,
+        "win_chance_black": 0.0634,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "b7d5",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "b7d5",
+            "san": "Bd5",
+            "score": 808
+          },
+          {
+            "rank": 2,
+            "uci": "a7a5",
+            "san": "a5",
+            "score": 871
+          },
+          {
+            "rank": 3,
+            "uci": "a8b8",
+            "san": "Rab8",
+            "score": 872
+          },
+          {
+            "rank": 4,
+            "uci": "f8e8",
+            "san": "Rfe8",
+            "score": 888
+          },
+          {
+            "rank": 5,
+            "uci": "a8e8",
+            "san": "Rae8",
+            "score": 957
+          }
+        ],
+        "latency_ms": 108
+      }
+    },
+    {
+      "move_number": 26,
+      "command": "a8d8",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-26",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "3r1rk1/pbq2pp1/5n2/4N2p/8/3B4/PPPNQPPP/2KR3R w - - 3 14",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 2950,
+          "material_white": 3470,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 998,
+        "win_chance_white": 0.9653,
+        "win_chance_black": 0.0347,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "h1e1",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h1e1",
+            "san": "Rhe1",
+            "score": 998
+          },
+          {
+            "rank": 2,
+            "uci": "d3c4",
+            "san": "Bc4",
+            "score": 980
+          },
+          {
+            "rank": 3,
+            "uci": "f2f4",
+            "san": "f4",
+            "score": 956
+          },
+          {
+            "rank": 4,
+            "uci": "d2c4",
+            "san": "Ndc4",
+            "score": 845
+          },
+          {
+            "rank": 5,
+            "uci": "f2f3",
+            "san": "f3",
+            "score": 749
+          }
+        ],
+        "latency_ms": 57
+      }
+    },
+    {
+      "move_number": 27,
+      "command": "d1e1",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-27",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "3r1rk1/pbq2pp1/5n2/4N2p/8/3B4/PPPNQPPP/2K1R2R b - - 4 14",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 2950,
+          "material_white": 3470,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 724,
+        "win_chance_white": 0.9178,
+        "win_chance_black": 0.0822,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "b7d5",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "b7d5",
+            "san": "Bd5",
+            "score": 724
+          },
+          {
+            "rank": 2,
+            "uci": "f8e8",
+            "san": "Rfe8",
+            "score": 735
+          },
+          {
+            "rank": 3,
+            "uci": "f6g4",
+            "san": "Ng4",
+            "score": 809
+          },
+          {
+            "rank": 4,
+            "uci": "c7a5",
+            "san": "Qa5",
+            "score": 918
+          },
+          {
+            "rank": 5,
+            "uci": "d8b8",
+            "san": "Rb8",
+            "score": 920
+          }
+        ],
+        "latency_ms": 111
+      }
+    },
+    {
+      "move_number": 28,
+      "command": "g7g6",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-28",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "3r1rk1/pbq2p2/5np1/4N2p/8/3B4/PPPNQPPP/2K1R2R w - - 0 15",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 2950,
+          "material_white": 3470,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 956,
+        "win_chance_white": 0.9603,
+        "win_chance_black": 0.0397,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "d3c4",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d3c4",
+            "san": "Bc4",
+            "score": 956
+          },
+          {
+            "rank": 2,
+            "uci": "h1f1",
+            "san": "Rhf1",
+            "score": 938
+          },
+          {
+            "rank": 3,
+            "uci": "d2b3",
+            "san": "Nb3",
+            "score": 868
+          },
+          {
+            "rank": 4,
+            "uci": "d2c4",
+            "san": "Ndc4",
+            "score": 833
+          },
+          {
+            "rank": 5,
+            "uci": "f2f4",
+            "san": "f4",
+            "score": 827
+          }
+        ],
+        "latency_ms": 192
+      }
+    },
+    {
+      "move_number": 29,
+      "command": "e2e3",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-29",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "3r1rk1/pbq2p2/5np1/4N2p/8/3BQ3/PPPN1PPP/2K1R2R b - - 1 15",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 2950,
+          "material_white": 3470,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 671,
+        "win_chance_white": 0.9035,
+        "win_chance_black": 0.0965,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "f6d5",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "f6d5",
+            "san": "Nd5",
+            "score": 671
+          },
+          {
+            "rank": 2,
+            "uci": "f8e8",
+            "san": "Rfe8",
+            "score": 689
+          },
+          {
+            "rank": 3,
+            "uci": "f6g4",
+            "san": "Ng4",
+            "score": 831
+          },
+          {
+            "rank": 4,
+            "uci": "d8d3",
+            "san": "Rxd3",
+            "score": 831
+          },
+          {
+            "rank": 5,
+            "uci": "d8e8",
+            "san": "Rde8",
+            "score": 912
+          }
+        ],
+        "latency_ms": 123
+      }
+    },
+    {
+      "move_number": 30,
+      "command": "f6g4",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-30",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "3r1rk1/pbq2p2/6p1/4N2p/6n1/3BQ3/PPPN1PPP/2K1R2R w - - 2 16",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 2950,
+          "material_white": 3470,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 812,
+        "win_chance_white": 0.9374,
+        "win_chance_black": 0.0626,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "e3f4",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e3f4",
+            "san": "Qf4",
+            "score": 812
+          },
+          {
+            "rank": 2,
+            "uci": "e3g3",
+            "san": "Qg3",
+            "score": 787
+          },
+          {
+            "rank": 3,
+            "uci": "e5g4",
+            "san": "Nxg4",
+            "score": 759
+          },
+          {
+            "rank": 4,
+            "uci": "e3e2",
+            "san": "Qe2",
+            "score": 729
+          },
+          {
+            "rank": 5,
+            "uci": "e3g5",
+            "san": "Qg5",
+            "score": 702
+          }
+        ],
+        "latency_ms": 284
+      }
+    },
+    {
+      "move_number": 31,
+      "command": "e5g4",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-31",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "3r1rk1/pbq2p2/6p1/7p/6N1/3BQ3/PPPN1PPP/2K1R2R b - - 0 16",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 840,
+          "material_black": 2630,
+          "material_white": 3470,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 840,
+        "win_chance_white": 0.9427,
+        "win_chance_black": 0.0573,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "h5g4",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h5g4",
+            "san": "hxg4",
+            "score": 840
+          },
+          {
+            "rank": 2,
+            "uci": "d8d6",
+            "san": "Rd6",
+            "score": 1165
+          },
+          {
+            "rank": 3,
+            "uci": "c7b6",
+            "san": "Qb6",
+            "score": 1172
+          },
+          {
+            "rank": 4,
+            "uci": "c7a5",
+            "san": "Qa5",
+            "score": 1210
+          },
+          {
+            "rank": 5,
+            "uci": "c7c6",
+            "san": "Qc6",
+            "score": 1294
+          }
+        ],
+        "latency_ms": 469
+      }
+    },
+    {
+      "move_number": 32,
+      "command": "h5g4",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-32",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "3r1rk1/pbq2p2/6p1/8/6p1/3BQ3/PPPN1PPP/2K1R2R w - - 0 17",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 2630,
+          "material_white": 3150,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 970,
+        "win_chance_white": 0.9621,
+        "win_chance_black": 0.0379,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "h1g1",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h1g1",
+            "san": "Rhg1",
+            "score": 970
+          },
+          {
+            "rank": 2,
+            "uci": "d2b3",
+            "san": "Nb3",
+            "score": 900
+          },
+          {
+            "rank": 3,
+            "uci": "h2h4",
+            "san": "h4",
+            "score": 861
+          },
+          {
+            "rank": 4,
+            "uci": "e3g3",
+            "san": "Qg3",
+            "score": 828
+          },
+          {
+            "rank": 5,
+            "uci": "d2e4",
+            "san": "Ne4",
+            "score": 822
+          }
+        ],
+        "latency_ms": 201
+      }
+    },
+    {
+      "move_number": 33,
+      "command": "h2h3",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-33",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "3r1rk1/pbq2p2/6p1/8/6p1/3BQ2P/PPPN1PP1/2K1R2R b - - 0 17",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 2630,
+          "material_white": 3150,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 724,
+        "win_chance_white": 0.9178,
+        "win_chance_black": 0.0822,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "f8e8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "f8e8",
+            "san": "Rfe8",
+            "score": 724
+          },
+          {
+            "rank": 2,
+            "uci": "b7g2",
+            "san": "Bxg2",
+            "score": 765
+          },
+          {
+            "rank": 3,
+            "uci": "d8d3",
+            "san": "Rxd3",
+            "score": 787
+          },
+          {
+            "rank": 4,
+            "uci": "b7c6",
+            "san": "Bc6",
+            "score": 910
+          },
+          {
+            "rank": 5,
+            "uci": "d8c8",
+            "san": "Rc8",
+            "score": 914
+          }
+        ],
+        "latency_ms": 191
+      }
+    },
+    {
+      "move_number": 34,
+      "command": "f8e8",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-34",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "3rr1k1/pbq2p2/6p1/8/6p1/3BQ2P/PPPN1PP1/2K1R2R w - - 1 18",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 2630,
+          "material_white": 3150,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 787,
+        "win_chance_white": 0.9323,
+        "win_chance_black": 0.0677,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "e3e8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e3e8",
+            "san": "Qxe8+",
+            "score": 787
+          },
+          {
+            "rank": 2,
+            "uci": "e3h6",
+            "san": "Qh6",
+            "score": 770
+          },
+          {
+            "rank": 3,
+            "uci": "e3g3",
+            "san": "Qg3",
+            "score": 744
+          },
+          {
+            "rank": 4,
+            "uci": "d3e4",
+            "san": "Be4",
+            "score": 704
+          },
+          {
+            "rank": 5,
+            "uci": "e3g5",
+            "san": "Qg5",
+            "score": 588
+          }
+        ],
+        "latency_ms": 154
+      }
+    },
+    {
+      "move_number": 35,
+      "command": "e3h6",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-35",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "3rr1k1/pbq2p2/6pQ/8/6p1/3B3P/PPPN1PP1/2K1R2R b - - 2 18",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 2630,
+          "material_white": 3150,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 559,
+        "win_chance_white": 0.8657,
+        "win_chance_black": 0.1343,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "b7g2",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "b7g2",
+            "san": "Bxg2",
+            "score": 559
+          },
+          {
+            "rank": 2,
+            "uci": "g4g3",
+            "san": "g3",
+            "score": 780
+          },
+          {
+            "rank": 3,
+            "uci": "e8e1",
+            "san": "Rxe1+",
+            "score": 869
+          },
+          {
+            "rank": 4,
+            "uci": "e8e5",
+            "san": "Re5",
+            "score": 964
+          },
+          {
+            "rank": 5,
+            "uci": "e8e6",
+            "san": "Re6",
+            "score": 973
+          }
+        ],
+        "latency_ms": 144
+      }
+    },
+    {
+      "move_number": 36,
+      "command": "b7g2",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-36",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "3rr1k1/p1q2p2/6pQ/8/6p1/3B3P/PPPN1Pb1/2K1R2R w - - 0 19",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 420,
+          "material_black": 2630,
+          "material_white": 3050,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 1055,
+        "win_chance_white": 0.9712,
+        "win_chance_black": 0.0288,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "h3g4",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h3g4",
+            "san": "hxg4",
+            "score": 1055
+          },
+          {
+            "rank": 2,
+            "uci": "d3c4",
+            "san": "Bc4",
+            "score": 700
+          },
+          {
+            "rank": 3,
+            "uci": "d2e4",
+            "san": "Ne4",
+            "score": 625
+          },
+          {
+            "rank": 4,
+            "uci": "d3g6",
+            "san": "Bxg6",
+            "score": 502
+          },
+          {
+            "rank": 5,
+            "uci": "c1b1",
+            "san": "Kb1",
+            "score": 371
+          }
+        ],
+        "latency_ms": 445
+      }
+    },
+    {
+      "move_number": 37,
+      "command": "h3g4",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-37",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "3rr1k1/p1q2p2/6pQ/8/6P1/3B4/PPPN1Pb1/2K1R2R b - - 0 19",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 2530,
+          "material_white": 3050,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 701,
+        "win_chance_white": 0.9119,
+        "win_chance_black": 0.0881,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "g2h1",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "g2h1",
+            "san": "Bxh1",
+            "score": 701
+          },
+          {
+            "rank": 2,
+            "uci": "e8e1",
+            "san": "Rxe1+",
+            "score": 846
+          },
+          {
+            "rank": 3,
+            "uci": "g2h3",
+            "san": "Bh3",
+            "score": 1428
+          },
+          {
+            "rank": 4,
+            "uci": "c7c2",
+            "san": "Qxc2+",
+            "score": 1577
+          },
+          {
+            "rank": 5,
+            "uci": "c7h2",
+            "san": "Qh2",
+            "score": 2132
+          }
+        ],
+        "latency_ms": 73
+      }
+    },
+    {
+      "move_number": 38,
+      "command": "g2h1",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-38",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "3rr1k1/p1q2p2/6pQ/8/6P1/3B4/PPPN1P2/2K1R2b w - - 0 20",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 20,
+          "material_black": 2530,
+          "material_white": 2550,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 778,
+        "win_chance_white": 0.9304,
+        "win_chance_black": 0.0696,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "e1h1",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e1h1",
+            "san": "Rxh1",
+            "score": 778
+          },
+          {
+            "rank": 2,
+            "uci": "e1e8",
+            "san": "Rxe8+",
+            "score": 472
+          },
+          {
+            "rank": 3,
+            "uci": "e1e3",
+            "san": "Re3",
+            "score": 7
+          },
+          {
+            "rank": 4,
+            "uci": "e1g1",
+            "san": "Rg1",
+            "score": -64
+          },
+          {
+            "rank": 5,
+            "uci": "e1d1",
+            "san": "Rd1",
+            "score": -81
+          }
+        ],
+        "latency_ms": 236
+      }
+    },
+    {
+      "move_number": 39,
+      "command": "e1h1",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-39",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "3rr1k1/p1q2p2/6pQ/8/6P1/3B4/PPPN1P2/2K4R b - - 0 20",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 350,
+          "material_black": 2200,
+          "material_white": 2550,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 855,
+        "win_chance_white": 0.9453,
+        "win_chance_black": 0.0547,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "c7e5",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "c7e5",
+            "san": "Qe5",
+            "score": 855
+          },
+          {
+            "rank": 2,
+            "uci": "e8e1",
+            "san": "Re1+",
+            "score": 1460
+          },
+          {
+            "rank": 3,
+            "uci": "c7h2",
+            "san": "Qh2",
+            "score": 2152
+          },
+          {
+            "rank": 4,
+            "uci": "c7c3",
+            "san": "Qc3",
+            "score": 2964
+          },
+          {
+            "rank": 5,
+            "uci": "c7c2",
+            "san": "Qxc2+",
+            "score": 99991
+          }
+        ],
+        "latency_ms": 80
+      }
+    },
+    {
+      "move_number": 40,
+      "command": "c7e5",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-40",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "3rr1k1/p4p2/6pQ/4q3/6P1/3B4/PPPN1P2/2K4R w - - 1 21",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 350,
+          "material_black": 2200,
+          "material_white": 2550,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 1008,
+        "win_chance_white": 0.9664,
+        "win_chance_black": 0.0336,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "d2e4",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d2e4",
+            "san": "Ne4",
+            "score": 1008
+          },
+          {
+            "rank": 2,
+            "uci": "d2c4",
+            "san": "Nc4",
+            "score": 861
+          },
+          {
+            "rank": 3,
+            "uci": "d2f3",
+            "san": "Nf3",
+            "score": 844
+          },
+          {
+            "rank": 4,
+            "uci": "h6h7",
+            "san": "Qh7+",
+            "score": 835
+          },
+          {
+            "rank": 5,
+            "uci": "d2b3",
+            "san": "Nb3",
+            "score": 750
+          }
+        ],
+        "latency_ms": 98
+      }
+    },
+    {
+      "move_number": 41,
+      "command": "d2e4",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-41",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "3rr1k1/p4p2/6pQ/4q3/4N1P1/3B4/PPP2P2/2K4R b - - 2 21",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 350,
+          "material_black": 2200,
+          "material_white": 2550,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 868,
+        "win_chance_white": 0.9475,
+        "win_chance_black": 0.0525,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "d8d4",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d8d4",
+            "san": "Rd4",
+            "score": 868
+          },
+          {
+            "rank": 2,
+            "uci": "d8d3",
+            "san": "Rxd3",
+            "score": 925
+          },
+          {
+            "rank": 3,
+            "uci": "e5d4",
+            "san": "Qd4",
+            "score": 950
+          },
+          {
+            "rank": 4,
+            "uci": "e8e6",
+            "san": "Re6",
+            "score": 981
+          },
+          {
+            "rank": 5,
+            "uci": "d8b8",
+            "san": "Rb8",
+            "score": 1063
+          }
+        ],
+        "latency_ms": 280
+      }
+    },
+    {
+      "move_number": 42,
+      "command": "d8d3",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-42",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "4r1k1/p4p2/6pQ/4q3/4N1P1/3r4/PPP2P2/2K4R w - - 0 22",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 20,
+          "material_black": 2200,
+          "material_white": 2220,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 938,
+        "win_chance_white": 0.958,
+        "win_chance_black": 0.042,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "h6h7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h6h7",
+            "san": "Qh7+",
+            "score": 938
+          },
+          {
+            "rank": 2,
+            "uci": "c2d3",
+            "san": "cxd3",
+            "score": 906
+          },
+          {
+            "rank": 3,
+            "uci": "f2f4",
+            "san": "f4",
+            "score": 671
+          },
+          {
+            "rank": 4,
+            "uci": "g4g5",
+            "san": "g5",
+            "score": 302
+          },
+          {
+            "rank": 5,
+            "uci": "e4f6",
+            "san": "Nf6+",
+            "score": 273
+          }
+        ],
+        "latency_ms": 210
+      }
+    },
+    {
+      "move_number": 43,
+      "command": "c2d3",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-43",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "4r1k1/p4p2/6pQ/4q3/4N1P1/3P4/PP3P2/2K4R b - - 0 22",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 1700,
+          "material_white": 2220,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 968,
+        "win_chance_white": 0.9618,
+        "win_chance_black": 0.0382,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "e5g7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e5g7",
+            "san": "Qg7",
+            "score": 968
+          },
+          {
+            "rank": 2,
+            "uci": "e5d4",
+            "san": "Qd4",
+            "score": 997
+          },
+          {
+            "rank": 3,
+            "uci": "e8e6",
+            "san": "Re6",
+            "score": 1007
+          },
+          {
+            "rank": 4,
+            "uci": "e8e7",
+            "san": "Re7",
+            "score": 1010
+          },
+          {
+            "rank": 5,
+            "uci": "e8c8",
+            "san": "Rc8+",
+            "score": 1072
+          }
+        ],
+        "latency_ms": 320
+      }
+    },
+    {
+      "move_number": 44,
+      "command": "e8e6",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-44",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "6k1/p4p2/4r1pQ/4q3/4N1P1/3P4/PP3P2/2K4R w - - 1 23",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 1700,
+          "material_white": 2220,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 1163,
+        "win_chance_white": 0.9797,
+        "win_chance_black": 0.0203,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "g4g5",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "g4g5",
+            "san": "g5",
+            "score": 1163
+          },
+          {
+            "rank": 2,
+            "uci": "c1b1",
+            "san": "Kb1",
+            "score": 1051
+          },
+          {
+            "rank": 3,
+            "uci": "f2f3",
+            "san": "f3",
+            "score": 977
+          },
+          {
+            "rank": 4,
+            "uci": "h6h7",
+            "san": "Qh7+",
+            "score": 947
+          },
+          {
+            "rank": 5,
+            "uci": "c1c2",
+            "san": "Kc2",
+            "score": 916
+          }
+        ],
+        "latency_ms": 340
+      }
+    },
+    {
+      "move_number": 45,
+      "command": "g4g5",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-45",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "6k1/p4p2/4r1pQ/4q1P1/4N3/3P4/PP3P2/2K4R b - - 0 23",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 1700,
+          "material_white": 2220,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 1171,
+        "win_chance_white": 0.9802,
+        "win_chance_black": 0.0198,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "e5g7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e5g7",
+            "san": "Qg7",
+            "score": 1171
+          },
+          {
+            "rank": 2,
+            "uci": "e6c6",
+            "san": "Rc6+",
+            "score": 1241
+          },
+          {
+            "rank": 3,
+            "uci": "f7f5",
+            "san": "f5",
+            "score": 1701
+          },
+          {
+            "rank": 4,
+            "uci": "e5c7",
+            "san": "Qc7+",
+            "score": 99992
+          },
+          {
+            "rank": 5,
+            "uci": "e5h2",
+            "san": "Qh2",
+            "score": 99993
+          }
+        ],
+        "latency_ms": 143
+      }
+    },
+    {
+      "move_number": 46,
+      "command": "e5g7",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-46",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "6k1/p4pq1/4r1pQ/6P1/4N3/3P4/PP3P2/2K4R w - - 1 24",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 1700,
+          "material_white": 2220,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 1194,
+        "win_chance_white": 0.9817,
+        "win_chance_black": 0.0183,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "h6h4",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h6h4",
+            "san": "Qh4",
+            "score": 1194
+          },
+          {
+            "rank": 2,
+            "uci": "h6h2",
+            "san": "Qh2",
+            "score": 1153
+          },
+          {
+            "rank": 3,
+            "uci": "h6g7",
+            "san": "Qxg7+",
+            "score": 1026
+          },
+          {
+            "rank": 4,
+            "uci": "e4f6",
+            "san": "Nf6+",
+            "score": 1012
+          },
+          {
+            "rank": 5,
+            "uci": "c1b1",
+            "san": "Kb1",
+            "score": 967
+          }
+        ],
+        "latency_ms": 231
+      }
+    },
+    {
+      "move_number": 47,
+      "command": "h6h4",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-47",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "6k1/p4pq1/4r1p1/6P1/4N2Q/3P4/PP3P2/2K4R b - - 2 24",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 1700,
+          "material_white": 2220,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 1122,
+        "win_chance_white": 0.9768,
+        "win_chance_black": 0.0232,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "f7f6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "f7f6",
+            "san": "f6",
+            "score": 1122
+          },
+          {
+            "rank": 2,
+            "uci": "e6e4",
+            "san": "Rxe4",
+            "score": 1192
+          },
+          {
+            "rank": 3,
+            "uci": "e6c6",
+            "san": "Rc6+",
+            "score": 1218
+          },
+          {
+            "rank": 4,
+            "uci": "f7f5",
+            "san": "f5",
+            "score": 1374
+          },
+          {
+            "rank": 5,
+            "uci": "e6e5",
+            "san": "Re5",
+            "score": 1676
+          }
+        ],
+        "latency_ms": 460
+      }
+    },
+    {
+      "move_number": 48,
+      "command": "g8f8",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-48",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "5k2/p4pq1/4r1p1/6P1/4N2Q/3P4/PP3P2/2K4R w - - 3 25",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 1700,
+          "material_white": 2220,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 1532,
+        "win_chance_white": 0.994,
+        "win_chance_black": 0.006,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "e4f6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e4f6",
+            "san": "Nf6",
+            "score": 1532
+          },
+          {
+            "rank": 2,
+            "uci": "e4c3",
+            "san": "Nc3",
+            "score": 1038
+          },
+          {
+            "rank": 3,
+            "uci": "h4h2",
+            "san": "Qh2",
+            "score": 1032
+          },
+          {
+            "rank": 4,
+            "uci": "h4h8",
+            "san": "Qh8+",
+            "score": 1022
+          },
+          {
+            "rank": 5,
+            "uci": "a2a4",
+            "san": "a4",
+            "score": 1011
+          }
+        ],
+        "latency_ms": 261
+      }
+    },
+    {
+      "move_number": 49,
+      "command": "e4f6",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-49",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "5k2/p4pq1/4rNp1/6P1/7Q/3P4/PP3P2/2K4R b - - 4 25",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 1700,
+          "material_white": 2220,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 2054,
+        "win_chance_white": 0.9989,
+        "win_chance_black": 0.0011,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "g7f6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "g7f6",
+            "san": "Qxf6",
+            "score": 2054
+          },
+          {
+            "rank": 2,
+            "uci": "e6c6",
+            "san": "Rc6+",
+            "score": 2054
+          },
+          {
+            "rank": 3,
+            "uci": "g7g8",
+            "san": "Qg8",
+            "score": 2087
+          },
+          {
+            "rank": 4,
+            "uci": "g7h6",
+            "san": "Qh6",
+            "score": 2113
+          },
+          {
+            "rank": 5,
+            "uci": "g7h8",
+            "san": "Qh8",
+            "score": 2284
+          }
+        ],
+        "latency_ms": 513
+      }
+    },
+    {
+      "move_number": 50,
+      "command": "g7g8",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-50",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "5kq1/p4p2/4rNp1/6P1/7Q/3P4/PP3P2/2K4R w - - 5 26",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 1700,
+          "material_white": 2220,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 2301,
+        "win_chance_white": 0.9995,
+        "win_chance_black": 0.0005,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "h4d4",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h4d4",
+            "san": "Qd4",
+            "score": 2301
+          },
+          {
+            "rank": 2,
+            "uci": "f6g8",
+            "san": "Nxg8",
+            "score": 2137
+          },
+          {
+            "rank": 3,
+            "uci": "h4b4",
+            "san": "Qb4+",
+            "score": 2027
+          },
+          {
+            "rank": 4,
+            "uci": "c1d2",
+            "san": "Kd2",
+            "score": 2026
+          },
+          {
+            "rank": 5,
+            "uci": "c1b1",
+            "san": "Kb1",
+            "score": 1596
+          }
+        ],
+        "latency_ms": 72
+      }
+    },
+    {
+      "move_number": 51,
+      "command": "h4d4",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-51",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "5kq1/p4p2/4rNp1/6P1/3Q4/3P4/PP3P2/2K4R b - - 6 26",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 1700,
+          "material_white": 2220,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 99994,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "e6c6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "e6c6",
+            "san": "Rc6+",
+            "score": 99994
+          },
+          {
+            "rank": 2,
+            "uci": "f8g7",
+            "san": "Kg7",
+            "score": 99995
+          },
+          {
+            "rank": 3,
+            "uci": "e6d6",
+            "san": "Rd6",
+            "score": 99996
+          },
+          {
+            "rank": 4,
+            "uci": "e6e1",
+            "san": "Re1+",
+            "score": 99996
+          },
+          {
+            "rank": 5,
+            "uci": "f8e7",
+            "san": "Ke7",
+            "score": 99996
+          }
+        ],
+        "latency_ms": 55
+      }
+    },
+    {
+      "move_number": 52,
+      "command": "e6d6",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-52",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "5kq1/p4p2/3r1Np1/6P1/3Q4/3P4/PP3P2/2K4R w - - 7 27",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 520,
+          "material_black": 1700,
+          "material_white": 2220,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 99996,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "d4d6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d4d6",
+            "san": "Qxd6+",
+            "score": 99996
+          },
+          {
+            "rank": 2,
+            "uci": "d4b4",
+            "san": "Qb4",
+            "score": 2060
+          },
+          {
+            "rank": 3,
+            "uci": "d4a7",
+            "san": "Qxa7",
+            "score": 1497
+          },
+          {
+            "rank": 4,
+            "uci": "d4e3",
+            "san": "Qe3",
+            "score": 1478
+          },
+          {
+            "rank": 5,
+            "uci": "f6h7",
+            "san": "Nh7+",
+            "score": 1343
+          }
+        ],
+        "latency_ms": 94
+      }
+    },
+    {
+      "move_number": 53,
+      "command": "d4d6",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-53",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "5kq1/p4p2/3Q1Np1/6P1/8/3P4/PP3P2/2K4R b - - 0 27",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": true,
+          "material_balance_white_minus_black": 1020,
+          "material_black": 1200,
+          "material_white": 2220,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": true,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 99997,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "black king is in check.",
+        "best_move_uci": "f8g7",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "f8g7",
+            "san": "Kg7",
+            "score": 99997
+          }
+        ],
+        "latency_ms": 9
+      }
+    },
+    {
+      "move_number": 54,
+      "command": "f8g7",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-54",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "6q1/p4pk1/3Q1Np1/6P1/8/3P4/PP3P2/2K4R w - - 1 28",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 1020,
+          "material_black": 1200,
+          "material_white": 2220,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 99997,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "f6e8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "f6e8",
+            "san": "Ne8+",
+            "score": 99997
+          },
+          {
+            "rank": 2,
+            "uci": "c1b1",
+            "san": "Kb1",
+            "score": 99996
+          },
+          {
+            "rank": 3,
+            "uci": "c1d2",
+            "san": "Kd2",
+            "score": 99996
+          },
+          {
+            "rank": 4,
+            "uci": "f6h5",
+            "san": "Nh5+",
+            "score": 99996
+          },
+          {
+            "rank": 5,
+            "uci": "f6g8",
+            "san": "Nxg8",
+            "score": 99994
+          }
+        ],
+        "latency_ms": 28
+      }
+    },
+    {
+      "move_number": 55,
+      "command": "f6g8",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-55",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "6N1/p4pk1/3Q2p1/6P1/8/3P4/PP3P2/2K4R b - - 0 28",
+        "evaluated_for_color": "black",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 1920,
+          "material_black": 300,
+          "material_white": 2220,
+          "side_to_move": "black",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 99996,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "a7a5",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "a7a5",
+            "san": "a5",
+            "score": 99996
+          },
+          {
+            "rank": 2,
+            "uci": "a7a6",
+            "san": "a6",
+            "score": 99998
+          },
+          {
+            "rank": 3,
+            "uci": "f7f6",
+            "san": "f6",
+            "score": 99998
+          },
+          {
+            "rank": 4,
+            "uci": "f7f5",
+            "san": "f5",
+            "score": 99998
+          },
+          {
+            "rank": 5,
+            "uci": "g7g8",
+            "san": "Kxg8",
+            "score": 99998
+          }
+        ],
+        "latency_ms": 14
+      }
+    },
+    {
+      "move_number": 56,
+      "command": "f7f5",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-56",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "6N1/p5k1/3Q2p1/5pP1/8/3P4/PP3P2/2K4R w - f6 0 29",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 1920,
+          "material_black": 300,
+          "material_white": 2220,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 99998,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "d6f6",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "d6f6",
+            "san": "Qf6+",
+            "score": 99998
+          },
+          {
+            "rank": 2,
+            "uci": "g5f6",
+            "san": "gxf6+",
+            "score": 99997
+          },
+          {
+            "rank": 3,
+            "uci": "d6e6",
+            "san": "Qe6",
+            "score": 99997
+          },
+          {
+            "rank": 4,
+            "uci": "d6d4",
+            "san": "Qd4+",
+            "score": 99997
+          },
+          {
+            "rank": 5,
+            "uci": "d6e5",
+            "san": "Qe5+",
+            "score": 99997
+          }
+        ],
+        "latency_ms": 24
+      }
+    },
+    {
+      "move_number": 58,
+      "command": "g7g8",
+      "analysis": {
+        "request_id": "game-1789115126818115000-162094f6-move-58",
+        "status": "ok",
+        "source": "fairy-stockfish",
+        "evaluation_source": "fairy-stockfish",
+        "fen": "6k1/p7/5Qp1/5pP1/8/3P4/PP3P2/2K4R w - - 0 30",
+        "evaluated_for_color": "white",
+        "health_summary": {
+          "black_in_check": false,
+          "material_balance_white_minus_black": 1600,
+          "material_black": 300,
+          "material_white": 1900,
+          "side_to_move": "white",
+          "white_in_check": false
+        },
+        "is_check": false,
+        "is_checkmate": false,
+        "is_stalemate": false,
+        "eval_cp_white": 99999,
+        "win_chance_white": 1,
+        "win_chance_black": 0,
+        "threat_summary": "White has the initiative.",
+        "best_move_uci": "h1h8",
+        "suggested_moves": [
+          {
+            "rank": 1,
+            "uci": "h1h8",
+            "san": "Rh8#",
+            "score": 99999
+          },
+          {
+            "rank": 2,
+            "uci": "c1b1",
+            "san": "Kb1",
+            "score": 99998
+          },
+          {
+            "rank": 3,
+            "uci": "f6e6",
+            "san": "Qe6+",
+            "score": 99997
+          },
+          {
+            "rank": 4,
+            "uci": "f6d8",
+            "san": "Qd8+",
+            "score": 99997
+          },
+          {
+            "rank": 5,
+            "uci": "f6g6",
+            "san": "Qxg6+",
+            "score": 99996
+          }
+        ],
+        "latency_ms": 38
+      }
+    }
+  ],
+  "explanations": [
+    {
+      "move_number": 38,
+      "move_uci": "g2h1",
+      "move_san": "Bxh1",
+      "fen": "3rr1k1/p1q2p2/6pQ/8/6P1/3B4/PPPN1P2/2K1R2b w - - 0 20",
+      "skill_level": "intermediate",
+      "source": "ollama",
+      "explanation": "Black played Bxh1. That piece move is done — candidate replies include Rxh1, Rxe8+.",
+      "concept_hints": [
+        "White has the initiative.",
+        "Engine suggested replies (side to move): Rxh1, Rxe8+, Re3."
+      ],
+      "latency_ms": 3808,
+      "recorded_at": "2026-09-11T08:26:33Z"
+    },
+    {
+      "move_number": 44,
+      "move_uci": "e8e6",
+      "move_san": "Re6",
+      "fen": "6k1/p4p2/4r1pQ/4q3/4N1P1/3P4/PP3P2/2K4R w - - 1 23",
+      "skill_level": "intermediate",
+      "source": "ollama",
+      "explanation": "Black played Re6. The immediate threat is that White's pawn on e4 is under attack and could be captured by Black's rook, potentially gaining a material advantage.",
+      "concept_hints": [
+        "White has the initiative.",
+        "White is ahead on material / evaluation.",
+        "Engine suggested replies (side to move): g5, Kb1, f3."
+      ],
+      "latency_ms": 2990,
+      "recorded_at": "2026-09-11T08:26:46Z"
+    },
+    {
+      "move_number": 48,
+      "move_uci": "g8f8",
+      "move_san": "Kf8",
+      "fen": "5k2/p4pq1/4r1p1/6P1/4N2Q/3P4/PP3P2/2K4R w - - 3 25",
+      "skill_level": "intermediate",
+      "source": "ollama",
+      "explanation": "Black played Kf8. That piece move is done — candidate replies include Nf6, Nc3.",
+      "concept_hints": [
+        "White has the initiative.",
+        "White is ahead on material / evaluation.",
+        "Engine suggested replies (side to move): Nf6, Nc3, Qh2."
+      ],
+      "latency_ms": 3059,
+      "recorded_at": "2026-09-11T08:26:53Z"
+    }
+  ],
+  "exported_at": "2026-09-11T08:26:58Z"
+}
