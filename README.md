@@ -1,407 +1,240 @@
-# UoLCS CM3070 Final Project
+# Chess / Xiangqi / Shogi — AI play + coaching + diagram→FEN
 
-Multi-variant board game platform with explainable AI coaching (Template 4.1 — orchestrating AI agents).
+Multi-variant board game with explainable AI coaching (CM3070 Final Project, University of London / Goldsmiths).
 
-## How to use the app
+Three models in the product: **Fairy-Stockfish** (play/analysis), **Ollama** (text coach; heuristic fallback if off), **Chess_diagram_to_FEN** (image → FEN, confirm before load).
 
-1. Pick a game: Chess, Xiangqi, or Shogi.
-2. Pick a mode: Human vs Human, Human vs AI, or AI vs AI.
-3. Human vs AI: choose AI strength, move on the board (or type a command), then Fairy-Stockfish replies. AI vs AI: choose strength for each side, set how many games to run, then start the match — Fairy-Stockfish plays both sides.
-4. After moves, notes, estimated win chance, and coach text update (Ollama when available; otherwise a simple fallback).
+Play Chess, Xiangqi, or Shogi (human vs human, human vs AI, AI vs AI).
 
-Optional: import a board diagram (confirm before load), paste a move list, use the clock, or Preview mode to try one what-if move without changing the live game.
+**Online demo (no install):** https://eunhachessgame.win and https://www.eunhachessgame.win — Fairy-Stockfish play works; coach text uses the heuristic fallback only (Ollama is not installed on the server because of disk space).
 
-In the running app, open **?** (top-right) for the same how-to popup at any time; it does not reset your game.
+**Two ways to install:** [A — Docker](#a--install-with-docker) (any OS) · [B — without Docker](#b--install-without-docker) (macOS / Linux / Windows with Windows Subsystem for Linux).
 
-Install / run / Docker / diagram-vendor steps are below — this section is the user path only.
+---
 
-## Theme lock
+## How to Play
 
-**Primary story:** Go **orchestrates three pretrained models** in different domains: Fairy-Stockfish with Chess NNUE `nn-3475407dc199.nnue` (board/search; Xiangqi/Shogi stay classical), Ollama for text coaching (evidence run `llama3.2`; tag is configurable), and Chess_diagram_to_FEN for image→FEN. Beginner / Intermediate / Master are **profiles of one engine**, not three models. Playing and explaining stay separate; Go owns sessions, legality, and routing.
+1. Open http://localhost:8080
+2. Pick game → mode → (for AI) strength → New Game
+3. Move on the board (or type a command). AI replies in Human vs AI / AI vs AI.
+4. Notes / win chance / coach text update after moves (heuristic if Ollama is off)
+5. Preferred: diagram import (**confirm** before load). Also: load moves, clock, Preview, **?** help (top-right)
 
-**Supporting tools only (not the “three playing agents”):** History / Policy / Value remain Chess decision helpers / fallback when Fairy-Stockfish is off. Do not describe HPV as the three playing agents.
+Moves: Chess `e2e4`; Xiangqi `a4a5` / `h3h10`; Shogi `c3c4`, promote `e8e9+`, drop `P*e5`.
 
-**Demo path:** Human vs AI → select strength profile → make a move → AI replies → notes / win% / explain update.
+---
 
-Locked wording also lives in `IMPLEMENTATION_ISSUES.md` (Main theme lock) and `report/documentation/theme_lock.md`.  
-AI move path (FS vs History/Policy/Value): `report/documentation/fs_vs_hpv_decision_path.md`.
+## A — Install with Docker
 
-## Project Goal
+Best for markers on **Windows, macOS, or Linux**. Needs **Git + Docker** only (no Go/Python/engine build on the host).
 
-1. Build a web app for board game AI play and coaching.
-2. Support Chess, Xiangqi, and Shogi with the same mode set (HvH / HvAI / AI vs AI).
-3. Use short, clear move input (plus board interaction).
-4. Support Human vs AI with selectable strength.
-5. Support AI vs AI evaluation.
-6. Deliver plain-language explanations via the analyst service.
+### Step 1. Install tools
 
-## System Parts
-
-1. Frontend web app.
-2. Go backend API, sessions, and orchestration.
-3. Fairy-Stockfish playing agents (strength profiles).
-4. Python analyst service (`/analyze` + `/explain`).
-5. Diagram → FEN: `POST /fen_from_image` on the Python analyser (on-demand; not on the live `/move` path).
-
-## Diagram → FEN
-
-On-demand image model ([tsoj/Chess_diagram_to_FEN](https://github.com/tsoj/Chess_diagram_to_FEN)).
-
-**Variant product notes (diagram import):**
-
-| Game | Product stance |
-|------|----------------|
-| **Chess** | Primary path — full recognize → confirm → load → coach. |
-| **Xiangqi** | Supported end-to-end, but recognition is less reliable than Chess; always confirm the board before load. Formal image fixture smoke is documented in the development logs. |
-| **Shogi** | Board from the image model; **hands inferred** from starting inventory minus pieces on the board (heuristic split by side — may differ from diagram komadai). Weaker recognition; confirm carefully. |
-
-**Vendor (not in git — large weights/venv):** keep a local clone next to `chess_game`:
-
-```text
-final_project/
-  chess_game/                 # this repo
-  _local_Chess_diagram_to_FEN/   # clone + models + .venv
-```
+| OS | Git | Docker |
+|----|-----|--------|
+| **Windows** | [Git for Windows](https://git-scm.com/download/win) | [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) — start it (Windows Subsystem for Linux backend is fine) |
+| **macOS** | Git | [Docker Desktop](https://docs.docker.com/desktop/setup/install/mac-install/) — start it |
+| **Linux** | `sudo apt install -y git` (or distro equivalent) | e.g. `sudo apt install -y docker.io docker-compose-plugin`, then `sudo usermod -aG docker "$USER"` and **re-login** |
 
 ```bash
-cd final_project
+# check if git and docker has been installed and refreshed
+git --version && docker version && docker compose version
+```
+
+### Step 2. Clone and start
+
+Run the following commands to download the project, then build and start the backend and analyser:
+
+```bash
+git clone https://github.com/santorini19970530/chess_game.git
+cd chess_game
+docker compose up --build
+```
+
+Leave the terminal open while you use the app. Open **http://localhost:8080**. First build can take several minutes.
+
+Stop: `Ctrl+C`. Detached: `docker compose up -d --build` / `docker compose down`.
+
+**Quick check:** Chess → Human vs AI → Intermediate → one move → AI replies.
+
+Step 2 alone is enough to play. Coach text uses a **heuristic** fallback when no language model is connected.
+
+### Step 3. Language model coach (preferred, not required)
+
+A local **Ollama** coach is preferred for plain-language notes. The game still runs without it (heuristic coach).
+
+1. Install [Ollama](https://ollama.com/) on the host and pull a model, e.g. `ollama pull llama3.2`.
+2. Start Compose with the language model enabled (instead of the plain command in Step 2):
+
+```bash
+# coach via host Ollama (install Ollama, pull model first)
+LLM_PROVIDER=ollama OLLAMA_MODEL=llama3.2 docker compose up --build
+```
+
+| Env | Meaning |
+|-----|---------|
+| `LLM_PROVIDER=ollama` | Use host Ollama at `host.docker.internal:11434` |
+| `OLLAMA_MODEL` | default `llama3.2` |
+| `NNUE_HOST_DIR` | host folder with `nn-3475407dc199.nnue` (default `../_local_nnue`) |
+| `CHESS_DIAGRAM_HOST_DIR` | vision vendor clone (default `../_local_Chess_diagram_to_FEN`) |
+
+Missing NNUE folder is fine — play still works with classical eval.
+
+### Step 4. Diagram import — Chess_diagram_to_FEN (preferred, not required)
+
+This is the **third model** (image → FEN). Preferred so markers can try diagram upload → confirm → load. Without it, board play still works; you just cannot import from a picture.
+
+1. Next to the clone (parent of `chess_game/`), clone the vendor and download its weights (see the vendor project README for `uv sync` / `download_models.sh`).
+2. Folder name expected by Compose: `../_local_Chess_diagram_to_FEN` (or set `CHESS_DIAGRAM_HOST_DIR`).
+3. Restart Compose (`docker compose up --build`). The analyser reads that folder for `/fen_from_image`.
+
+macOS may need `brew install cairo`; Linux: `libcairo2-dev`.
+
+---
+
+## B — Install without Docker
+
+Runs Go + Python + Fairy-Stockfish on the host.
+Use **macOS**, **Linux**, or **Windows with Windows Subsystem for Linux**.
+On plain Windows without that Linux environment, please use [A — Docker](#a--install-with-docker) instead.
+
+### Step 1. Install tools
+
+Install these if the version checks below fail:
+
+| Tool | Windows (use Windows Subsystem for Linux) | macOS | Linux (Debian/Ubuntu example) |
+|------|-------------------------------------------|-------|-------------------------------|
+| **Git** | `sudo apt install -y git` inside the Linux environment | Xcode Command Line Tools, or https://git-scm.com/download/mac | `sudo apt install -y git` |
+| **Go** 1.22+ | https://go.dev/dl/ (Linux build inside the Linux environment) | https://go.dev/dl/ | https://go.dev/dl/ or `sudo apt install -y golang-go` (check version ≥ 1.22) |
+| **Python** 3.10+ with `pip` | `sudo apt install -y python3 python3-pip` | usually preinstalled; else https://www.python.org/downloads/ — use `python3` / `pip3` | `sudo apt install -y python3 python3-pip` |
+| **C++ build tools** (`make`, `g++`) | `sudo apt install -y build-essential` | install Xcode Command Line Tools: `xcode-select --install` | `sudo apt install -y build-essential` |
+
+Plain Windows without a Linux environment: use [A — Install with Docker](#a--install-with-docker) instead.
+
+```bash
+# check if the required installations are done
+git --version && go version && python3 --version && make --version
+```
+
+If any command says “not found”, install that tool from the table, open a **new** terminal, and check again.
+
+### Step 2. Clone the Project Repo
+
+```bash
+git clone https://github.com/santorini19970530/chess_game.git
+cd chess_game
+```
+
+### Step 3. Python dependencies
+
+Installs the Python packages listed in `py_analyser/requirements.txt` (Flask, python-chess, Pillow, and so on) so the analyser service can run.
+
+```bash
+cd py_analyser
+python3 -m pip install -r requirements.txt
+cd ..
+```
+
+### Step 4. Build Fairy-Stockfish (one-time)
+
+Compile the engine binary once after cloning.
+You do not need to rebuild every time you start the app (only again if you delete the binary or change the engine source).
+
+```bash
+cd py_analyser/Fairy-Stockfish-fairy_sf_14/src
+make -j build ARCH=x86-64-modern    # Apple Silicon: try ARCH=apple-silicon or ARCH=armv8
+# binary should be: ./stockfish
+cd ../../..
+```
+
+`make help` lists architectures.
+Or set `FAIRY_STOCKFISH_PATH` to any Fairy-Stockfish 14 binary.
+
+**If Fairy-Stockfish does not build or work:**
+
+| What you see | Likely cause | What to do |
+|--------------|--------------|------------|
+| `make: command not found` / `g++: not found` | C++ tools missing | Finish Step 1 (`build-essential` or Xcode Command Line Tools) |
+| `make` errors about architecture / unknown `ARCH` | Wrong `ARCH=` for your CPU | Run `make help` and pick a matching `ARCH` (Apple Silicon often `apple-silicon` or `armv8`) |
+| No `./stockfish` file after `make` | Build failed or wrong folder | Stay in `.../src`, re-run `make`, confirm the file exists: `ls -l stockfish` |
+| Backend log: `fairy-stockfish unavailable` | Binary missing, wrong path, or not executable | Re-run Step 4, or `export FAIRY_STOCKFISH_PATH=/full/path/to/stockfish`, then restart |
+| Python / analyser: set `FAIRY_STOCKFISH_PATH`… | Same — analyser cannot find the binary | Same fix as above |
+| UI plays but AI is weak / no engine suggestions | `USE_FAIRY_STOCKFISH` not set, or engine failed and Go fell back | Start backend with `USE_FAIRY_STOCKFISH=true` (see Step 6); check terminal logs for Fairy-Stockfish errors |
+| Notes say Fairy-Stockfish unavailable / evaluation unavailable | Analyser cannot start the engine | Fix path/binary; restart the analyser |
+
+Still stuck: use [A — Install with Docker](#a--install-with-docker) (Fairy-Stockfish is built inside the image).
+
+### Step 5. Diagram import — Chess_diagram_to_FEN (preferred, not required)
+
+This is the **third model** (image → FEN). Preferred for the full three-model path. Without it, board play and Fairy-Stockfish AI still work; diagram upload will not.
+
+1. From the parent of `chess_game/`:
+
+```bash
+cd ..
 git clone https://github.com/tsoj/Chess_diagram_to_FEN.git _local_Chess_diagram_to_FEN
 cd _local_Chess_diagram_to_FEN
-uv sync --extra cpu
-./download_models.sh
-# analyser deps into the same venv
-uv pip install --python .venv/bin/python flask Pillow python-chess
-brew install cairo   # macOS; cairocffi needs libcairo
+# follow that repo: sync environment, download_models.sh, then install flask/Pillow/python-chess into that Python if needed
 ```
 
-Override path with `CHESS_DIAGRAM_TO_FEN_DIR=/path/to/clone` if needed.
-
-**Run (easiest):** from `chess_game/`, `./run.sh` — uses the vendor `.venv` when `../_local_Chess_diagram_to_FEN` exists.
-
-**Analyser only:**
+2. System library for the vision stack: macOS `brew install cairo`; Linux `sudo apt install -y libcairo2-dev`.
+3. Point the analyser at it (or rely on the default sibling path):
 
 ```bash
-cd chess_game/py_analyser
-../../_local_Chess_diagram_to_FEN/.venv/bin/python server.py
+export CHESS_DIAGRAM_TO_FEN_DIR="$(pwd)"   # while inside _local_Chess_diagram_to_FEN
 ```
 
-**Smoke:**
+4. When starting the analyser (Step 6), prefer that environment’s Python if it has torch/vision installed (same idea as `run.sh` using `../_local_Chess_diagram_to_FEN/.venv/bin/python`).
+
+### Step 6. Start the game
+
+**macOS (Apple Silicon):** if `./run.sh` works:
+
+`run.sh` is a helper script that
+(1) rebuilds frontend CSS with the bundled Tailwind tool,
+(2) starts the Python analyser on port 8001 (Ollama coach if Ollama is already running, otherwise heuristic; uses the diagram vendor Python if that venv exists),
+(3) starts the Go backend on port 8080 with Fairy-Stockfish enabled, and
+(4) stops both when you press Ctrl+C.
 
 ```bash
-# from chess_game/
-curl -F "image=@gameplay_capture/chess/chess-08082026.webp" -F "game=chess" \
-  http://127.0.0.1:8001/fen_from_image
-
-# offline self-check (aliases always; fixture+vendor when present)
-../_local_Chess_diagram_to_FEN/.venv/bin/python py_analyser/fen_from_image.py
+cd chess_game   # if you were in the vendor folder
+./run.sh
 ```
 
-`game` / `type` / `game_type`: `chess` | `xianqi` | `shogi` (`xianqi` maps to upstream `xiangqi`).
-
-**After Confirm load (UI):** Go `POST /api/games/{id}/load-fen` enqueues the existing `/analyze` + `/explain` pipe (no new coach API). Win% / threat notes update from analysis; coach text uses Ollama when available, else heuristic fallback (`LLM_PROVIDER=heuristic` / Ollama down).
-
-## Docker Compose
-
-Optional reproducibility / demo aid — **not** a production deployment claim. Prefer local `./run.sh` for day-to-day development.
-
-**Lean stack in Compose:** Go backend (`:8080`) + Python analyser (internal `:8001`) + Linux Fairy-Stockfish in both images. Default coach is heuristic (`LLM_PROVIDER=heuristic`). Ollama and the diagram vision vendor stay **out** of the images.
+**Linux, Windows Subsystem for Linux, or if `run.sh` fails on Tailwind:** `style.css` is already in the repo — start the two services yourself:
 
 ```bash
-# from chess_game/
-docker compose up --build
-# open http://localhost:8080
-```
+# terminal 1 — python analyser
+cd py_analyser
+LLM_PROVIDER=heuristic python3 server.py
+# if Ollama is running on :11434 you can use:
+# LLM_PROVIDER=ollama OLLAMA_MODEL=llama3.2 python3 server.py
+# if diagram vendor venv exists, use that python instead of python3
 
-| Env (optional) | Meaning |
-|----------------|---------|
-| `LLM_PROVIDER=ollama` | Use host Ollama via `host.docker.internal:11434` (model must already be pulled) |
-| `OLLAMA_MODEL` | default `llama3.2` |
-| `PY_ANALYSER_TIMEOUT_MS` | Go → analyser HTTP timeout |
-
-Only host port **8080** is published. Same Compose can later run on a Linux VPS for a public demo URL (Plan Phase 9); put a reverse proxy or Cloudflare Tunnel in front of `8080` only.
-
-### Optional VPS demo (Phase 9)
-
-Same lean Compose on a small Linux host for a permanent marker URL. Still **not** a production deployment claim (in-memory sessions, no auth, heuristic coach by default). Prefer **4 GB RAM**.
-
-**1. Transfer (git — preferred):**
-
-```bash
-# on your Mac, from chess_game/ after committing on this branch
-git push -u origin issue0042
-
-# on the VPS
-sudo apt update
-sudo apt install -y docker.io docker-compose-plugin git
-sudo usermod -aG docker "$USER"   # re-login after this
-git clone -b issue0042 https://github.com/santorini19970530/chess_game.git
-cd chess_game
-docker compose up -d --build
-```
-
-**Or scp** the `chess_game/` tree (including Dockerfiles) if you have not pushed yet.
-
-**2. Expose only `:8080`:** Cloudflare Tunnel (easiest HTTPS), or Caddy/nginx reverse proxy with WebSocket upgrade for `/ws/game`. Do **not** publish analyser `:8001`.
-
-**3. Smoke on the public URL:** open the site → Human vs AI → one finished game (same check as the local Compose smoke).
-
-## Main Phases
-
-### Phase 1: Literature and evaluation design
-
-Write literature with critical comparison.
-Define metrics early.
-Use win rate, game length, and latency.
-
-### Phase 2: Architecture and API freeze
-
-Freeze API contracts.
-Freeze data flow between services.
-Keep frontend thin.
-
-### Phase 3: Chess vertical slice
-
-Create game.
-Accept human move.
-Return AI move.
-Show game status.
-Auto analysis after every successful move.
-
-### Phase 4: Variant expansion
-
-Add next variant with same backend pattern.
-Keep feature parity minimal first.
-Stabilize before adding more.
-
-Coach pipe for Xiangqi/Shogi (`/analyze` + `/explain`) is Done (logs 129–130), including FS hints, captured icons, and White-POV win%.
-
-### Phase 5: Quality and polish
-
-Tune easy, medium, and hard profiles.
-Improve UI clarity.
-Improve analyst response quality.
-
-### Phase 6: Testing and instrumentation
-
-Add API tests.
-Add move-flow tests.
-Log per-game metadata for evaluation.
-
-### Phase 7: Evaluation
-
-Run AI vs AI tournaments.
-Produce tables and charts.
-Write short result analysis.
-
-### Phase 8: Final documentation
-
-Finalize report.
-Finalize README and run steps.
-Prepare demo assets.
-
-## Weekly Rule
-
-End each week with three outputs.
-A runnable build.
-One evaluation artifact.
-One documentation update.
-
-## Scope Rules
-
-Finish Chess first.
-Prefer fewer complete variants.
-Keep analyst output simple if needed.
-
-## Formal AI-vs-AI eval (`cmd/match`)
-
-From `go_backend` (Fairy-Stockfish required; Ollama not required):
-
-```bash
+# terminal 2 — go backend server
 cd go_backend
-OUT=data/evaluations/2026-07-17
-mkdir -p "$OUT"
-
-USE_FAIRY_STOCKFISH=true go run ./cmd/match -games 5 -game xianqi -profile beginner -format json > "$OUT/eval_xianqi_smoke.json"
-USE_FAIRY_STOCKFISH=true go run ./cmd/match -games 5 -game shogi -profile beginner -format json > "$OUT/eval_shogi_smoke.json"
+USE_FAIRY_STOCKFISH=true PY_ANALYSER_URL=http://127.0.0.1:8001 go run .
 ```
 
-Profiles: `beginner` | `intermediate` | `advanced` | `master` | Chess-only `nnue`.  
-Results write-up: FYP repo log sheet `123_chess_formal_ai_vs_ai_evaluation.md`.
+Open **http://localhost:8080** on browser to play the game.
+
+### Optional extras (not required to play)
+
+Steps 1–6 already cover play, Fairy-Stockfish, preferred diagram import, and heuristic coach. These are extra only:
+
+- **Ollama:** preferred plain-language coach. Without it, notes use the heuristic fallback. Install Ollama, `ollama pull llama3.2`, start it before the analyser (or set `LLM_PROVIDER=ollama` as in the two-terminal example above).
+- **NNUE file:** Chess neural eval weights (`nn-3475407dc199.nnue`). Without it, Fairy-Stockfish still plays with classical eval. Put the file in `../_local_nnue/` or set `FAIRY_STOCKFISH_NNUE_PATH`.
 
 ---
 
-## UI board rendering (Chess / Xiangqi / Shogi)
+## Troubleshooting
 
-The playable board is a **CSS grid of div squares**, not a board image.
-
-- Server markup: `go_backend/game/board/board.go` builds `.chess_board_wrapper` → `.chess_board` → `.chess_board_square` with `data-sequence`.
-- Client: `frontend/scripts/chess_command.js` maps `file`/`rank` → sequence, paints pieces into those squares, and reuses legal/suggested square classes.
-- Style: `input.css` imports per-game board sheets — `chessboard.css` / `xianqiboard.css` / `shogiboard.css` (active via `data-game-type`); Tailwind builds one `style.css`.
-- **Piece placement:** Chess/Shogi = inside the square. Xiangqi = on junctions; line layer uses real spacing (`x=i/8`, `y=j/9`), not 9×10 cell centers.
-- Client rebuild: `chess_command.js` `ensureBoardGeometry` / `rebuildBoardGrid` when `game.type` changes; sequence = `(maxRank - rank) * files + (file - 1)`.
-- Assets: piece art only (`pic/chess_pic/` PNGs, `pic/xianqi_pic/` PNGs, `pic/shogi_pic/` SVGs). Do not use a full-board picture for layout.
-
-Xiangqi: API kinds → `xianqi_pic` (e.g. king→`general_*`, elephant→`bear_*`). Shogi: kinds → `shogi_pic/{kind}.svg` (black via CSS rotate); hands from snapshot `captured`; drops `P*e5`; optional promote dialog / must-promote auto `+`. Rules stay in Go; the board divs only display state and collect moves.
-
----
-
-## How to read FEN / make moves (Xiangqi + Shogi)
-
-Both variants use the **same coordinate style as this API**:
-
-| Axis | Meaning |
-|------|---------|
-| **File** | column letter `a` … `i` (left → right) |
-| **Rank** | row number (bottom → top from **White/Red/Sente**) |
-| **API square** | `file` 1–9 = `a`–`i`, `rank` = number |
-| **Move string** | `fromSquare` + `toSquare`, e.g. `c3c4` = from c3 to c4 |
-
-**FEN placement rule (both games):** the text before the first space is the board. Ranks are separated by `/`.  
-**First segment = highest rank** (Black/Gote back rank). **Last segment = rank 1** (White/Red/Sente back rank).  
-Digits = empty squares in a row. Uppercase = White/Red/Sente; lowercase = Black/Gote.
-
----
-
-## Xiangqi (`game=xianqi`)
-
-Session ID: `xianqi`. Go owns rules; Fairy-Stockfish is AI search only (`UCI_Variant=xiangqi`).
-
-**Start FEN:**
-
-```text
-rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1
-```
-
-### Board map (start) — ranks 10 → 1
-
-```text
-rank 10  r n b a k a b n r     ← Black back (FEN first segment)
-rank  9  . . . . . . . . .
-rank  8  . c . . . . . c .
-rank  7  p . p . p . p . p
-rank  6  . . . . . . . . .     ← river
-rank  5  . . . . . . . . .
-rank  4  P . P . P . P . P
-rank  3  . C . . . . . C .
-rank  2  . . . . . . . . .
-rank  1  R N B A K A B N R     ← Red/White back (FEN last segment)
-         a b c d e f g h i
-```
-
-(`.` = empty; palace is files `d`–`f`, ranks 1–3 and 8–10.)
-
-### Piece letters
-
-| Letter | Piece |
-|--------|--------|
-| K/k | General |
-| A/a | Advisor |
-| B/b | Elephant |
-| N/n | Horse |
-| R/r | Chariot |
-| C/c | Cannon |
-| P/p | Soldier |
-
-### How to form a move
-
-1. Find the piece’s square: file letter + rank number (e.g. leftmost Red soldier is **a4**).
-2. Find destination the same way (one step forward → **a5**).
-3. Send **`a4a5`**. Rank 10 uses two digits: cannon on **h3** capturing up the file → **`h3h10`**.
-
-Examples from start:
-
-| Idea | Move |
-|------|------|
-| Red soldier a4 → a5 | `a4a5` |
-| Red cannon h3 → h7 (need screen) / h10 capture | `h3h10` (legal at start) |
-| Black to move after Red | FEN has ` b ` instead of ` w ` |
-
-**Simulate / match:** `POST /api/simulate` / `cmd/match -game xianqi` (alias `xiangqi`).
-
-**Endings (Go, World Xiangqi Federation):** mate and stalemate-as-loss; perpetual check (the checker loses); perpetual chase of one unprotected piece other than the general (the chaser loses); king/soldier-only chase is not a chase loss; mutual threefold repetition is a draw. Fairy-Stockfish does not judge these.
-
-**House rule:** 60 ply with no capture is a draw. Do not call this the Chess 50-move rule.
-
-**Ply limit:** after 600 plies with no other ending, Go draws (`draw_max_plies`). Same cap for Chess and Shogi. Fairy-Stockfish does not judge this.
-
----
-
-## Shogi (`game=shogi`)
-
-Session ID: `shogi`. Go owns rules (including hands/drops); Fairy-Stockfish is AI search only (`UCI_Variant=shogi`).
-
-**Start FEN** (hands in `[]` after the board; empty at start):
-
-```text
-lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL[] w - - 0 1
-```
-
-### Board map (start) — ranks 9 → 1
-
-```text
-rank 9  l n s g k g s n l     ← Gote/Black back
-rank 8  . r . . . . . b .
-rank 7  p p p p p p p p p
-rank 6  . . . . . . . . .
-rank 5  . . . . . . . . .
-rank 4  . . . . . . . . .
-rank 3  P P P P P P P P P
-rank 2  . B . . . . . R .
-rank 1  L N S G K G S N L     ← Sente/White back
-        a b c d e f g h i
-```
-
-Promotion zone: White ranks **7–9**, Black ranks **1–3**.
-
-### Piece letters
-
-| Letter | Piece | Promoted |
-|--------|--------|----------|
-| K/k | King | — |
-| G/g | Gold | — |
-| S/s | Silver | `+S` → gold-like |
-| N/n | Knight | `+N` |
-| L/l | Lance | `+L` |
-| P/p | Pawn | `+P` (tokin) |
-| B/b | Bishop | `+B` (horse) |
-| R/r | Rook | `+R` (dragon) |
-
-Hands field `[Ppg]` = White has Pawn; Black has Pawn and Gold (uppercase = White’s hand, lowercase = Black’s).
-
-### How to form a move
-
-**Board move:** same as Xiangqi — `from` + `to` on `a`–`i` / `1`–`9`.
-
-| Idea | Move |
-|------|------|
-| Sente pawn c3 → c4 | `c3c4` |
-| Promote (optional `+`, forced on last ranks for P/L/N) | `e8e9` becomes `e8e9+` |
-| Drop pawn from hand onto e5 | `P*e5` or `p*e5` (also `@` accepted) |
-
-Go rejects *nifu* (two unpromoted pawns on one file) and *uchifuzume* (FESA 3.11c: pawn drop that is immediate mate). Other piece-drop mates stay legal.
-
-**Endings (Go, FESA):** mate / no-move is a loss. Same board + hands + side **four** times is *sennichite* (draw). If that fourfold is one side checking every ply, the checker loses (FESA 3.12). Impasse / 入玉宣言 (FESA 5.3) is a **declaration** (`POST /api/games/{id}/declare`): king in the promotion zone, not in check, ≥10 pieces in the opponent’s camp besides the king, Sente 28 / Gote 27 points (camp + hand; rook/bishop 5). Pass wins; fail loses. Fairy-Stockfish does not judge these.
-
-**Relife:** capture → piece goes to your **hand** (unpromoted); later **drop** with `P*e5`.
-
-Snapshot field `captured` for shogi = **hands** (White/Black counts).
-
-Examples:
-
-1. Read FEN segment for rank 3: `PPPPPPPPP` → pawns on a3…i3.  
-2. Move the c-file pawn forward → **`c3c4`**.  
-3. After you capture a pawn, hand shows `pawn: 1`; drop with **`P*e5`**.
-
-**Simulate / match:** `POST /api/simulate` / `cmd/match -game shogi`. After 600 plies with no mate or other ending, Go draws (`draw_max_plies`).
-
-### Quick API create
-
-```json
-{ "mode": "human_vs_human", "game": "shogi", "humanColor": "white" }
-```
-
-```json
-{ "mode": "human_vs_human", "game": "xianqi", "humanColor": "white" }
-```
-
-Move body uses the same command string as above (`c3c4`, `a4a5`, `P*e5`, …).
+| Problem | Fix |
+|---------|-----|
+| `docker` not found | Install/start Docker; Linux: re-login after `docker` group |
+| Port 8080 / 8001 busy | Stop the other process |
+| Docker build slow/fails | Free disk/RAM; retry `docker compose up --build` |
+| `stockfish: no such file` | Finish Step 4 under install B, or set `FAIRY_STOCKFISH_PATH` |
+| `./run.sh` / Tailwind error | Use the two-terminal start under Step 6 of install B (Start the game) |
+| No LLM paragraphs | Normal without Ollama; enable Ollama or `LLM_PROVIDER=ollama` |
+| Windows without Windows Subsystem for Linux | Use install **A** (Docker) |
