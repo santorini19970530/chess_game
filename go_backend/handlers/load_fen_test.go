@@ -161,6 +161,39 @@ func TestPostAPIGameLoadFen_ShogiOK(t *testing.T) {
 	}
 }
 
+// TestPostAPIGameLoadFen_ShogiNifuRejected - load-fen refuses a board that already has nifu
+func TestPostAPIGameLoadFen_ShogiNifuRejected(t *testing.T) {
+	h := NewHandler()
+	template, err := sessionpkg.CreateGame(
+		sessionpkg.GameModeHumanVsHuman,
+		sessionpkg.GameTypeShogi,
+		"white",
+		1,
+		"",
+		"",
+	)
+	if err != nil {
+		t.Fatalf("create template: %v", err)
+	}
+
+	fen := "ln1g5/1ks1g3l/1p1pp1n2/p1pGs2rp/1P1N1ppp1/P1SB1P2P/1S1p1bPP1/LKG6/4R2NL[pp] w"
+	body := `{"fen":"` + fen + `","game":"shogi"}`
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/api/games/"+template.ID+"/load-fen",
+		strings.NewReader(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.APIGameRoutes(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d want 400 body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "nifu") || !strings.Contains(rec.Body.String(), "d (6)") {
+		t.Fatalf("body=%s want nifu on file d (6)", rec.Body.String())
+	}
+}
+
 // TestPostAPIGameLoadFen_BadFEN - checks load-fen rejects unparseable fen loudly
 func TestPostAPIGameLoadFen_BadFEN(t *testing.T) {
 	h := NewHandler()

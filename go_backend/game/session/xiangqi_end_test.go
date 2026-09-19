@@ -181,7 +181,7 @@ func TestClassifyXiangqiRepeatCycle_IncludesFirstPlyOfCycle(t *testing.T) {
 func TestXiangqiPerpetualCheck_ChariotShuttleLoses(t *testing.T) {
 	resetGameSessionForTest()
 	ResetGame()
-	fen := "4k4/9/4R4/9/9/9/9/9/9/K8 b - - 0 1"
+	fen := "4k4/9/4R4/9/9/9/9/9/9/5K3 b - - 0 1"
 	game, err := CreateGame(GameModeHumanVsHuman, GameTypeXiangqi, "white", 1, fen, "")
 	if err != nil {
 		t.Fatalf("create: %v", err)

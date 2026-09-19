@@ -10,6 +10,11 @@ func isInsideXiangqiBoard(file, rank int) bool {
 	return file >= 1 && file <= 9 && rank >= 1 && rank <= 10
 }
 
+// XiangqiInPalace - reports whether file/rank is inside that side's palace
+func XiangqiInPalace(file, rank int, color pieces.PieceColor) bool {
+	return inXiangqiPalace(file, rank, color)
+}
+
 // inXiangqiPalace - reports in xiangqi palace
 func inXiangqiPalace(file, rank int, color pieces.PieceColor) bool {
 	if file < 4 || file > 6 {

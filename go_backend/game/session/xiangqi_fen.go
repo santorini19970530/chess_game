@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode"
 
+	"go_backend/game/movement"
 	pieces "go_backend/game/piece"
 )
 
@@ -19,6 +20,9 @@ func applyXiangqiFENToCurrentGlobals(fen string) error {
 	}
 	board, err := parseXiangqiFENBoard(parts[0])
 	if err != nil {
+		return err
+	}
+	if err := validateXiangqiSetupBoard(board); err != nil {
 		return err
 	}
 	switch parts[1] {
@@ -72,6 +76,45 @@ func parseXiangqiFENBoard(boardPart string) ([]pieces.ChessPiece, error) {
 		}
 	}
 	return out, nil
+}
+
+// validateXiangqiSetupBoard - rejects a parsed xiangqi fen that is already an illegal setup
+func validateXiangqiSetupBoard(board []pieces.ChessPiece) error {
+	seen := map[[2]int]bool{}
+	wg, bg := 0, 0
+	for _, p := range board {
+		key := [2]int{p.File, p.Rank}
+		if seen[key] {
+			return fmt.Errorf("illegal xiangqi FEN: two pieces on %c%d", 'a'+p.File-1, p.Rank)
+		}
+		seen[key] = true
+		switch p.Kind {
+		case pieces.King:
+			if p.Color == pieces.White {
+				wg++
+			} else {
+				bg++
+			}
+			if !movement.XiangqiInPalace(p.File, p.Rank, p.Color) {
+				return fmt.Errorf("illegal xiangqi FEN: general outside palace on %c%d", 'a'+p.File-1, p.Rank)
+			}
+		case pieces.Advisor:
+			if !movement.XiangqiInPalace(p.File, p.Rank, p.Color) {
+				return fmt.Errorf("illegal xiangqi FEN: advisor outside palace on %c%d", 'a'+p.File-1, p.Rank)
+			}
+		case pieces.Elephant:
+			if p.Color == pieces.White && p.Rank > 5 {
+				return fmt.Errorf("illegal xiangqi FEN: elephant crossed the river on %c%d", 'a'+p.File-1, p.Rank)
+			}
+			if p.Color == pieces.Black && p.Rank < 6 {
+				return fmt.Errorf("illegal xiangqi FEN: elephant crossed the river on %c%d", 'a'+p.File-1, p.Rank)
+			}
+		}
+	}
+	if wg > 1 || bg > 1 {
+		return fmt.Errorf("illegal xiangqi FEN: white has %d general(s), black has %d", wg, bg)
+	}
+	return nil
 }
 
 // xiangqiPieceFromChar - performs xiangqi piece from char

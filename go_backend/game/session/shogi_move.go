@@ -149,7 +149,7 @@ func validateShogiDrop(kind pieces.PieceKind, color pieces.PieceColor, file, ran
 		return fmt.Errorf("illegal drop square for %s", kind)
 	}
 	if kind == pieces.Pawn && shogiHasUnpromotedPawnOnFile(color, file) {
-		return fmt.Errorf("nifu: two unpromoted pawns on the same file")
+		return fmt.Errorf("nifu: two unpromoted %s pawns on file %s", shogiSetupSide(color), shogiSetupFile(file))
 	}
 	if movement.ShogiWouldLeaveKingInCheckAfterDrop(kind, color, file, rank) {
 		return fmt.Errorf("illegal drop: king would be in check")

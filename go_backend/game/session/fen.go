@@ -35,6 +35,9 @@ func applyFENToCurrentGlobals(fen string) error {
 	if err != nil {
 		return err
 	}
+	if err := validateChessSetupBoard(board); err != nil {
+		return err
+	}
 	pieces.ChessPieces = board
 
 	switch activeColor {
@@ -149,4 +152,31 @@ func parseInt(v string) (int, error) {
 		n = n*10 + int(ch-'0')
 	}
 	return n, nil
+}
+
+// validateChessSetupBoard - rejects a parsed chess fen that is already an illegal setup
+func validateChessSetupBoard(board []pieces.ChessPiece) error {
+	seen := map[[2]int]bool{}
+	wk, bk := 0, 0
+	for _, p := range board {
+		key := [2]int{p.File, p.Rank}
+		if seen[key] {
+			return fmt.Errorf("illegal chess FEN: two pieces on %c%d", 'a'+p.File-1, p.Rank)
+		}
+		seen[key] = true
+		if p.Kind == pieces.King {
+			if p.Color == pieces.White {
+				wk++
+			} else {
+				bk++
+			}
+		}
+		if p.Kind == pieces.Pawn && (p.Rank == 1 || p.Rank == 8) {
+			return fmt.Errorf("illegal chess FEN: pawn on %c%d", 'a'+p.File-1, p.Rank)
+		}
+	}
+	if wk > 1 || bk > 1 {
+		return fmt.Errorf("illegal chess FEN: white has %d king(s), black has %d", wk, bk)
+	}
+	return nil
 }

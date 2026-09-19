@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode"
 
+	"go_backend/game/movement"
 	pieces "go_backend/game/piece"
 )
 
@@ -48,6 +49,12 @@ func applyShogiFENToCurrentGlobals(fen string) error {
 	hands, err := parseShogiHands(handText)
 	if err != nil {
 		return err
+	}
+	if err := validateShogiSetupBoard(board); err != nil {
+		return err
+	}
+	if hands.white[pieces.King] > 0 || hands.black[pieces.King] > 0 {
+		return fmt.Errorf("illegal shogi FEN: king in hand")
 	}
 	switch parts[1] {
 	case "w":
@@ -127,6 +134,70 @@ func parseShogiFENBoard(boardPart string) ([]pieces.ChessPiece, error) {
 		}
 	}
 	return out, nil
+}
+
+// validateShogiSetupBoard - rejects a parsed shogi fen that is already an illegal setup
+func validateShogiSetupBoard(board []pieces.ChessPiece) error {
+	seen := map[[2]int]bool{}
+	whitePawn, blackPawn := [10]int{}, [10]int{}
+	wk, bk := 0, 0
+	for _, p := range board {
+		key := [2]int{p.File, p.Rank}
+		if seen[key] {
+			return fmt.Errorf("illegal shogi FEN: two pieces on %s", shogiSetupSquare(p.File, p.Rank))
+		}
+		seen[key] = true
+		switch p.Kind {
+		case pieces.King:
+			if p.Color == pieces.White {
+				wk++
+			} else {
+				bk++
+			}
+		case pieces.Pawn:
+			if p.Color == pieces.White {
+				whitePawn[p.File]++
+			} else {
+				blackPawn[p.File]++
+			}
+		}
+		if movement.ShogiMustPromote(p.Kind, p.Rank, p.Color) {
+			return fmt.Errorf(
+				"illegal shogi FEN: %s %s on %s has no legal move",
+				shogiSetupSide(p.Color), p.Kind, shogiSetupSquare(p.File, p.Rank),
+			)
+		}
+	}
+	if wk > 1 || bk > 1 {
+		return fmt.Errorf("illegal shogi FEN: white has %d king(s), black has %d", wk, bk)
+	}
+	for file := 1; file <= 9; file++ {
+		if whitePawn[file] > 1 {
+			return fmt.Errorf("nifu: two unpromoted white pawns on file %s", shogiSetupFile(file))
+		}
+		if blackPawn[file] > 1 {
+			return fmt.Errorf("nifu: two unpromoted black pawns on file %s", shogiSetupFile(file))
+		}
+	}
+	return nil
+}
+
+// shogiSetupFile - uci file letter plus diagram file 1–9 (fen file 1 = a = 9)
+func shogiSetupFile(file int) string {
+	return fmt.Sprintf("%c (%d)", 'a'+file-1, 10-file)
+}
+
+// shogiSetupSquare - uci square plus diagram file and rank
+func shogiSetupSquare(file, rank int) string {
+	return fmt.Sprintf("%c%d (file %d rank %d)", 'a'+file-1, rank, 10-file, rank)
+}
+
+// shogiSetupSide - white/black word for setup errors
+func shogiSetupSide(color pieces.PieceColor) string {
+	if color == pieces.White {
+		return "white"
+	}
+	return "black"
 }
 
 // shogiPieceFromChar - performs shogi piece from char
