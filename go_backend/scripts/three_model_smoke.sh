@@ -5,7 +5,24 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 BASE_URL="${BASE_URL:-http://localhost:8080}"
 PY_URL="${PY_ANALYSER_URL:-http://127.0.0.1:8001}"
-FIXTURE="${FIXTURE:-$ROOT_DIR/gameplay_capture/chess/chess-08082026.webp}"
+# default_diagram_fixture - env FIXTURE, else walk up for report/gameplay_captures
+default_diagram_fixture() {
+  local rel="report/gameplay_captures/chess/chess-08082026.webp"
+  local dir="$ROOT_DIR"
+  local i
+  for i in 1 2 3 4 5 6; do
+    if [[ -f "$dir/$rel" ]]; then
+      echo "$dir/$rel"
+      return
+    fi
+    dir="$(dirname "$dir")"
+  done
+  echo "$ROOT_DIR/../../report/gameplay_captures/chess/chess-08082026.webp"
+}
+
+if [[ -z "${FIXTURE:-}" ]]; then
+  FIXTURE="$(default_diagram_fixture)"
+fi
 EXPLAIN_LOG="${EXPLAIN_LOG:-$ROOT_DIR/py_analyser/data/explain_logs/explain.jsonl}"
 NNUE_DEFAULT="$ROOT_DIR/../_local_nnue/nn-3475407dc199.nnue"
 CORR="${CORR:-issue0068-c-$(date +%s)}"
@@ -13,6 +30,7 @@ POLL_SECS="${POLL_SECS:-90}"
 
 if [[ ! -f "$FIXTURE" ]]; then
   echo "missing fixture: $FIXTURE" >&2
+  echo "optional smoke only (not needed to play). set FIXTURE=/path/to/board.webp" >&2
   exit 1
 fi
 

@@ -18,12 +18,7 @@ if PARENT_DIR not in sys.path:
 import fen_from_image  # noqa: E402
 import server  # noqa: E402
 
-_FIXTURE = (
-    Path(PARENT_DIR).parent
-    / "gameplay_capture"
-    / "chess"
-    / "chess-08082026.webp"
-)
+_FIXTURE = fen_from_image.chess_diagram_fixture_path()
 _VENDOR_PY = Path(PARENT_DIR).parent.parent / "_local_Chess_diagram_to_FEN" / ".venv" / "bin" / "python"
 
 

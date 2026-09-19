@@ -18,21 +18,38 @@ fi
 PY_PID=""
 GO_PID=""
 
-# macOS may quarantine the standalone CLI after download; that hangs/blocks run.sh.
-xattr -d com.apple.quarantine "$TAILWIND" 2>/dev/null || true
+# port_busy - true if something is already listening on this tcp port
+port_busy() {
+  local port="$1"
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -t -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1
+  elif command -v ss >/dev/null 2>&1; then
+    ss -ltn | grep -qE ":${port}[[:space:]]"
+  else
+    return 1
+  fi
+}
+
 # cwd must be chess_game so Tailwind v4 sees frontend HTML/JS (not only styles/).
 cd "$ROOT_DIR"
-"$TAILWIND" -i "$INPUT_CSS" -o "$OUTPUT_CSS"
-
-if lsof -t -nP -iTCP:8080 -sTCP:LISTEN >/dev/null 2>&1; then
-  echo "port 8080 is already in use; stop that process first."
-  echo "example: lsof -t -nP -iTCP:8080 -sTCP:LISTEN | xargs kill"
+# CLI is a local Mac binary (gitignored). Without Docker, use committed style.css.
+if [[ -x "$TAILWIND" ]]; then
+  command -v xattr >/dev/null 2>&1 && xattr -d com.apple.quarantine "$TAILWIND" 2>/dev/null || true
+  "$TAILWIND" -i "$INPUT_CSS" -o "$OUTPUT_CSS"
+elif [[ -f "$OUTPUT_CSS" ]]; then
+  echo "tailwind cli absent; using committed $OUTPUT_CSS"
+else
+  echo "missing $OUTPUT_CSS and no tailwind cli at $TAILWIND" >&2
   exit 1
 fi
 
-if lsof -t -nP -iTCP:8001 -sTCP:LISTEN >/dev/null 2>&1; then
+if port_busy 8080; then
+  echo "port 8080 is already in use; stop that process first."
+  exit 1
+fi
+
+if port_busy 8001; then
   echo "port 8001 is already in use; stop that process first."
-  echo "example: lsof -t -nP -iTCP:8001 -sTCP:LISTEN | xargs kill"
   exit 1
 fi
 
@@ -49,7 +66,7 @@ fi
 
 echo "starting python analyzer server on http://127.0.0.1:8001 ..."
 echo "python: $PY_BIN"
-if lsof -t -nP -iTCP:11434 -sTCP:LISTEN >/dev/null 2>&1; then
+if port_busy 11434; then
   echo "Ollama detected → LLM explainer enabled (model=llama3.2)"
   LLM_PROVIDER=ollama OLLAMA_MODEL=llama3.2 "$PY_BIN" "$PY_SERVER" &
 else
