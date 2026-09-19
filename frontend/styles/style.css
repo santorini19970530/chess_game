@@ -1641,6 +1641,76 @@ span.shogi_hand_piece {
 .diagram_import_block label {
   font-size: 0.9rem;
 }
+.diagram_import_fen_label_row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.diagram_import_fen_label_row label {
+  flex: 1 1 auto;
+}
+#diagram_import_fen_help {
+  flex: 0 0 auto;
+  width: 1.6rem;
+  max-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 1px solid #4a4a4a;
+  border-radius: 999px;
+  background: #1c1c1c;
+  color: #f5f5f5;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.diagram_import_fen_help_panel {
+  width: min(560px, 92vw);
+  overflow-x: hidden;
+}
+#diagram_import_fen_help[hidden] {
+  display: none;
+}
+.diagram_import_fen_help_body {
+  color: #e8e8e8;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.diagram_import_fen_help_body[hidden] {
+  display: none !important;
+}
+.diagram_import_fen_help_game {
+  margin: 0 0 8px;
+  font-weight: 700;
+  color: #f5f5f5;
+}
+.diagram_import_fen_help_body p {
+  margin: 0 0 8px;
+}
+.diagram_import_fen_help_body p:last-child {
+  margin-bottom: 0;
+}
+.diagram_import_fen_help_body code {
+  font-size: 0.85em;
+  overflow-wrap: anywhere;
+}
+.diagram_import_fen_help_list {
+  margin: 0 0 10px;
+  padding-left: 1.2rem;
+  columns: 2;
+  column-gap: 12px;
+}
+.diagram_import_fen_help_list li {
+  margin: 0 0 4px;
+}
+.diagram_import_fen_help_fields {
+  margin: 0 0 10px;
+  padding-left: 1.2rem;
+}
+.diagram_import_fen_help_fields li {
+  margin: 0 0 4px;
+}
 .diagram_import_hint, .diagram_import_note {
   margin: 0;
   font-size: 0.8rem;
@@ -2177,18 +2247,22 @@ span.shogi_hand_piece {
 }
 .how_it_works_header h2 {
   margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 1.15rem;
   font-weight: 700;
 }
-#how_it_works_close {
-  flex-shrink: 0;
+#how_it_works_close, #diagram_import_fen_help_close {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: none;
   border: 1px solid #4a4a4a;
   background: #1c1c1c;
   color: #f5f5f5;
   padding: 6px 12px;
   cursor: pointer;
 }
-#how_it_works_close:hover, #how_it_works_close:focus-visible {
+#how_it_works_close:hover, #how_it_works_close:focus-visible, #diagram_import_fen_help_close:hover, #diagram_import_fen_help_close:focus-visible {
   border-color: #8a8a8a;
   outline: none;
 }

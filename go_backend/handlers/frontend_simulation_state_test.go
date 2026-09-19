@@ -344,7 +344,7 @@ func TestFrontendHowItWorks_Markers(t *testing.T) {
 	requireSnippet(t, jsSrc, "howItWorksHelp")
 }
 
-// TestFrontendDiagramImport_Markers - checks diagram import confirm-load ui markers
+// TestFrontendDiagramImport_Markers - checks diagram import confirm-load and fen-edit help markers
 func TestFrontendDiagramImport_Markers(t *testing.T) {
 	indexSrc := loadIndexHandlerSource(t)
 	requireSnippet(t, indexSrc, `id="diagram_import_file"`)
@@ -352,8 +352,23 @@ func TestFrontendDiagramImport_Markers(t *testing.T) {
 	requireSnippet(t, indexSrc, `id="diagram_import_confirm"`)
 	requireSnippet(t, indexSrc, `id="diagram_import_confirm_btn"`)
 	requireSnippet(t, indexSrc, `id="diagram_import_cancel_btn"`)
+	requireSnippet(t, indexSrc, `id="diagram_import_fen_help"`)
+	requireSnippet(t, indexSrc, `id="diagram_import_fen_help_dialog"`)
+	requireSnippet(t, indexSrc, `id="diagram_import_fen_help_close"`)
+	requireSnippet(t, indexSrc, `id="diagram_import_fen_help_title"`)
+	requireSnippet(t, indexSrc, `id="diagram_import_fen_help_chess"`)
+	requireSnippet(t, indexSrc, "[SP2bsp4]")
+	requireSnippet(t, indexSrc, "White is holding")
+	requireSnippet(t, indexSrc, "silver")
+	requireSnippet(t, indexSrc, "rnbakabnr/9/1c5c1")
+	requireSnippet(t, indexSrc, "Xiangqi (Chinese chess)")
+	requireSnippet(t, indexSrc, "advisor")
+	requireSnippet(t, indexSrc, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
+	requireSnippet(t, indexSrc, "KQkq")
+	requireSnippet(t, indexSrc, "full FEN")
 
 	jsSrc := loadChessCommandSource(t)
+	requireSnippet(t, jsSrc, `raw === "xiangqi" || raw === "xianqi"`)
 	requireSnippet(t, jsSrc, "/api/diagram/fen")
 	requireSnippet(t, jsSrc, "/load-fen")
 	requireSnippet(t, jsSrc, "DiagramImport")
@@ -361,6 +376,10 @@ func TestFrontendDiagramImport_Markers(t *testing.T) {
 	requireSnippet(t, jsSrc, "analysisMoveNumber")
 	requireSnippet(t, jsSrc, "hands are inferred from board inventory")
 	requireSnippet(t, jsSrc, "Xiangqi: confirm the board carefully")
+	requireSnippet(t, jsSrc, "Uses the Game dropdown")
+	requireSnippet(t, jsSrc, "openFenEditHelp")
+	requireSnippet(t, jsSrc, "closeFenEditHelp")
+	requireSnippet(t, jsSrc, "syncFenEditHelpVisibility")
 	requireSnippet(t, indexSrc, "Shogi: hands are inferred from board inventory")
 }
 

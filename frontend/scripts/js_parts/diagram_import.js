@@ -34,6 +34,12 @@ class DiagramImport {
         this.refreshPreviewFromFenInput();
       });
     }
+    if (this.app.el.gameTypeSelect) {
+      this.app.el.gameTypeSelect.addEventListener("change", () => {
+        this.syncFenEditHelpVisibility();
+      });
+    }
+    this.bindFenEditHelp();
   }
 
   // selectedGameType - returns the setup game type for diagram recognition
@@ -51,6 +57,8 @@ class DiagramImport {
     if (this.app.el.diagramImportPreview) this.app.el.diagramImportPreview.innerHTML = "";
     if (this.app.el.diagramImportNote) this.app.el.diagramImportNote.textContent = "";
     if (!opts.keepFile && this.app.el.diagramImportFile) this.app.el.diagramImportFile.value = "";
+    this.closeFenEditHelp();
+    this.syncFenEditHelpVisibility();
   }
 
   // setBusy - toggles recognize/confirm controls while a request is in flight
@@ -119,6 +127,7 @@ class DiagramImport {
     }
     if (this.app.el.diagramImportNote) {
       const notes = [];
+      notes.push("Uses the Game dropdown. A picture of another game still returns a FEN for this game.");
       if (pending.limitsNote) notes.push(pending.limitsNote);
       if (pending.game === "shogi") {
         notes.push(
@@ -130,6 +139,87 @@ class DiagramImport {
       }
       this.app.el.diagramImportNote.textContent = notes.join(" ");
     }
+    this.syncFenEditHelpVisibility();
+  }
+
+  // bindFenEditHelp - wires ? / close / backdrop / escape for the fen-edit hint
+  bindFenEditHelp() {
+    const help = this.app.el.diagramImportFenHelp;
+    const closeBtn = this.app.el.diagramImportFenHelpClose;
+    const dialog = this.app.el.diagramImportFenHelpDialog;
+    if (help) {
+      help.addEventListener("click", () => this.openFenEditHelp());
+    }
+    if (closeBtn) {
+      closeBtn.addEventListener("click", () => this.closeFenEditHelp());
+    }
+    if (dialog) {
+      dialog.querySelectorAll("[data-diagram-fen-help-dismiss]").forEach((el) => {
+        el.addEventListener("click", () => this.closeFenEditHelp());
+      });
+    }
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && this.isFenEditHelpOpen()) {
+        event.preventDefault();
+        this.closeFenEditHelp();
+      }
+    });
+  }
+
+  // fenEditHelpGame - returns chess / shogi / xianqi from the Game dropdown (fallback: pending)
+  fenEditHelpGame() {
+    const raw = String(this.selectedGameType() || this.app.state.diagramPending?.game || "chess")
+      .trim()
+      .toLowerCase();
+    if (raw === "xiangqi" || raw === "xianqi") return "xianqi";
+    if (raw === "shogi") return "shogi";
+    return "chess";
+  }
+
+  // syncFenEditHelpVisibility - shows the ? and only the guide for the selected game
+  syncFenEditHelpVisibility() {
+    const help = this.app.el.diagramImportFenHelp;
+    const bodies = {
+      chess: this.app.el.diagramImportFenHelpChess,
+      shogi: this.app.el.diagramImportFenHelpShogi,
+      xianqi: this.app.el.diagramImportFenHelpXiangqi,
+    };
+    const game = this.fenEditHelpGame();
+    const show = Boolean(this.app.state.diagramPending);
+    if (help) help.hidden = !show;
+    for (const [key, el] of Object.entries(bodies)) {
+      if (el) el.hidden = key !== game;
+    }
+    const title = this.app.el.diagramImportFenHelpDialog?.querySelector("#diagram_import_fen_help_title");
+    if (title) {
+      const names = { chess: "Chess", shogi: "Shogi", xianqi: "Xiangqi" };
+      title.textContent = `How to edit this ${names[game] || "Chess"} FEN`;
+    }
+    if (!show) this.closeFenEditHelp();
+  }
+
+  // isFenEditHelpOpen - reports whether the fen-edit hint dialog is visible
+  isFenEditHelpOpen() {
+    const dialog = this.app.el.diagramImportFenHelpDialog;
+    return Boolean(dialog && !dialog.hasAttribute("hidden"));
+  }
+
+  // openFenEditHelp - opens the fen-edit hint dialog
+  openFenEditHelp() {
+    this.syncFenEditHelpVisibility();
+    const dialog = this.app.el.diagramImportFenHelpDialog;
+    const help = this.app.el.diagramImportFenHelp;
+    if (!dialog || help?.hidden) return;
+    dialog.removeAttribute("hidden");
+    const closeBtn = this.app.el.diagramImportFenHelpClose;
+    if (closeBtn && typeof closeBtn.focus === "function") closeBtn.focus();
+  }
+
+  // closeFenEditHelp - hides the fen-edit hint dialog
+  closeFenEditHelp() {
+    const dialog = this.app.el.diagramImportFenHelpDialog;
+    if (!dialog) return;
+    dialog.setAttribute("hidden", "");
   }
 
   // refreshPreviewFromFenInput - rebuilds the confirm preview when the fen textarea changes

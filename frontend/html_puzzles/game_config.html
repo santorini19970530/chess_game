@@ -92,7 +92,16 @@
         Chess is the primary path. Xiangqi: confirm carefully (recognition less reliable). Shogi: hands are inferred from board inventory (heuristic).
       </p>
       <div id="diagram_import_confirm" class="diagram_import_confirm" hidden>
-        <label for="diagram_import_fen">Recognized FEN (preview below; edit if wrong, then confirm load)</label>
+        <div class="diagram_import_fen_label_row">
+          <label for="diagram_import_fen">Recognized FEN (preview below; edit if wrong, then confirm load)</label>
+          <button
+            type="button"
+            id="diagram_import_fen_help"
+            hidden
+            aria-label="How to edit this FEN"
+            title="How to edit this FEN"
+          >?</button>
+        </div>
         <textarea id="diagram_import_fen" rows="3" spellcheck="false" autocomplete="off"></textarea>
         <div id="diagram_import_preview" class="diagram_import_preview" aria-label="Diagram confirmation board"></div>
         <p id="diagram_import_note" class="diagram_import_note" aria-live="polite"></p>
