@@ -9,6 +9,75 @@
   {{template "game_play" .}}
 </div>
 {{template "how_it_works" .}}
+<div
+  id="diagram_import_fen_help_dialog"
+  class="how_it_works_dialog"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="diagram_import_fen_help_title"
+  hidden
+>
+  <div class="how_it_works_backdrop" data-diagram-fen-help-dismiss tabindex="-1"></div>
+  <div class="how_it_works_panel diagram_import_fen_help_panel">
+    <div class="how_it_works_header">
+      <h2 id="diagram_import_fen_help_title">How to edit this FEN</h2>
+      <button type="button" id="diagram_import_fen_help_close" aria-label="Close">Close</button>
+    </div>
+    <div id="diagram_import_fen_help_chess" class="diagram_import_fen_help_body" hidden>
+      <p class="diagram_import_fen_help_game">Chess</p>
+      <p>Each letter is a piece. Capital = White. Small = Black.</p>
+      <ul class="diagram_import_fen_help_list">
+        <li><code>K</code> king</li>
+        <li><code>Q</code> queen</li>
+        <li><code>R</code> rook</li>
+        <li><code>B</code> bishop</li>
+        <li><code>N</code> knight</li>
+        <li><code>P</code> pawn</li>
+      </ul>
+      <p>After the board, type four more fields. This box is a full FEN, so they all load.</p>
+      <ul class="diagram_import_fen_help_fields">
+        <li><code>w</code> or <code>b</code> — White or Black to move</li>
+        <li><code>KQkq</code> — who can still castle (K White king-side, Q White queen-side, k / q Black). <code>-</code> means nobody</li>
+        <li><code>-</code> — en passant target, or <code>-</code> if none</li>
+        <li><code>0 1</code> — halfmove clock, then fullmove number</li>
+      </ul>
+      <p>Example tail: <code>w KQkq - 0 1</code>. Start: <code>rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</code>.</p>
+    </div>
+    <div id="diagram_import_fen_help_shogi" class="diagram_import_fen_help_body" hidden>
+      <p class="diagram_import_fen_help_game">Shogi</p>
+      <p>Each letter is a piece. Use these English names when you type:</p>
+      <ul class="diagram_import_fen_help_list">
+        <li><code>R</code> rook (飛)</li>
+        <li><code>B</code> bishop (角)</li>
+        <li><code>G</code> gold (金)</li>
+        <li><code>S</code> silver (銀)</li>
+        <li><code>N</code> knight (桂)</li>
+        <li><code>L</code> lance (香)</li>
+        <li><code>P</code> pawn (歩)</li>
+      </ul>
+      <p>Capital letter = White (先手). Small letter = Black (後手).</p>
+      <p>Hands are the <code>[…]</code> after the board — captured pieces you can drop. The photo’s side piles are not read; this app guesses them. Fix the guess if the picture differs. Empty hands are <code>[]</code>.</p>
+      <p>A number before a letter is how many. <code>2b</code> means Black holds 2 bishops.</p>
+      <p>Example <code>[SP2bsp4]</code>: White is holding 1 silver and 1 pawn. Black is holding 2 bishops, 1 silver, and 4 pawns.</p>
+      <p>After that, <code>w</code> means White to move. <code>b</code> means Black to move.</p>
+    </div>
+    <div id="diagram_import_fen_help_xiangqi" class="diagram_import_fen_help_body" hidden>
+      <p class="diagram_import_fen_help_game">Xiangqi (Chinese chess)</p>
+      <p>Each letter is a piece. Capital = Red (the White column in this app). Small = Black.</p>
+      <ul class="diagram_import_fen_help_list">
+        <li><code>K</code> general (帥)</li>
+        <li><code>A</code> advisor (仕)</li>
+        <li><code>B</code> elephant (相)</li>
+        <li><code>N</code> horse (馬)</li>
+        <li><code>R</code> chariot (車)</li>
+        <li><code>C</code> cannon (炮)</li>
+        <li><code>P</code> soldier (兵)</li>
+      </ul>
+      <p>Files are <code>a</code>–<code>i</code>. After the board, <code>w</code> means Red to move and <code>b</code> means Black to move.</p>
+      <p>Start example: <code>rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w</code>.</p>
+    </div>
+  </div>
+</div>
 <script src="/scripts/js_parts/game_app.js"></script>
 <script src="/scripts/js_parts/dom_state.js"></script>
 <script src="/scripts/js_parts/util.js"></script>

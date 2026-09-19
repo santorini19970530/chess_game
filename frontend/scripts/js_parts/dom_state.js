@@ -57,6 +57,12 @@ class DomState {
     el.diagramImportNote = document.getElementById("diagram_import_note");
     el.diagramImportConfirmBtn = document.getElementById("diagram_import_confirm_btn");
     el.diagramImportCancelBtn = document.getElementById("diagram_import_cancel_btn");
+    el.diagramImportFenHelp = document.getElementById("diagram_import_fen_help");
+    el.diagramImportFenHelpDialog = document.getElementById("diagram_import_fen_help_dialog");
+    el.diagramImportFenHelpClose = document.getElementById("diagram_import_fen_help_close");
+    el.diagramImportFenHelpChess = document.getElementById("diagram_import_fen_help_chess");
+    el.diagramImportFenHelpShogi = document.getElementById("diagram_import_fen_help_shogi");
+    el.diagramImportFenHelpXiangqi = document.getElementById("diagram_import_fen_help_xiangqi");
     el.gameTypeSelect = document.getElementById("game_type");
     el.gameModeSelect = document.getElementById("game_mode");
     el.humanSideSelect = document.getElementById("human_side");
