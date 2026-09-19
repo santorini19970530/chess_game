@@ -182,20 +182,29 @@ def fen_from_image_bytes(image_bytes: bytes, game: str) -> dict[str, Any]:
     }
 
 
+# chess_diagram_fixture_path - env path, else first report capture found walking up
+def chess_diagram_fixture_path() -> Path:
+    env = os.environ.get("CHESS_DIAGRAM_FIXTURE", "").strip()
+    if env:
+        return Path(env).expanduser().resolve()
+    rel = Path("report") / "gameplay_captures" / "chess" / "chess-08082026.webp"
+    start = Path(__file__).resolve().parent
+    for parent in (start, *start.parents):
+        candidate = parent / rel
+        if candidate.is_file():
+            return candidate
+    return start.parents[2] / rel
+
+
 if __name__ == "__main__":
     # offline self-check: aliases always; chess fixture when vendor + capture exist
     assert resolve_diagram_game("xianqi") == "xiangqi"
     assert resolve_diagram_game("chess") == "chess"
     assert resolve_diagram_game("shogi") == "shogi"
-    fixture = (
-        Path(__file__).resolve().parents[1]
-        / "gameplay_capture"
-        / "chess"
-        / "chess-08082026.webp"
-    )
+    fixture = chess_diagram_fixture_path()
     if fixture.is_file() and _VENDOR_DIR.is_dir():
         out = fen_from_image_bytes(fixture.read_bytes(), "chess")
         assert out["fen"] and "/" in out["fen"]
         print("ok", out["fen"])
     else:
-        print("ok aliases only (missing vendor or gameplay_capture fixture)")
+        print("ok aliases only (missing vendor or report fixture)")

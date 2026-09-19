@@ -1,11 +1,15 @@
 .DS_Store
 **/.DS_Store
+
 # macOS zip / Finder metadata (never commit)
 **/__MACOSX/
 **/._*
-# Finder "Keep Both" duplicates (break `go test` / pollute assets)
+
+# duplicates due to iCloud sync (break `go test` / pollute assets)
 **/* 2.*
 **/* 2/
+
+
 frontend/styles/tailwindcss
 go_backend/go_backend
 server.log

@@ -188,20 +188,21 @@ export CHESS_DIAGRAM_TO_FEN_DIR="$(pwd)"   # while inside _local_Chess_diagram_t
 
 ### Step 6. Start the game
 
-**macOS (Apple Silicon):** if `./run.sh` works:
-
-`run.sh` is a helper script that
-(1) rebuilds frontend CSS with the bundled Tailwind tool,
-(2) starts the Python analyser on port 8001 (Ollama coach if Ollama is already running, otherwise heuristic; uses the diagram vendor Python if that venv exists),
-(3) starts the Go backend on port 8080 with Fairy-Stockfish enabled, and
-(4) stops both when you press Ctrl+C.
+On **macOS, Linux, or Windows Subsystem for Linux** (no Docker):
 
 ```bash
 cd chess_game   # if you were in the vendor folder
 ./run.sh
 ```
 
-**Linux, Windows Subsystem for Linux, or if `run.sh` fails on Tailwind:** `style.css` is already in the repo — start the two services yourself:
+`run.sh` does not need the gitignored Tailwind CLI or the compiled `go_backend` binary.
+It
+(1) rebuilds CSS only if a local Tailwind CLI is present, otherwise uses the committed `style.css`,
+(2) starts the Python analyser on port 8001 (Ollama coach if Ollama is already running, otherwise heuristic; uses the diagram vendor Python if that venv exists),
+(3) starts the Go backend on port 8080 with Fairy-Stockfish enabled (`go build` / `go run`), and
+(4) stops both when you press Ctrl+C.
+
+If `./run.sh` cannot run, start the two services yourself:
 
 ```bash
 # terminal 1 — python analyser
@@ -235,6 +236,6 @@ Steps 1–6 already cover play, Fairy-Stockfish, preferred diagram import, and h
 | Port 8080 / 8001 busy | Stop the other process |
 | Docker build slow/fails | Free disk/RAM; retry `docker compose up --build` |
 | `stockfish: no such file` | Finish Step 4 under install B, or set `FAIRY_STOCKFISH_PATH` |
-| `./run.sh` / Tailwind error | Use the two-terminal start under Step 6 of install B (Start the game) |
+| `./run.sh` fails | Use the two-terminal start under Step 6 of install B. CSS is already in `frontend/styles/style.css` |
 | No LLM paragraphs | Normal without Ollama; enable Ollama or `LLM_PROVIDER=ollama` |
 | Windows without Windows Subsystem for Linux | Use install **A** (Docker) |
