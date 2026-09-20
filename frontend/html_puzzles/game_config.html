@@ -82,13 +82,13 @@
         <input
           id="diagram_import_file"
           type="file"
-          accept="image/*,.png,.jpg,.jpeg,.webp,.gif"
+          accept=".png,.jpg,.jpeg,.webp,.gif"
           aria-describedby="diagram_import_hint"
         />
         <button id="diagram_import_recognize" type="button">Recognize</button>
       </div>
       <p id="diagram_import_hint" class="diagram_import_hint">
-        Upload an external board image, confirm the FEN, then load into a review session (not mid-game overwrite).
+        Upload PNG, JPEG, WebP, or GIF (not HEIC). Confirm the FEN, then load a review session (not mid-game overwrite).
         Chess is the primary path. Xiangqi: confirm carefully (recognition less reliable). Shogi: hands are inferred from board inventory (heuristic).
       </p>
       <div id="diagram_import_confirm" class="diagram_import_confirm" hidden>

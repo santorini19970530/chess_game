@@ -8,7 +8,7 @@ import pieces "go_backend/game/piece"
 // XiangqiWouldLeaveGeneralInCheck - reports whether applying from→to leaves mover's general attacked or creates a flying-general face-off
 func XiangqiWouldLeaveGeneralInCheck(source pieces.ChessPiece, fromFile, fromRank, toFile, toRank int) bool {
 	after := simulateXiangqiMove(pieces.ChessPieces, fromFile, fromRank, toFile, toRank)
-	return xiangqiGeneralInCheckOnBoard(after, source.Color) || xiangqiFlyingGeneral(after)
+	return xiangqiGeneralInCheckOnBoard(after, source.Color) || XiangqiFlyingGeneral(after)
 }
 
 // simulateXiangqiMove - simulates xiangqi move
@@ -72,8 +72,8 @@ func XiangqiCheckedColor() pieces.PieceColor {
 	return ""
 }
 
-// xiangqiFlyingGeneral - flying general: same file, no pieces between the two kings
-func xiangqiFlyingGeneral(board []pieces.ChessPiece) bool {
+// XiangqiFlyingGeneral - reports two generals on one file with no piece between
+func XiangqiFlyingGeneral(board []pieces.ChessPiece) bool {
 	wf, wr, wok := findGeneral(board, pieces.White)
 	bf, br, bok := findGeneral(board, pieces.Black)
 	if !wok || !bok || wf != bf {

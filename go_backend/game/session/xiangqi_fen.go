@@ -114,6 +114,13 @@ func validateXiangqiSetupBoard(board []pieces.ChessPiece) error {
 	if wg > 1 || bg > 1 {
 		return fmt.Errorf("illegal xiangqi FEN: white has %d general(s), black has %d", wg, bg)
 	}
+	if movement.XiangqiFlyingGeneral(board) {
+		for _, p := range board {
+			if p.Kind == pieces.King && p.Color == pieces.White {
+				return fmt.Errorf("illegal xiangqi FEN: flying generals on file %c", 'a'+p.File-1)
+			}
+		}
+	}
 	return nil
 }
 

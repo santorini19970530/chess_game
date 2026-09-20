@@ -63,3 +63,12 @@ func TestApplyXiangqiFEN_ElephantCrossedRiverRejected(t *testing.T) {
 		t.Fatalf("err=%v", err)
 	}
 }
+
+// TestApplyXiangqiFEN_FlyingGeneralsRejected - two generals on one empty file cannot be a setup
+func TestApplyXiangqiFEN_FlyingGeneralsRejected(t *testing.T) {
+	fen := "4k4/9/1pc5b/p5p2/2n6/R8/8n/1C3A1CN/3P2N2/4K3R w"
+	err := applyXiangqiFENToCurrentGlobals(fen)
+	if err == nil || !strings.Contains(err.Error(), "flying generals") || !strings.Contains(err.Error(), "file e") {
+		t.Fatalf("err=%v", err)
+	}
+}
