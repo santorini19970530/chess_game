@@ -76,6 +76,7 @@ class TestTeacherPrompt(unittest.TestCase):
         self.assertIn("Ok terms:", sh)
         self.assertIn("drop", sh.split("Ok terms:", 1)[-1])
         self.assertIn("Shogi", sh)
+        self.assertIn("一", sh)
         self.assertNotIn("palace", chess)
         self.assertNotIn("palace", chess.split("Ok terms:", 1)[-1] if "Ok terms:" in chess else chess)
 
@@ -161,6 +162,8 @@ class TestTeacherPrompt(unittest.TestCase):
             side_to_move="black",
         )
         self.assertNotIn("Placeholder", text)
+        self.assertIn("3三→3四", text)
+        self.assertNotIn("c3", text.lower())
         self.assertTrue(
             text.startswith("You played") or text.startswith("White played") or text.startswith("Black played")
         )
@@ -211,9 +214,9 @@ class TestTeacherPrompt(unittest.TestCase):
             ),
             concept_hints=["Engine suggested replies (side to move): b2h8, b2c3."],
         )
-        self.assertTrue(out.startswith("Black played pawn g7→g6."))
-        self.assertIn("b2h8", out)
-        self.assertIn("b2c3", out)
+        self.assertTrue(out.startswith("Black played pawn 7七→7六."))
+        self.assertIn("2二→8八", out)
+        self.assertIn("2二→3三", out)
         self.assertNotIn("original", out.lower())
         self.assertNotIn("safe hand", out.lower())
 
@@ -227,9 +230,9 @@ class TestTeacherPrompt(unittest.TestCase):
             ground_summary="GROUND TRUTH: last Shogi move silver c9→c8 (UCI c9c8). Only mention squares c9 c8.",
             concept_hints=["Engine suggested replies (side to move): G@e6, P@e6."],
         )
-        self.assertTrue(out.startswith("Black played silver c9→c8."))
+        self.assertTrue(out.startswith("Black played silver 3九→3八."))
         self.assertNotIn("G*c8", out)
-        self.assertIn("G@e6", out)
+        self.assertIn("5六", out)
 
     # test_finalize_drops_vacuous_your_turn - checks empty your-turn filler is removed
     def test_finalize_drops_vacuous_your_turn(self) -> None:
@@ -240,8 +243,8 @@ class TestTeacherPrompt(unittest.TestCase):
             human_color="white",
             ground_summary="GROUND TRUTH: last Shogi move drop pawn → a6 (UCI P*a6).",
         )
-        self.assertTrue(out.startswith("Black played drop pawn → a6."))
-        self.assertGreater(len(out), len("Black played drop pawn → a6."))
+        self.assertTrue(out.startswith("Black played drop pawn → 1六."))
+        self.assertGreater(len(out), len("Black played drop pawn → 1六."))
         self.assertNotIn("your turn", out.lower())
 
     # test_finalize_drops_truncated_follow_up - checks mid-sentence llm cutoffs are dropped
@@ -253,7 +256,7 @@ class TestTeacherPrompt(unittest.TestCase):
             human_color="white",
             ground_summary="GROUND TRUTH: last Shogi move silver g9→g8 (UCI g9g8).",
         )
-        self.assertTrue(out.startswith("Black played silver g9→g8."))
+        self.assertTrue(out.startswith("Black played silver 7九→7八."))
         self.assertNotIn("so let's", out)
         self.assertIn("silver", out.lower())
 
@@ -275,7 +278,7 @@ class TestTeacherPrompt(unittest.TestCase):
             human_color="white",
             ground_summary=ground,
         )
-        self.assertTrue(out.startswith("You played silver g1→f2."))
+        self.assertTrue(out.startswith("You played silver 7一→6二."))
         self.assertNotIn("d1", out)
         self.assertNotIn("center", out.lower())
         self.assertIn("piece safety", out.lower())
@@ -407,7 +410,7 @@ class TestTeacherPrompt(unittest.TestCase):
                 "Only mention squares h8 b2."
             ),
         )
-        self.assertTrue(out.startswith("You played bishop h8→b2."))
+        self.assertTrue(out.startswith("You played bishop 8八→2二."))
         self.assertIn("bishop", out.lower())
 
     # test_finalize_strips_shogi_chess_file_jargon - checks kingside / pawn breaks / f-file die on shogi
@@ -424,11 +427,11 @@ class TestTeacherPrompt(unittest.TestCase):
             concept_hints=["Engine suggested replies (side to move): S@b8."],
             fen="4k4/9/9/9/9/9/9/9/4K4[S] w - - 0 1",
         )
-        self.assertTrue(out.startswith("Black played gold e8→d7."))
+        self.assertTrue(out.startswith("Black played gold 5八→4七."))
         self.assertNotIn("pawn break", out.lower())
         self.assertNotIn("f-file", out.lower())
         self.assertNotIn("kingside", out.lower())
-        self.assertIn("S@b8", out)
+        self.assertIn("2八", out)
 
     # test_finalize_drops_illegal_shogi_drop_not_in_hand - checks B@h3 dies when the hand has no bishop
     def test_finalize_drops_illegal_shogi_drop_not_in_hand(self) -> None:
@@ -444,10 +447,10 @@ class TestTeacherPrompt(unittest.TestCase):
             concept_hints=["Engine suggested replies (side to move): B@h3, S@b8."],
             fen="4k4/9/9/9/9/9/9/9/4K4[S] w - - 0 1",
         )
-        self.assertTrue(out.startswith("Black played silver i7→h6."))
+        self.assertTrue(out.startswith("Black played silver 9七→8六."))
         self.assertNotIn("B@h3", out)
         self.assertNotIn("b@h3", out.lower())
-        self.assertIn("S@b8", out)
+        self.assertIn("2八", out)
 
     # test_heuristic_still_works - checks heuristic provider returns non-empty coach text
     def test_heuristic_still_works(self) -> None:

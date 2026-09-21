@@ -75,7 +75,10 @@ class TestVariantExplain(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.get_json())
         payload = response.get_json()
         self.assertEqual(payload["status"], "ok")
-        self.assertTrue(str(payload.get("explanation", "")).strip())
+        text = str(payload.get("explanation", "")).strip()
+        self.assertTrue(text)
+        self.assertIn("3三→3四", text)
+        self.assertNotIn("c3", text.lower())
 
     # test_teacher_prompt_loads_variant_terms - checks xianqi/shogi prompts use that game's terms, not chess copy
     def test_teacher_prompt_loads_variant_terms(self) -> None:

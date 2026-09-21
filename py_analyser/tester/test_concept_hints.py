@@ -14,7 +14,12 @@ if PARENT_DIR not in sys.path:
 
 os.environ["LLM_PROVIDER"] = "heuristic"
 
-from analyzer import build_concept_hints, build_move_ground_truth  # noqa: E402
+from analyzer import (  # noqa: E402
+    build_concept_hints,
+    build_move_ground_truth,
+    shogi_board_square,
+    shogi_uci_to_board,
+)
 import server  # noqa: E402
 
 
@@ -42,15 +47,24 @@ class TestMoveGroundTruth(unittest.TestCase):
     def test_shogi_labels_piece_from_post_move_fen(self) -> None:
         fen = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B3S1R1/LNSGKG1NL[] b - - 0 1"
         gt = build_move_ground_truth(fen, "g1f2", ["g1f2"], "shogi")
-        self.assertEqual(gt.get("san"), "silver g1→f2")
-        self.assertIn("silver g1→f2", gt["summary"])
+        self.assertEqual(gt.get("san"), "silver 7一→6二")
+        self.assertIn("silver 7一→6二", gt["summary"])
+        self.assertNotIn("g1", gt["summary"])
         self.assertNotEqual(gt.get("san"), "g1f2")
 
     # test_shogi_drop_label - checks shogi drop uci becomes a drop pawn label
     def test_shogi_drop_label(self) -> None:
         fen = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL[P] w - - 0 1"
         gt = build_move_ground_truth(fen, "P*e5", ["P*e5"], "shogi")
-        self.assertEqual(gt.get("san"), "drop pawn → e5")
+        self.assertEqual(gt.get("san"), "drop pawn → 5五")
+
+    # test_shogi_board_square - checks uci file/rank maps to numbered file + rank kanji
+    def test_shogi_board_square(self) -> None:
+        self.assertEqual(shogi_board_square("g", 1), "7一")
+        self.assertEqual(shogi_board_square("f", "2"), "6二")
+        self.assertEqual(shogi_uci_to_board("silver g1→f2"), "silver 7一→6二")
+        self.assertEqual(shogi_uci_to_board("P*e5"), "drop pawn → 5五")
+        self.assertEqual(shogi_uci_to_board("g1f2"), "7一→6二")
 
     # test_does_not_claim_far_bishop_attack_on_f3 - checks quiet f2f3 does not invent bishop attacks
     def test_does_not_claim_far_bishop_attack_on_f3(self) -> None:
@@ -119,6 +133,17 @@ class TestConceptHints(unittest.TestCase):
             max_hints=2,
         )
         self.assertEqual(len(hints), 2)
+
+    # test_shogi_reply_cues_use_board_squares - checks shogi suggestion uci is rewritten for the coach
+    def test_shogi_reply_cues_use_board_squares(self) -> None:
+        hints = build_concept_hints(
+            {
+                "game_type": "shogi",
+                "fen": "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B3S1R1/LNSGKG1NL[] b - - 0 1",
+                "suggested_moves": [{"uci": "g1f2", "san": "g1f2"}],
+            }
+        )
+        self.assertEqual(hints, ["Engine suggested replies (side to move): silver 7一→6二."])
 
 
 class TestExplainConceptHintsContract(unittest.TestCase):

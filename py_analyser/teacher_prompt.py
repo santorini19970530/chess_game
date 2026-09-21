@@ -111,6 +111,8 @@ class TeacherPrompt:
                     f"Advise YOU ({human}) after naming {last_mover}'s move; "
                     f"do not call {last_mover}'s piece 'your' piece."
                 )
+        if (game_type or "").strip().lower() == "shogi":
+            parts.append("Write squares as file 1-9 plus rank 一-九 (7一), never UCI letters like g1.")
         if style_line:
             parts.append(f"Style: {style_line}.")
         if terms_line:

@@ -76,9 +76,10 @@ class ExplainFinalizer:
         concept_hints: list[str] | None = None,
         fen: str | None = None,
     ) -> str:
-        if fen and (
-            "shogi" in (ground_summary or "").lower() or "[" in (fen.split()[0] if fen else "")
-        ):
+        is_shogi = "shogi" in (ground_summary or "").lower() or (
+            bool(fen) and "[" in ((fen.split()[0] if fen else ""))
+        )
+        if fen and is_shogi:
             concept_hints = self._filter_shogi_drop_hints(concept_hints, fen)
         cleaned = self.sanitize(text).strip().strip('"').strip("'")
         san = (move_san or "").strip()
@@ -91,12 +92,15 @@ class ExplainFinalizer:
             )
             san = (m.group(1) if m else "").strip()
         if not san:
-            return self._safe_coach_followup(
-                ground_summary=ground_summary,
-                concept_hints=concept_hints,
-                last_mover=last_mover,
-                human_color=human_color,
-                move_san=None,
+            return self._finish_shogi(
+                self._safe_coach_followup(
+                    ground_summary=ground_summary,
+                    concept_hints=concept_hints,
+                    last_mover=last_mover,
+                    human_color=human_color,
+                    move_san=None,
+                ),
+                is_shogi,
             )
 
         mover = self._normalize_side(last_mover)
@@ -270,7 +274,7 @@ class ExplainFinalizer:
             break  # at most one follow-up sentence
 
         if follow:
-            return f"{opener} {' '.join(follow)}".strip()
+            return self._finish_shogi(f"{opener} {' '.join(follow)}".strip(), is_shogi)
         # prefer a boring true line over opener-only silence after filters strip llm junk
         idea = self._safe_coach_followup(
             ground_summary=ground_summary,
@@ -279,7 +283,15 @@ class ExplainFinalizer:
             human_color=human or None,
             move_san=san,
         )
-        return f"{opener} {idea}".strip()
+        return self._finish_shogi(f"{opener} {idea}".strip(), is_shogi)
+
+    # _finish_shogi - rewrites leftover uci squares in player-facing shogi coach text
+    def _finish_shogi(self, text: str, is_shogi: bool) -> str:
+        if not is_shogi:
+            return text
+        from analyzer import shogi_uci_to_board
+
+        return shogi_uci_to_board(text)
 
     # _normalize_side - maps color strings to white or black
     def _normalize_side(self, color: str | None) -> str:
