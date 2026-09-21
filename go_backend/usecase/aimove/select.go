@@ -218,6 +218,21 @@ func normalizeAIMove(gameType, raw string) string {
 	return s
 }
 
+// KeepLegalEngineMoves - keeps engine lines whose uci is in the session legal set
+func KeepLegalEngineMoves(gameType string, results []engine.UCIResult, legal []string) []engine.UCIResult {
+	set := make(map[string]struct{}, len(legal))
+	for _, mv := range legal {
+		set[normalizeAIMove(gameType, mv)] = struct{}{}
+	}
+	out := make([]engine.UCIResult, 0, len(results))
+	for _, r := range results {
+		if _, ok := set[normalizeAIMove(gameType, r.Move)]; ok {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
 // selectMoveWithFairyStockfish - asks the local uci engine for one best move with profile/clock limits and optional degrade
 func selectMoveWithFairyStockfish(fen, profile, side string, allowDegrade bool, gameType string, clk *sessionpkg.Clock) (string, error) {
 	var lastErr error

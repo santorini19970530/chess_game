@@ -154,6 +154,7 @@ class TeacherPrompt:
                 last_mover="",
                 human_color=human_color,
                 ground_summary=str(ground.get("summary") or ""),
+                fen=fen,
             )
         if "capturing" in summary:
             idea = "That was a capture — check whether the piece is safe."
@@ -184,6 +185,7 @@ class TeacherPrompt:
             last_mover=last_mover,
             human_color=human_color,
             ground_summary=str(ground.get("summary") or ""),
+            fen=fen,
         )
 
     # looks_like_uci - reports whether a string looks like a bare uci move token

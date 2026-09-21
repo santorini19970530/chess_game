@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"go_backend/game/engine"
 )
 
 // TestUseFairyStockfish_EnvFlag - maps USE_FAIRY_STOCKFISH true/1 to on and other values to off
@@ -134,5 +136,26 @@ func TestNormalizeAIMove_ShogiDropAtToStar(t *testing.T) {
 	got = normalizeAIMove("chess", "E2E4")
 	if got != "e2e4" {
 		t.Fatalf("got %q want e2e4", got)
+	}
+}
+
+// TestKeepLegalEngineMoves_ShogiAtMatchesStar - keeps S@b8 when the legal set uses s*b8
+func TestKeepLegalEngineMoves_ShogiAtMatchesStar(t *testing.T) {
+	legal := []string{"s*b8", "c3c4"}
+	results := []engine.UCIResult{{Move: "B@h3"}, {Move: "S@b8"}, {Move: "c3c4"}}
+	got := KeepLegalEngineMoves("shogi", results, legal)
+	if len(got) != 2 {
+		t.Fatalf("len=%d want 2: %+v", len(got), got)
+	}
+	if got[0].Move != "S@b8" || got[1].Move != "c3c4" {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+// TestKeepLegalEngineMoves_NoUnfilteredFallback - drops every engine line that is not legal
+func TestKeepLegalEngineMoves_NoUnfilteredFallback(t *testing.T) {
+	got := KeepLegalEngineMoves("shogi", []engine.UCIResult{{Move: "B@h3"}}, []string{"s*b8"})
+	if len(got) != 0 {
+		t.Fatalf("want empty, got %+v", got)
 	}
 }

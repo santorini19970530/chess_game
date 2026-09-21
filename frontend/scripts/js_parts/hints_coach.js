@@ -78,6 +78,18 @@ class HintsCoach {
     return kind ? String(kind) : "piece";
   }
 
+  // squareOnBoard - formats a uci square as algebraic, or shogi file + rank kanji
+  squareOnBoard(file, rank) {
+    if (String(this.app.state?.boardGameType || "").toLowerCase() === "shogi") {
+      if (typeof BoardView !== "undefined" && BoardView.shogiBoardSquare) {
+        return BoardView.shogiBoardSquare(file, rank);
+      }
+      const kanji = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九"][Number(rank)] || "";
+      return `${Number(file)}${kanji}`;
+    }
+    return `${String.fromCharCode(96 + file)}${rank}`;
+  }
+
   // formatHintLine - formats one suggested-move line for the notes box
   formatHintLine(rank, parsed, scoreCp, rawMove = "") {
     const sc = typeof scoreCp === "number" ? ` (${scoreCp > 0 ? "+" : ""}${scoreCp})` : "";
@@ -85,12 +97,12 @@ class HintsCoach {
       const raw = String(rawMove || "").trim();
       return `${rank}. ${raw || "????"}${sc}`;
     }
-    const toLab = `${String.fromCharCode(96 + parsed.to.file)}${parsed.to.rank}`;
+    const toLab = this.squareOnBoard(parsed.to.file, parsed.to.rank);
     if (parsed.dropKind) {
       const kind = this.app.SHOGI_DROP_KIND_FROM_CHAR[parsed.dropKind.toLowerCase()] || parsed.dropKind;
       return `${rank}. drop ${kind} from hand → ${toLab}${sc}`;
     }
-    const fromLab = `${String.fromCharCode(96 + parsed.from.file)}${parsed.from.rank}`;
+    const fromLab = this.squareOnBoard(parsed.from.file, parsed.from.rank);
     const kind = this.pieceKindAt(parsed.from.file, parsed.from.rank);
     const promo = parsed.promote ? " (promote)" : "";
     return `${rank}. ${kind} ${fromLab} → ${toLab}${promo}${sc}`;
@@ -365,6 +377,21 @@ if (typeof window !== "undefined") {
   const line = coach.formatHintLine(1, null, 3402, "e7e8q");
   if (!line.includes("e7e8q") || line.includes("????")) {
     throw new Error("formatHintLine raw fallback self-check failed");
+  }
+  const shogiCoach = new HintsCoach({
+    state: { boardGameType: "shogi", boardFiles: 9, boardMaxRank: 9 },
+    el: { boardElement: { querySelector() { return null; } } },
+    board: { sequenceByFileRank() { return 0; } },
+    SHOGI_DROP_KIND_FROM_CHAR: {},
+  });
+  const shogiLine = shogiCoach.formatHintLine(
+    1,
+    { from: { file: 7, rank: 1 }, to: { file: 6, rank: 2 }, dropKind: null, promote: false },
+    30,
+    "g1f2"
+  );
+  if (!shogiLine.includes("7一") || !shogiLine.includes("6二") || shogiLine.includes("g1")) {
+    throw new Error("formatHintLine shogi board-square self-check failed");
   }
   console.log("hints coach self-check ok");
 }

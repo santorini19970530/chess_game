@@ -19,6 +19,13 @@ _INTERNAL_FEN_NOISE = re.compile(
     r"(?i)\(?\s*internal board(?:\s+fen)?[^)\n]*\)?\.?"
 )
 
+_DROP_TOKEN = re.compile(r"\b([plnsgbr])[*@]([a-i])([1-9])\b", re.I)
+_CHESS_JARGON_BOTH = re.compile(
+    r"(?i)\b(cent(?:er|re)|castling|en passant|pawn chain|pawn breaks?|"
+    r"pawn storm|kingside|queenside|[a-i]-file)\b"
+)
+_CHESS_JARGON_XIANGQI = re.compile(r"(?i)\b(bishop|rook|knight|queen)\b")
+
 _PIECE_NAMES = (
     "promoted silver",
     "promoted knight",
@@ -67,7 +74,12 @@ class ExplainFinalizer:
         human_color: str | None = None,
         ground_summary: str = "",
         concept_hints: list[str] | None = None,
+        fen: str | None = None,
     ) -> str:
+        if fen and (
+            "shogi" in (ground_summary or "").lower() or "[" in (fen.split()[0] if fen else "")
+        ):
+            concept_hints = self._filter_shogi_drop_hints(concept_hints, fen)
         cleaned = self.sanitize(text).strip().strip('"').strip("'")
         san = (move_san or "").strip()
         if not san:
@@ -199,9 +211,9 @@ class ExplainFinalizer:
             claimed_moves |= set(re.findall(r"\b[a-i]\d{1,2}[a-i]\d{1,2}\+?\b", sl, flags=re.I))
             if claimed_moves and not claimed_moves.issubset(allowed_moves):
                 continue
-            if ("xiangqi" in allow or "shogi" in allow) and re.search(
-                r"\b(cent(?:er|re)|castling|en passant)\b", sl
-            ):
+            if ("xiangqi" in allow or "shogi" in allow) and _CHESS_JARGON_BOTH.search(sl):
+                continue
+            if "xiangqi" in allow and _CHESS_JARGON_XIANGQI.search(sl):
                 continue
             # retract / undo the move just played (illegal nonsense, esp. pawns)
             if re.search(
@@ -294,6 +306,116 @@ class ExplainFinalizer:
     def _is_drop_label(self, move_san: str | None) -> bool:
         return (move_san or "").strip().lower().startswith("drop ")
 
+    # _shogi_side_to_move - reads w/b from fen, defaulting to white
+    def _shogi_side_to_move(self, fen: str) -> str:
+        parts = (fen or "").split()
+        if len(parts) >= 2 and parts[1] == "b":
+            return "black"
+        return "white"
+
+    # _shogi_hand_letters - returns drop letters in the side-to-move hand
+    def _shogi_hand_letters(self, fen: str, side: str) -> set[str]:
+        raw = (fen or "").split()[0] if fen else ""
+        hand = ""
+        if "[" in raw and "]" in raw:
+            hand = raw[raw.index("[") + 1 : raw.index("]")]
+        out: set[str] = set()
+        for ch in hand:
+            if ch.isdigit():
+                continue
+            if side == "white" and ch.isupper():
+                out.add(ch.lower())
+            elif side == "black" and ch.islower():
+                out.add(ch.lower())
+        return out
+
+    # _shogi_grid - maps (file, rank) to the fen letter including a leading +
+    def _shogi_grid(self, fen: str) -> dict[tuple[int, int], str]:
+        placement = (fen or "").split()[0] if fen else ""
+        if "[" in placement:
+            placement = placement.split("[", 1)[0]
+        rows = placement.split("/")
+        grid: dict[tuple[int, int], str] = {}
+        for i, row in enumerate(rows):
+            rank = len(rows) - i
+            file_i = 1
+            j = 0
+            while j < len(row):
+                ch = row[j]
+                if ch.isdigit():
+                    file_i += int(ch)
+                    j += 1
+                    continue
+                if ch == "+":
+                    j += 1
+                    if j >= len(row):
+                        break
+                    grid[(file_i, rank)] = "+" + row[j]
+                    file_i += 1
+                    j += 1
+                    continue
+                grid[(file_i, rank)] = ch
+                file_i += 1
+                j += 1
+        return grid
+
+    # _shogi_drop_plausible - reports whether a drop token is in-hand, empty, and not nifu / last-rank
+    def _shogi_drop_plausible(self, fen: str, token: str) -> bool:
+        m = _DROP_TOKEN.search(token or "")
+        if not m or not (fen or "").strip():
+            return True
+        kind = m.group(1).lower()
+        file_i = ord(m.group(2).lower()) - ord("a") + 1
+        rank = int(m.group(3))
+        side = self._shogi_side_to_move(fen)
+        if kind not in self._shogi_hand_letters(fen, side):
+            return False
+        grid = self._shogi_grid(fen)
+        if (file_i, rank) in grid:
+            return False
+        if side == "white":
+            if kind in {"p", "l"} and rank == 9:
+                return False
+            if kind == "n" and rank >= 8:
+                return False
+            pawn = "P"
+        else:
+            if kind in {"p", "l"} and rank == 1:
+                return False
+            if kind == "n" and rank <= 2:
+                return False
+            pawn = "p"
+        if kind == "p" and any(f == file_i and piece == pawn for (f, _r), piece in grid.items()):
+            return False
+        return True
+
+    # _filter_shogi_drop_hints - drops engine reply tokens that cannot be a legal shogi drop
+    def _filter_shogi_drop_hints(
+        self, concept_hints: list[str] | None, fen: str
+    ) -> list[str] | None:
+        if not concept_hints:
+            return concept_hints
+        out: list[str] = []
+        for raw in concept_hints:
+            if "engine suggested replies" not in raw.lower():
+                out.append(raw)
+                continue
+            prefix, sep, tail = raw.partition(":")
+            if not sep:
+                out.append(raw)
+                continue
+            kept: list[str] = []
+            for part in tail.split(","):
+                tok = part.strip().rstrip(".")
+                if not tok:
+                    continue
+                if _DROP_TOKEN.search(tok) and not self._shogi_drop_plausible(fen, tok):
+                    continue
+                kept.append(tok)
+            if kept:
+                out.append(prefix + ": " + ", ".join(kept) + ".")
+        return out
+
     # _replies_from_cues - pulls up to two suggested reply tokens from concept hints
     def _replies_from_cues(self, concept_hints: list[str] | None) -> list[str]:
         for raw in concept_hints or []:
@@ -360,6 +482,7 @@ def finalize_explanation(
     human_color: str | None = None,
     ground_summary: str = "",
     concept_hints: list[str] | None = None,
+    fen: str | None = None,
 ) -> str:
     return _FINALIZER.finalize(
         text,
@@ -368,6 +491,7 @@ def finalize_explanation(
         human_color=human_color,
         ground_summary=ground_summary,
         concept_hints=concept_hints,
+        fen=fen,
     )
 
 

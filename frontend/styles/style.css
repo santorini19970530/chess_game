@@ -1032,6 +1032,19 @@ main {
   color: #fff7ed;
   font-size: 0.65rem;
 }
+.chess_board_wrapper[data-game-type="shogi"] {
+  grid-template-columns: clamp(22px, 4cqw, 36px) minmax(0, 1fr);
+}
+.chess_board_wrapper[data-game-type="shogi"] .board_label {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.2em;
+}
+.chess_board_wrapper[data-game-type="shogi"] .board_label_kanji {
+  font-weight: 600;
+  opacity: 0.85;
+}
 .chess_board_wrapper[data-game-type="shogi"] .chess_board {
   --shogi-line: #3d2a1a;
   --shogi-wood: #e0c9a0;
