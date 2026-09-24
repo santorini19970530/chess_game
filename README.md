@@ -160,7 +160,7 @@ cd _local_Chess_diagram_to_FEN
 # follow that repo: sync environment, download_models.sh, then install flask/Pillow/python-chess into that Python if needed
 ```
 
-2. System library for the vision stack: macOS `brew install cairo`; Linux `sudo apt install -y libcairo2-dev`.
+2. System library for the vision stack: macOS `brew install cairo`; Linux `sudo apt install -y libcairo2`.
 3. Point the analyser at it (or rely on the default sibling path):
 
 ```bash
