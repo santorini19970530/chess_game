@@ -170,7 +170,7 @@ func TestUCIVariantName(t *testing.T) {
 		"chess":   "chess",
 		"xianqi":  "xiangqi",
 		"xiangqi": "xiangqi",
-		"Xianqi":  "xiangqi",
+		"Xiangqi": "xiangqi",
 		"shogi":   "shogi",
 		"":        "chess",
 	}

@@ -1,6 +1,6 @@
 # local reproducibility / demo aid (not a production deployment claim)
-# usage (Mac, from chess_game/): docker compose up --build
-# DO overrides: NNUE_HOST_DIR=/root/_local_nnue CHESS_DIAGRAM_HOST_DIR=/root/_local_Chess_diagram_to_FEN
+# marker path: docker compose up --build → play (Fairy-Stockfish); coach = heuristic default
+# diagram import / Ollama coach are not the Compose marker path — use host ./run.sh
 # only host port 8080 is published; analyser stays on the compose network.
 services:
   analyser:
@@ -9,17 +9,16 @@ services:
       dockerfile: Dockerfile.analyser
     volumes:
       - ${NNUE_HOST_DIR:-../_local_nnue}:/nnue:ro
-      - ${CHESS_DIAGRAM_HOST_DIR:-../_local_Chess_diagram_to_FEN}:/vendor/Chess_diagram_to_FEN:ro
     environment:
       PY_ANALYSER_HOST: "0.0.0.0"
       PY_ANALYSER_PORT: "8001"
       LLM_PROVIDER: "${LLM_PROVIDER:-heuristic}"
       FAIRY_STOCKFISH_PATH: /usr/local/bin/stockfish
       FAIRY_STOCKFISH_NNUE_PATH: /nnue/nn-3475407dc199.nnue
-      OLLAMA_URL: "${OLLAMA_URL:-http://host.docker.internal:11434}"
+      # optional advanced: LLM_PROVIDER=ollama with host Ollama; URL must hit /api/generate
+      OLLAMA_URL: "${OLLAMA_URL:-http://host.docker.internal:11434/api/generate}"
       OLLAMA_MODEL: "${OLLAMA_MODEL:-llama3.2}"
       EXPLAIN_LOG: "0"
-      CHESS_DIAGRAM_TO_FEN_DIR: /vendor/Chess_diagram_to_FEN
     expose:
       - "8001"
     extra_hosts:
