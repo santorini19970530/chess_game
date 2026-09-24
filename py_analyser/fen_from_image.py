@@ -101,20 +101,25 @@ def _find_library(name: str) -> str | None:
     return _orig_find_library(name)
 
 
-# _ensure_cairo_library - points cairocffi at homebrew libcairo (conda shells miss it)
+# _ensure_cairo_library - uses a homebrew libcairo when present, otherwise the system library
 def _ensure_cairo_library() -> None:
     global _cairo_ready
     if _cairo_ready:
         return
 
-    if not any(p.is_file() for p in _CAIRO_CANDIDATES):
-        raise FenFromImageError(
-            "libcairo not found; install with: brew install cairo",
-            "internal",
-        )
+    if any(p.is_file() for p in _CAIRO_CANDIDATES):
+        ctypes.util.find_library = _find_library
+        _cairo_ready = True
+        return
 
-    ctypes.util.find_library = _find_library
-    _cairo_ready = True
+    if any(_orig_find_library(name) for name in _CAIRO_FIND_NAMES):
+        _cairo_ready = True
+        return
+
+    raise FenFromImageError(
+        "libcairo not found; macOS: brew install cairo; Linux: sudo apt install -y libcairo2",
+        "internal",
+    )
 
 
 # fen_from_image_bytes - runs diagram recognition and returns fen fields

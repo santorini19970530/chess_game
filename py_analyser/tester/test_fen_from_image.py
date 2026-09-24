@@ -47,6 +47,24 @@ class TestFenFromImageAPI(unittest.TestCase):
     def test_xianqi_alias_maps_to_xiangqi(self) -> None:
         self.assertEqual(fen_from_image.resolve_diagram_game("xianqi"), "xiangqi")
 
+    # test_cairo_accepts_system_library_without_homebrew - linux libcairo is enough when brew paths are absent
+    def test_cairo_accepts_system_library_without_homebrew(self) -> None:
+        saved_ready = fen_from_image._cairo_ready
+        saved_candidates = fen_from_image._CAIRO_CANDIDATES
+        saved_find = fen_from_image._orig_find_library
+        try:
+            fen_from_image._cairo_ready = False
+            fen_from_image._CAIRO_CANDIDATES = ()
+            fen_from_image._orig_find_library = (
+                lambda name: "libcairo.so.2" if name == "cairo" else None
+            )
+            fen_from_image._ensure_cairo_library()
+            self.assertTrue(fen_from_image._cairo_ready)
+        finally:
+            fen_from_image._cairo_ready = saved_ready
+            fen_from_image._CAIRO_CANDIDATES = saved_candidates
+            fen_from_image._orig_find_library = saved_find
+
     # test_chess_vision_checkpoint_names_when_vendor_present - five Chess best_model_*.pth prefixes
     def test_chess_vision_checkpoint_names_when_vendor_present(self) -> None:
         names = fen_from_image.chess_vision_checkpoints()
