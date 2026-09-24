@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"go_backend/game/engine"
 	sessionpkg "go_backend/game/session"
@@ -113,24 +112,8 @@ func (h *Handler) getAPIGameTopMoves(w http.ResponseWriter, r *http.Request, gam
 		return
 	}
 
-	// build set of legal UCI moves for the current position
-	legalSet := make(map[string]struct{})
-	if legalMoves, err := sessionpkg.AllLegalUCIMovesByID(gameID); err == nil {
-		for _, mv := range legalMoves {
-			legalSet[strings.ToLower(mv)] = struct{}{}
-		}
-	}
-
-	// filter to only legal moves
-	legalResults := make([]engine.UCIResult, 0, len(results))
-	for _, r := range results {
-		if _, ok := legalSet[strings.ToLower(r.Move)]; ok {
-			legalResults = append(legalResults, r)
-		}
-	}
-	if len(legalResults) == 0 {
-		legalResults = results // fallback if filtering removed everything
-	}
+	legalMoves, _ := sessionpkg.AllLegalUCIMovesByID(gameID)
+	legalResults := aimove.KeepLegalEngineMoves(string(game.Type), results, legalMoves)
 
 	type moveSuggestion struct {
 		Move    string `json:"move"`

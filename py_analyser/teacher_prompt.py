@@ -111,6 +111,8 @@ class TeacherPrompt:
                     f"Advise YOU ({human}) after naming {last_mover}'s move; "
                     f"do not call {last_mover}'s piece 'your' piece."
                 )
+        if (game_type or "").strip().lower() == "shogi":
+            parts.append("Write squares as file 1-9 plus rank 一-九 (7一), never UCI letters like g1.")
         if style_line:
             parts.append(f"Style: {style_line}.")
         if terms_line:
@@ -154,6 +156,7 @@ class TeacherPrompt:
                 last_mover="",
                 human_color=human_color,
                 ground_summary=str(ground.get("summary") or ""),
+                fen=fen,
             )
         if "capturing" in summary:
             idea = "That was a capture — check whether the piece is safe."
@@ -184,6 +187,7 @@ class TeacherPrompt:
             last_mover=last_mover,
             human_color=human_color,
             ground_summary=str(ground.get("summary") or ""),
+            fen=fen,
         )
 
     # looks_like_uci - reports whether a string looks like a bare uci move token

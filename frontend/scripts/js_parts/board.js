@@ -41,9 +41,16 @@ class BoardView {
     if (ranksEl) {
       ranksEl.replaceChildren(
         ...Array.from({ length: this.app.state.boardMaxRank }, (_, i) => {
+          const rank = this.app.state.boardMaxRank - i;
           const span = document.createElement("span");
           span.className = "board_label";
-          span.textContent = String(this.app.state.boardMaxRank - i);
+          span.append(String(rank));
+          if (this.app.state.boardGameType === "shogi") {
+            const kanji = document.createElement("span");
+            kanji.className = "board_label_kanji";
+            kanji.textContent = BoardView.shogiRankKanji(rank);
+            span.appendChild(kanji);
+          }
           return span;
         })
       );
@@ -351,6 +358,26 @@ class BoardView {
       rank: this.app.state.boardMaxRank - Math.floor(seq / this.app.state.boardFiles),
     };
   }
+
+  // boardSquareLabel - maps a uci file/rank onto the visible board square text
+  boardSquareLabel(fileNum, rankNum) {
+    if (this.app.state.boardGameType === "shogi") {
+      return BoardView.shogiBoardSquare(fileNum, rankNum);
+    }
+    return `${String.fromCharCode("a".charCodeAt(0) + Number(fileNum) - 1)}${rankNum}`;
+  }
+
+  static SHOGI_RANK_KANJI = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
+
+  // shogiRankKanji - returns the traditional rank kanji for a 1-based rank
+  static shogiRankKanji(rankNum) {
+    return BoardView.SHOGI_RANK_KANJI[Number(rankNum)] || "";
+  }
+
+  // shogiBoardSquare - maps uci file/rank (a=1) to numbered file + rank kanji
+  static shogiBoardSquare(fileNum, rankNum) {
+    return `${Number(fileNum)}${BoardView.shogiRankKanji(rankNum)}`;
+  }
 }
 
 if (typeof window !== "undefined") {
@@ -375,5 +402,9 @@ if (typeof window !== "undefined") {
   roundTrip(8, 8);
   roundTrip(9, 10);
   roundTrip(9, 9);
+  // g1 / f2 are uci; shogi files are 1-9 so those must read as 7一 / 6二
+  if (BoardView.shogiBoardSquare(7, 1) !== "7一" || BoardView.shogiBoardSquare(6, 2) !== "6二") {
+    throw new Error("shogiBoardSquare self-check failed");
+  }
   console.log("board geometry self-check ok");
 }

@@ -8,10 +8,17 @@ INPUT_CSS="$ROOT_DIR/frontend/styles/input.css"
 OUTPUT_CSS="$ROOT_DIR/frontend/styles/style.css"
 PY_SERVER="$ROOT_DIR/py_analyser/server.py"
 GO_DIR="$ROOT_DIR/go_backend"
-# prefer vendor venv (torch) for /fen_from_image; else plain python3 for coach-only
+# analyser needs Flask; vendor venv often has torch but may miss Flask — only use it if flask imports
+ANALYSER_VENV="$ROOT_DIR/py_analyser/.venv/bin/python"
 VENDOR_PY="$ROOT_DIR/../_local_Chess_diagram_to_FEN/.venv/bin/python"
-if [[ -x "$VENDOR_PY" ]]; then
+# _python_has_flask - true when this interpreter can import flask
+_python_has_flask() {
+  [[ -x "$1" ]] && "$1" -c "import flask" >/dev/null 2>&1
+}
+if _python_has_flask "$VENDOR_PY"; then
   PY_BIN="$VENDOR_PY"
+elif _python_has_flask "$ANALYSER_VENV"; then
+  PY_BIN="$ANALYSER_VENV"
 else
   PY_BIN="python3"
 fi

@@ -57,7 +57,10 @@ class OllamaProvider:
         except ValueError:
             timeout_ms = 15000
         self.timeout = timeout if timeout is not None else (timeout_ms / 1000.0)
-        self.url = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate").strip()
+        # compose may set base host:11434; code POSTs to the full generate URL
+        raw_url = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate").strip()
+        base = raw_url.rstrip("/")
+        self.url = base if base.endswith("/api/generate") else f"{base}/api/generate"
 
     # explain - generates coach text via ollama and sanitizes the response
     def explain(

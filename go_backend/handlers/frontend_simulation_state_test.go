@@ -269,8 +269,12 @@ func TestFrontendSimulationDownload_Step1ButtonMarkers(t *testing.T) {
 // TestFrontendShogiBoard_NumericFileLabels - checks frontend shogi board numeric file labels
 func TestFrontendShogiBoard_NumericFileLabels(t *testing.T) {
 	jsSrc := loadChessCommandSource(t)
-	requireSnippet(t, jsSrc, `const numericFiles = boardGameType === "shogi"`)
+	requireSnippet(t, jsSrc, `const numericFiles = this.app.state.boardGameType === "shogi"`)
 	requireSnippet(t, jsSrc, "? String(i + 1)")
+	requireSnippet(t, jsSrc, "board_label_kanji")
+	requireSnippet(t, jsSrc, "shogiBoardSquare")
+	requireSnippet(t, jsSrc, "squareOnBoard")
+	requireSnippet(t, jsSrc, "SHOGI_RANK_KANJI")
 }
 
 // TestFrontendConfigPanel_AlwaysVisibleLeft - checks setup panel is a static left column, not a details toggle

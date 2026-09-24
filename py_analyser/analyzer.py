@@ -162,6 +162,11 @@ _SHOGI_PROMO_KIND = {
     "b": "horse",
     "r": "dragon",
 }
+_SHOGI_RANK_KANJI = "一二三四五六七八九"
+_SHOGI_UCI_DROP = re.compile(r"\b([plnsgbr])[*@]([a-i])([1-9])\b", re.I)
+_SHOGI_UCI_MOVE = re.compile(r"\b([a-i])([1-9])([a-i])([1-9])(\+)?\b", re.I)
+_SHOGI_UCI_SQ = re.compile(r"\b([a-i])([1-9])\b", re.I)
+
 _XIANGQI_KIND = {
     "k": "general",
     "a": "advisor",
@@ -172,6 +177,38 @@ _XIANGQI_KIND = {
     "c": "cannon",
     "p": "soldier",
 }
+
+
+# shogi_board_square - maps a uci file letter and rank onto numbered file + rank kanji
+def shogi_board_square(file_letter: str, rank: str | int) -> str:
+    raw = str(file_letter or "").strip().lower()
+    if not raw:
+        return f"{file_letter}{rank}"
+    file_num = ord(raw[0]) - ord("a") + 1
+    try:
+        rank_num = int(rank)
+    except (TypeError, ValueError):
+        return f"{file_letter}{rank}"
+    if not (1 <= file_num <= 9 and 1 <= rank_num <= 9):
+        return f"{file_letter}{rank}"
+    return f"{file_num}{_SHOGI_RANK_KANJI[rank_num - 1]}"
+
+
+# shogi_uci_to_board - rewrites uci squares, moves, and drops in text to shogi board coordinates
+def shogi_uci_to_board(text: str) -> str:
+    def drop(m: re.Match[str]) -> str:
+        kind = _SHOGI_KIND.get(m.group(1).lower(), "piece")
+        return f"drop {kind} → {shogi_board_square(m.group(2), m.group(3))}"
+
+    def move(m: re.Match[str]) -> str:
+        src = shogi_board_square(m.group(1), m.group(2))
+        dest = shogi_board_square(m.group(3), m.group(4))
+        promo = " (promote)" if m.group(5) == "+" else ""
+        return f"{src}→{dest}{promo}"
+
+    out = _SHOGI_UCI_DROP.sub(drop, text or "")
+    out = _SHOGI_UCI_MOVE.sub(move, out)
+    return _SHOGI_UCI_SQ.sub(lambda m: shogi_board_square(m.group(1), m.group(2)), out)
 
 
 # _variant_board_grid - maps (file, rank) to piece kind from fen placement
@@ -219,20 +256,23 @@ def _variant_board_grid(fen: str, *, files: int, ranks: int) -> Dict[Tuple[int, 
 # _variant_move_label - builds a human label for xianqi/shogi uci from the post-move fen
 def _variant_move_label(fen: str, target: str, gt: str) -> str:
     key = "shogi" if gt == "shogi" else "xianqi"
-    drop = re.match(r"^([plnsgbr])[*@]([a-i])([1-9])$", target)
+    drop = re.match(r"^([plnsgbr])[*@]([a-i])([1-9])$", target, flags=re.I)
     if drop and key == "shogi":
-        kind = _SHOGI_KIND.get(drop.group(1), "piece")
-        return f"drop {kind} → {drop.group(2)}{drop.group(3)}"
+        kind = _SHOGI_KIND.get(drop.group(1).lower(), "piece")
+        dest = shogi_board_square(drop.group(2), drop.group(3))
+        return f"drop {kind} → {dest}"
 
-    board = re.match(r"^([a-i])(\d{1,2})([a-i])(\d{1,2})(\+?)$", target)
+    board = re.match(r"^([a-i])(\d{1,2})([a-i])(\d{1,2})(\+?)$", target, flags=re.I)
     if not board:
-        return target
+        return shogi_uci_to_board(target) if key == "shogi" else target
     ff, fr = board.group(1), board.group(2)
     tf, tr, promo = board.group(3), int(board.group(4)), board.group(5)
     files, ranks = (9, 9) if key == "shogi" else (9, 10)
     grid = _variant_board_grid(fen, files=files, ranks=ranks)
-    kind = grid.get((ord(tf) - ord("a") + 1, tr), "piece")
+    kind = grid.get((ord(tf.lower()) - ord("a") + 1, tr), "piece")
     suffix = " (promote)" if promo == "+" else ""
+    if key == "shogi":
+        return f"{kind} {shogi_board_square(ff, fr)}→{shogi_board_square(tf, tr)}{suffix}"
     return f"{kind} {ff}{fr}→{tf}{tr}{suffix}"
 
 
@@ -337,12 +377,21 @@ def build_move_ground_truth(
     if gt in {"xianqi", "xiangqi", "shogi"}:
         label = "Xiangqi" if gt in {"xianqi", "xiangqi"} else "Shogi"
         move_lab = _variant_move_label(fen, target, gt)
-        squares = " ".join(dict.fromkeys(re.findall(r"[a-i]\d{1,2}", f"{move_lab} {target}")))
-        summary = (
-            f"GROUND TRUTH: last {label} move {move_lab} (UCI {target}). "
-            f"Only mention squares {squares or target}. "
-            f"Do not invent other pieces, squares, captures, or Chess ideas (centre/castling)."
-        )
+        if gt == "shogi":
+            squares = " ".join(dict.fromkeys(re.findall(r"[1-9][一二三四五六七八九]", move_lab)))
+            summary = (
+                f"GROUND TRUTH: last Shogi move {move_lab}. "
+                f"Write squares as file 1-9 plus rank 一-九, never UCI letters. "
+                f"Only mention squares {squares or move_lab}. "
+                f"Do not invent other pieces, squares, captures, or Chess ideas (centre/castling)."
+            )
+        else:
+            squares = " ".join(dict.fromkeys(re.findall(r"[a-i]\d{1,2}", f"{move_lab} {target}")))
+            summary = (
+                f"GROUND TRUTH: last {label} move {move_lab} (UCI {target}). "
+                f"Only mention squares {squares or target}. "
+                f"Do not invent other pieces, squares, captures, or Chess ideas (centre/castling)."
+            )
         return {"summary": summary, "san": move_lab, "uci": target}
 
     try:
@@ -398,6 +447,8 @@ def build_concept_hints(
     if not analysis or max_hints <= 0:
         return []
 
+    gt = str(analysis.get("game_type") or "").strip().lower()
+    fen = str(analysis.get("fen") or "")
     hints: List[str] = []
 
     threat = str(analysis.get("threat_summary") or "").strip()
@@ -433,10 +484,15 @@ def build_concept_hints(
             else:
                 lab = str(getattr(item, "san", None) or getattr(item, "uci", "") or "").strip()
             if lab:
+                if gt == "shogi":
+                    mapped = _variant_move_label(fen, lab, "shogi")
+                    lab = mapped if mapped else shogi_uci_to_board(lab)
                 labels.append(lab)
     if not labels:
         best = str(analysis.get("best_move_uci") or "").strip()
         if best:
+            if gt == "shogi":
+                best = _variant_move_label(fen, best, "shogi") or shogi_uci_to_board(best)
             labels = [best]
     if labels:
         hints.append("Engine suggested replies (side to move): " + ", ".join(labels) + ".")
@@ -539,6 +595,16 @@ def _analyze_position_variant(
         suggestions = []
         eval_cp_white = 0
 
+    if suggestions:
+        suggestions = [
+            MoveSuggestion(
+                rank=item.rank,
+                uci=item.uci,
+                san=_variant_move_label(fen, item.uci, game_type) or item.uci,
+                score=item.score,
+            )
+            for item in suggestions
+        ]
     win_chance_white = cp_to_win_chance(eval_cp_white)
     win_chance_black = 1.0 - win_chance_white
     best_move_uci = suggestions[0].uci if suggestions else None
