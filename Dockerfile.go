@@ -8,7 +8,7 @@ COPY py_analyser/Fairy-Stockfish-fairy_sf_14/src/ ./
 ARG TARGETARCH
 RUN set -eux; \
   if [ "$TARGETARCH" = "arm64" ]; then ARCH=armv8; else ARCH=x86-64-modern; fi; \
-  make -j"$(nproc)" build ARCH="$ARCH"; \
+  make -j"$(nproc)" build ARCH="$ARCH" largeboards=yes; \
   mv stockfish /stockfish
 
 FROM golang:1.22-bookworm AS go-builder

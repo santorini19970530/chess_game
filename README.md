@@ -125,7 +125,7 @@ You do not need to rebuild every time you start the app (only again if you delet
 
 ```bash
 cd py_analyser/Fairy-Stockfish-fairy_sf_14/src
-make -j build ARCH=x86-64-modern    # Apple Silicon: try ARCH=apple-silicon or ARCH=armv8
+make -j build ARCH=x86-64-modern largeboards=yes    # Apple Silicon: ARCH=apple-silicon or ARCH=armv8, still largeboards=yes
 # binary should be: ./stockfish
 cd ../../..
 ```
