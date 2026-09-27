@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test_docker.sh - runs the same checks as test_all.sh using only Docker
+# test_docker.sh - runs Go and Python tests in throwaway images; not compose, and it does not build Fairy-Stockfish
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"

@@ -213,29 +213,36 @@ Steps 1–6 already cover play, Fairy-Stockfish, preferred diagram import, and h
 
 ## Testing
 
-Install and play first ([A](#a--install-with-docker) or [B](#b--install-without-docker)). Tests are a separate step. They do not need the browser to be open.
+Tests and play are separate. `ALL OK` means the Go tests and the Python tester passed. It does not start the browser, and it does not prove live Ollama, Fairy-Stockfish play, or diagram import.
+
+The default pass does not need Ollama, a browser, or the vision weights. A live diagram test runs only if `PY_FEN_FROM_IMAGE_LIVE=1` and torch imports. Engine probes that need the Fairy-Stockfish binary or `nn-3475407dc199.nnue` skip when that file is missing. A skip is not a failure.
+
+| What you have | Tests | Play |
+|---|---|---|
+| Go and Python (install B) | `./test_all.sh` | `./run.sh` |
+| Docker only | `./test_docker.sh` | `docker compose up --build` |
 
 ### Without Docker
 
-Needs the tools from install B. Python packages must already be installed (`python3 -m pip install -r py_analyser/requirements.txt`, or the analyser `.venv` that `./run.sh` uses).
+Needs Go and Python from install B, and `python3 -m pip install -r py_analyser/requirements.txt` (Flask, python-chess, Pillow), or the analyser `.venv` that `./run.sh` already uses.
 
 ```bash
 cd chess_game
 ./test_all.sh
 ```
 
-Expected last line: `test_all: ALL OK`. This runs the Go tests and the Python tester. Fairy-Stockfish, Ollama, and the diagram recogniser do not have to be running.
+Expected last line: `test_all: ALL OK`. If a sibling `_local_Chess_diagram_to_FEN/.venv` can import Flask and python-chess, the script uses that interpreter. Otherwise it uses `py_analyser/.venv` or `python3`.
 
 ### With Docker only
 
-Use this when Go and Python are not installed on the host. It does not start the game. The first run downloads images and can take several minutes.
+`./test_docker.sh` is not Compose. It starts two throwaway containers (`golang:1.22-bookworm` and `python:3.12-bookworm-slim`). It does not build Fairy-Stockfish and it does not open http://localhost:8080. The first run needs network and disk, because Go downloads modules and pip installs the analyser packages. An offline machine will fail here.
 
 ```bash
 cd chess_game
 ./test_docker.sh
 ```
 
-Expected last line: `test_docker: ALL OK`. Playing the game is still `docker compose up --build`, then http://localhost:8080.
+Expected last line: `test_docker: ALL OK`. To play, still run `docker compose up --build` and open http://localhost:8080. Diagram import on that path is not included. Use host `./run.sh` plus the recogniser for that.
 
 ## Troubleshooting
 
