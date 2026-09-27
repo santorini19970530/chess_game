@@ -8,11 +8,11 @@ Three models in the **product**: **Fairy-Stockfish** (play/analysis), **Ollama**
 
 | Path | Play (Fairy-Stockfish AI) | Coach text | Diagram import |
 |------|---------------------------|------------|----------------|
-| **A — Docker** (`docker compose up --build`) | Yes | Heuristic only (default) | **Not** in the Compose image / not the marker Docker path |
+| **A — Docker** (`docker compose up --build`) | Yes | Heuristic only (default) | Not included |
 | **B — host** (`./run.sh`) | Yes | Ollama if already on `:11434`, else heuristic | Yes, if the recogniser is installed on the **host** |
-| **Online demo** | Yes | Heuristic only | Not claimed for markers |
+| **Online demo** | Yes | Heuristic only | Not included |
 
-**Course demonstration video (3–5 min, student voice, not sped up):** record on the **host** path (`./run.sh` with Ollama on `:11434` and the recogniser installed) — not `docker compose`. Must show: one Chess move + AI reply, diagram **Cancel** (board unchanged), **Confirm** (new position), one coach sentence from Ollama. Docker alone cannot show Cancel/Confirm/Ollama coach. Local prototype, not a production claim.
+**For marker's reference** Docker is enough to play a game and see the short fallback coach. It is not enough to run all three models. Ollama and diagram import are host-only. To run those, use [B](#b--install-without-docker): Git, Go 1.22+, Python 3.10+, C++ build tools, compile Fairy-Stockfish, clone `Chess_diagram_to_FEN` as `_local_Chess_diagram_to_FEN` next to this repo, and start Ollama with `llama3.2` on port 11434 before `./run.sh`.
 
 Play Chess, Xiangqi, or Shogi (human vs human, human vs AI, AI vs AI).
 
@@ -36,9 +36,9 @@ Moves: Chess `e2e4`; Xiangqi `a4a5` / `h3h10`; Shogi `c3c4`, promote `e8e9+`, dr
 
 ## A — Install with Docker
 
-Best for markers on **Windows, macOS, or Linux** who need a short play demo. Needs **Git + Docker** only (no Go/Python/engine build on the host).
+Play demo only. Needs **Git + Docker** (no Go, Python, or engine build on the host). This path cannot grade the Ollama coach or diagram import.
 
-**Compose scope (plain words):** `docker compose up --build` → **play works** (Fairy-Stockfish AI). Coach text in that path is **heuristic** by default. **Diagram import is not part of the Compose image** and is **not** the marker Docker path. For Ollama + diagram recogniser, use [B — host `./run.sh`](#b--install-without-docker) instead — do **not** “restart Compose and upload.”
+`docker compose up --build` starts Fairy-Stockfish play. Coach text is the heuristic fallback. Diagram import is not in the image. Do not restart Compose and try to upload a diagram. For Ollama and the recogniser, use [B — host `./run.sh`](#b--install-without-docker).
 
 ### Step 1. Install tools
 
@@ -67,7 +67,7 @@ Stop: `Ctrl+C`. Detached: `docker compose up -d --build` / `docker compose down`
 
 **Quick check:** Chess → Human vs AI → Intermediate → one move → AI replies. Coach notes may be short heuristic text (expected under Docker).
 
-That is the full marker Docker path. Missing optional NNUE weights on the host is fine — play still works with classical eval.
+That is the full Docker installation path. Missing optional NNUE weights on the host is fine — play still works with classical eval.
 
 ### Full three-model path (not Docker)
 
