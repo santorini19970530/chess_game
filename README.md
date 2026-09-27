@@ -211,6 +211,32 @@ Steps 1–6 already cover play, Fairy-Stockfish, preferred diagram import, and h
 
 ---
 
+## Testing
+
+Install and play first ([A](#a--install-with-docker) or [B](#b--install-without-docker)). Tests are a separate step. They do not need the browser to be open.
+
+### Without Docker
+
+Needs the tools from install B. Python packages must already be installed (`python3 -m pip install -r py_analyser/requirements.txt`, or the analyser `.venv` that `./run.sh` uses).
+
+```bash
+cd chess_game
+./test_all.sh
+```
+
+Expected last line: `test_all: ALL OK`. This runs the Go tests and the Python tester. Fairy-Stockfish, Ollama, and the diagram recogniser do not have to be running.
+
+### With Docker only
+
+Use this when Go and Python are not installed on the host. It does not start the game. The first run downloads images and can take several minutes.
+
+```bash
+cd chess_game
+./test_docker.sh
+```
+
+Expected last line: `test_docker: ALL OK`. Playing the game is still `docker compose up --build`, then http://localhost:8080.
+
 ## Troubleshooting
 
 | Problem | Fix |

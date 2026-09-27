@@ -188,11 +188,11 @@ func TestFrontendSimulationState_ErrorAndConflictRecoveryMarkers(t *testing.T) {
 func TestFrontendSimulationState_BusyGuardMarkers(t *testing.T) {
 	source := loadChessCommandSource(t)
 
-	requireSnippet(t, source, "const simulationBusy = simulationRequestInFlight || isSimulationPlayback;")
-	requireSnippet(t, source, "if (newGameButton) newGameButton.disabled = simulationBusy;")
-	requireSnippet(t, source, "if (configApplyButton) configApplyButton.disabled = simulationBusy;")
-	requireSnippet(t, source, "if (button) button.disabled = simulationBusy || gameOver;")
-	requireSnippet(t, source, "if (flagButton) flagButton.disabled = simulationBusy || gameOver;")
+	requireSnippet(t, source, "const simulationBusy = this.app.state.simulationRequestInFlight || this.app.state.isSimulationPlayback;")
+	requireSnippet(t, source, "if (this.app.el.newGameButton) this.app.el.newGameButton.disabled = simulationBusy;")
+	requireSnippet(t, source, "if (this.app.el.configApplyButton) this.app.el.configApplyButton.disabled = simulationBusy;")
+	requireSnippet(t, source, "simulationBusy || this.app.state.gameOver || this.app.state.previewMode;")
+	requireSnippet(t, source, "if (this.app.el.flagButton) this.app.el.flagButton.disabled = simulationBusy || this.app.state.gameOver;")
 	requireSnippet(t, source, "Please enter an integer game count between 1 and 1000.")
 
 	if strings.Count(source, "Simulation is in progress. Please wait for it to finish.") < 3 {
